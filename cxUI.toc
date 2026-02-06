@@ -1,0 +1,11 @@
+## Interface: 110007
+## Title: |cff0070ddcem|cffffff00xokenc|r
+## Notes: Minimalist UI suite: Auto-hiding Action Bars, Micro Menu, and Quest Log with CDM Proc Highlighter.
+## Notes-ukUA: Мінімалістичний інтерфейс: авто-ховання панелей та квест-лога, підсвітка проків для CDM.
+## Version: 1.0.0
+## Author: cemxokenc
+## SavedVariables: CDMProcGlowDB
+## IconTexture: Interface\Icons\INV_Misc_Gear_01
+
+# Scripts
+cxUI.lua
