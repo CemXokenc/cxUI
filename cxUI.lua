@@ -1,7 +1,8 @@
 -- ===========================================================================
--- SETTINGS UI & DATABASE
+-- MODULE 1: SETTINGS UI & DATABASE
 -- ===========================================================================
 
+-- Initialize database with default values if it doesn't exist
 CXUI_DB = CXUI_DB or {
     hideBars = true,
     hideMicro = true,
@@ -16,6 +17,7 @@ optionsPanel.name = "cxUI"
 local initialSettings = {}
 local reloadButton
 
+-- Detect if critical settings (requiring ReloadUI) have changed
 local function ReloadRequiredSettingsChanged()
     local criticalKeys = { "hideQuests", "showAbsorb" }
     for _, k in ipairs(criticalKeys) do
@@ -24,6 +26,7 @@ local function ReloadRequiredSettingsChanged()
     return false
 end
 
+-- Change button color to red if a reload is necessary
 local function UpdateReloadButtonStyle()
     if not reloadButton then return end
     if ReloadRequiredSettingsChanged() then
@@ -33,6 +36,7 @@ local function UpdateReloadButtonStyle()
     end
 end
 
+-- Helper: Create a section header with a decorative line
 local function CreateHeader(text, yOffset)
     local header = optionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     header:SetPoint("TOPLEFT", 16, yOffset)
@@ -44,12 +48,14 @@ local function CreateHeader(text, yOffset)
     return header
 end
 
+-- Helper: Create a checkbox linked to CXUI_DB
 local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
     local check = CreateFrame("CheckButton", nil, optionsPanel, "InterfaceOptionsCheckButtonTemplate")
     check:SetPoint("TOPLEFT", 16, yOffset)
     local text = label
     if needsReload then text = text .. " |cffff0000(Requires Reload)*|r" end
     check.Text:SetText(text)
+    
     check:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText(label, 1, 1, 1)
@@ -57,11 +63,13 @@ local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
         GameTooltip:Show()
     end)
     check:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    
     check:SetScript("OnShow", function(self)
         if initialSettings[dbKey] == nil then initialSettings[dbKey] = CXUI_DB[dbKey] end
         self:SetChecked(CXUI_DB[dbKey])
         UpdateReloadButtonStyle()
     end)
+    
     check:SetScript("OnClick", function(self)
         CXUI_DB[dbKey] = self:GetChecked()
         UpdateReloadButtonStyle()
@@ -69,21 +77,26 @@ local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
     return check
 end
 
+-- Title setup
 local title = optionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", 16, -16)
 title:SetText("|cff0070ddcem|cffffff00xokenc|r UI")
 
+-- Module 1 Setup
 CreateHeader("Module 1: Transparency & Auto-hide", -50)
 CreateCheckbox("Action Bar Auto-hide", "hideBars", "Hides bars out of combat. Hover to reveal.", -75, false)
 CreateCheckbox("Micro Menu Auto-hide", "hideMicro", "Hides Micro Menu and Bags. Hover to reveal.", -105, false)
 CreateCheckbox("Quest Tracker Hover", "hideQuests", "Quest tracker only visible on mouseover.", -135, true)
 
-CreateHeader("Module 2: Combat Information", -175)
+-- Module 2 Setup
+CreateHeader("Module 2: Absorb Display", -175)
 CreateCheckbox("Enable Absorb Display", "showAbsorb", "Shows total shield amount in screen center.", -200, true)
 
-CreateHeader("Module 3: Class Mechanics", -240)
+-- Module 3 Setup
+CreateHeader("Module 3: CDM Glow", -240)
 CreateCheckbox("Enable CDM Proc Glow", "cdmGlow", "Special highlights for class-specific procs.", -265, false)
 
+-- Reload Button setup
 reloadButton = CreateFrame("Button", nil, optionsPanel, "BackdropTemplate, UIPanelButtonTemplate")
 reloadButton:SetSize(140, 30)
 reloadButton:SetPoint("BOTTOMLEFT", 16, 16)
@@ -113,6 +126,7 @@ local uiGroupFrames = { MicroMenuContainer, BagsBar }
 local UPDATE_INTERVAL, timeSinceLastUpdate, isInCombat, questTrackerHoverFrame = 0.1, 0, false, nil
 local spellFlyout = SpellFlyout
 
+-- Check if mouse is hovering over a frame or its internal buttons
 local function IsMouseOverUIFrame(frame)
     if not frame then return false end
     if frame:IsMouseOver() then return true end
@@ -124,6 +138,7 @@ local function IsMouseOverUIFrame(frame)
     return false
 end
 
+-- Mouseover check for all action bars
 local function IsMouseOverActionBars()
     if not CXUI_DB.hideBars or isInCombat then return false end
     if spellFlyout and spellFlyout:IsShown() and spellFlyout:IsMouseOver() then return true end
@@ -133,6 +148,7 @@ local function IsMouseOverActionBars()
     return false
 end
 
+-- Mouseover check for Micro Menu and Bags
 local function IsMouseOverUIGroup()
     if not CXUI_DB.hideMicro then return false end
     for _, frame in ipairs(uiGroupFrames) do
@@ -149,6 +165,7 @@ local function SetUIGroupAlpha(alpha)
     for _, frame in ipairs(uiGroupFrames) do if frame then frame:SetAlpha(alpha) end end
 end
 
+-- Maintain visibility for essential UI elements (e.g., LFG status)
 local function SetAlwaysVisibleFrames()
     if QueueStatusButton then
         QueueStatusButton:SetAlpha(1)
@@ -156,6 +173,7 @@ local function SetAlwaysVisibleFrames()
     end
 end
 
+-- Toggle clickability for hidden elements to prevent misclicks
 local function SetButtonsMouseEnabled(enabled)
     for _, bar in ipairs(actionBarFrames) do
         if bar and bar.actionButtons then
@@ -169,6 +187,7 @@ local function SetButtonsMouseEnabled(enabled)
     end
 end
 
+-- Create a dedicated hover frame for the Objective Tracker
 local function SetupQuestTrackerHover()
     if questTrackerHoverFrame or not CXUI_DB.hideQuests then return end
     local tracker = ObjectiveTrackerFrame
@@ -188,6 +207,7 @@ local function SetupQuestTrackerHover()
     end)
 end
 
+-- Update alpha based on combat and hover states
 local function UpdateAlpha()
     if isInCombat then SetActionBarsAlpha(0)
     else SetActionBarsAlpha(IsMouseOverActionBars() and 1 or (CXUI_DB.hideBars and 0 or 1)) end
@@ -218,6 +238,7 @@ transparencyCore:SetScript("OnEvent", function(self, event, arg)
     end
 end)
 
+-- Periodically check mouse position
 transparencyCore:SetScript("OnUpdate", function(self, elapsed)
     timeSinceLastUpdate = timeSinceLastUpdate + elapsed
     if timeSinceLastUpdate >= UPDATE_INTERVAL then
@@ -238,6 +259,7 @@ absorbText:SetPoint("CENTER")
 absorbText:SetTextColor(1, 1, 1, 1)
 absorbText:SetFont(absorbText:GetFont(), 18, "OUTLINE")
 
+-- Update the absorb numeric text
 local function UpdateAbsorbDisplay()
     if not CXUI_DB.showAbsorb then absorbText:SetText(""); return end
     local totalAbsorb = UnitGetTotalAbsorbs("player") or 0
@@ -258,6 +280,7 @@ end)
 CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
+-- Spell mapping for DK procs
 local PROC_CONFIG = {
     DEATHKNIGHT = { [81340] = { 47541, 207317 } },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, PRIEST = {},
@@ -265,6 +288,7 @@ local PROC_CONFIG = {
     DEMONHUNTER = {}, EVOKER = {},
 }
 
+-- List of usable glow templates from Blizzard's UI
 local PROC_TEMPLATES = {
     "ActionButtonSpellAlertTemplate",
     "ActionBarButtonSpellActivationAlert",
@@ -273,8 +297,10 @@ local PROC_TEMPLATES = {
     "SpellActivationAlert",
 }
 
+-- Safety check for Blizzard's protected values
 local function IsSecret(v) return type(_G.issecretvalue) == "function" and _G.issecretvalue(v) or false end
 
+-- Create or find a glow overlay frame for a given button
 local function EnsureGlowOverlay(btn)
     if not btn or (btn.IsForbidden and btn:IsForbidden()) then return nil end
     if btn.__CDMGlow_Alert then return btn.__CDMGlow_Alert end
@@ -296,6 +322,7 @@ local function EnsureGlowOverlay(btn)
     return nil
 end
 
+-- Handle animations for showing the glow
 local function StartProcAnimations(alert)
     if not alert then return end
     local start = alert.ProcStartAnim or alert.procStartAnim or alert.AnimIn or alert.animIn
@@ -309,6 +336,7 @@ local function StartProcAnimations(alert)
     SafePlay(alert.ProcLoopFlipbook3 or alert.procLoopFlipbook3)
 end
 
+-- Handle animations for hiding the glow
 local function StopProcAnimations(alert)
     if not alert then return end
     local out = alert.ProcEndAnim or alert.procEndAnim or alert.AnimOut or alert.animOut
@@ -323,6 +351,7 @@ local function HideGlow(btn) local alert = btn and btn.__CDMGlow_Alert; if alert
 
 local CDMGlow = { class = nil, spellsByAura = {}, trackedSpells = {}, buttonsByAura = {}, activeAuras = {}, overlayProcSpells = {}, baseCost = {}, _updateTimer = nil }
 
+-- Try to resolve spellID from a button frame
 local function GetButtonSpellID(frame)
     if not frame then return nil end
     local sid = frame.spellID or frame.spellId or frame.spellid
@@ -331,6 +360,7 @@ local function GetButtonSpellID(frame)
     return nil
 end
 
+-- Search for specific action buttons in the global UI tree
 local function ScanFrameTree(root, results, seen, depth)
     if not root or seen[root] or depth > 20 then return end
     seen[root] = true
@@ -344,6 +374,7 @@ local function ScanFrameTree(root, results, seen, depth)
     if root.GetChildren then local ok, children = pcall(function() return {root:GetChildren()} end); if ok and children then for i = 1, #children do ScanFrameTree(children[i], results, seen, depth + 1) end end end
 end
 
+-- Get Runic Power cost for a spell
 local function GetSpellRunicCost(spellID)
     local rpType = (Enum and Enum.PowerType and Enum.PowerType.RunicPower) or 6
     local costs = C_Spell and C_Spell.GetSpellPowerCost and C_Spell.GetSpellPowerCost(spellID)
@@ -351,6 +382,7 @@ local function GetSpellRunicCost(spellID)
     return nil
 end
 
+-- Record the baseline costs of tracked spells
 function CDMGlow:UpdateBaselineCosts()
     for auraID, spells in pairs(self.spellsByAura) do
         for i = 1, #spells do
@@ -360,6 +392,7 @@ function CDMGlow:UpdateBaselineCosts()
     end
 end
 
+-- Check if a spell currently has a cost reduction proc
 function CDMGlow:HasProcViaCost(auraID)
     local spells = self.spellsByAura[auraID]
     if not spells then return false end
@@ -371,6 +404,7 @@ function CDMGlow:HasProcViaCost(auraID)
     return false
 end
 
+-- Associate found buttons with tracked aura IDs
 function CDMGlow:ScanCDMButtons()
     if InCombatLockdown() then return end
     for auraID, buttons in pairs(self.buttonsByAura) do
@@ -392,6 +426,7 @@ function CDMGlow:ScanCDMButtons()
     end
 end
 
+-- Manage glow visibility based on aura presence or cost shifts
 function CDMGlow:UpdateGlows()
     if not CXUI_DB.cdmGlow or not DB.enabled then
         for auraID in pairs(self.activeAuras) do
@@ -438,6 +473,7 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
+-- Slash command handlers
 SLASH_CDMGLOW1 = "/cdmglow"
 SlashCmdList["CDMGLOW"] = function(msg)
     local cmd = (msg or ""):lower()
