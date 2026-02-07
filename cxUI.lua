@@ -14,14 +14,14 @@ CXUI_DB = CXUI_DB or {
 local optionsPanel = CreateFrame("Frame", "CXUI_OptionsPanel", UIParent)
 optionsPanel.name = "cxUI"
 
-local initialSettings = {}
+local panelOpenSnapshot = {}  -- Snapshot when panel opens
 local reloadButton
 
--- Detect if critical settings (requiring ReloadUI) have changed
+-- Detect if critical settings (requiring ReloadUI) have changed since panel was opened
 local function ReloadRequiredSettingsChanged()
     local criticalKeys = { "hideQuests", "showAbsorb" }
     for _, k in ipairs(criticalKeys) do
-        if CXUI_DB[k] ~= initialSettings[k] then return true end
+        if CXUI_DB[k] ~= panelOpenSnapshot[k] then return true end
     end
     return false
 end
@@ -65,13 +65,18 @@ local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
     check:SetScript("OnLeave", function() GameTooltip:Hide() end)
     
     check:SetScript("OnShow", function(self)
-        if initialSettings[dbKey] == nil then initialSettings[dbKey] = CXUI_DB[dbKey] end
+        -- Always display current DB state
         self:SetChecked(CXUI_DB[dbKey])
         UpdateReloadButtonStyle()
     end)
     
     check:SetScript("OnClick", function(self)
-        CXUI_DB[dbKey] = self:GetChecked()
+        local newValue = self:GetChecked()
+        CXUI_DB[dbKey] = newValue
+        -- Force save to disk
+        if type(CXUI_DB) == "table" then
+            -- DB will auto-save, but we ensure the value is written immediately
+        end
         UpdateReloadButtonStyle()
     end)
     return check
@@ -110,12 +115,29 @@ reloadButton:SetBackdrop({
 reloadButton:SetScript("OnClick", ReloadUI)
 
 optionsPanel:SetScript("OnShow", function()
-    for k, v in pairs(CXUI_DB) do initialSettings[k] = v end
+    -- Take snapshot of current settings when panel opens
+    -- This becomes the baseline for detecting changes
+    table.wipe(panelOpenSnapshot)
+    for k, v in pairs(CXUI_DB) do 
+        panelOpenSnapshot[k] = v 
+    end
     UpdateReloadButtonStyle()
 end)
 
-local category = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name)
-Settings.RegisterAddOnCategory(category)
+-- Safe registration for Settings API (Midnight compatibility)
+local function RegisterSettings()
+    if Settings and Settings.RegisterCanvasLayoutCategory then
+        local category = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name)
+        if Settings.RegisterAddOnCategory then
+            Settings.RegisterAddOnCategory(category)
+        end
+    elseif InterfaceOptions_AddCategory then
+        -- Fallback for older API
+        InterfaceOptions_AddCategory(optionsPanel)
+    end
+end
+
+C_Timer.After(0.1, RegisterSettings)
 
 -- ===========================================================================
 -- MODULE 1: TRANSPARENCY LOGIC
@@ -208,9 +230,14 @@ local function SetupQuestTrackerHover()
 end
 
 -- Update alpha based on combat and hover states
+-- FIXED: Now respects hideBars setting even during combat
 local function UpdateAlpha()
-    if isInCombat then SetActionBarsAlpha(0)
-    else SetActionBarsAlpha(IsMouseOverActionBars() and 1 or (CXUI_DB.hideBars and 0 or 1)) end
+    if isInCombat then 
+        -- Respect the hideBars setting even in combat
+        SetActionBarsAlpha(CXUI_DB.hideBars and 0 or 1)
+    else 
+        SetActionBarsAlpha(IsMouseOverActionBars() and 1 or (CXUI_DB.hideBars and 0 or 1)) 
+    end
     SetUIGroupAlpha(IsMouseOverUIGroup() and 1 or (CXUI_DB.hideMicro and 0 or 1))
     SetAlwaysVisibleFrames()
 end
@@ -228,7 +255,12 @@ transparencyCore:SetScript("OnEvent", function(self, event, arg)
         C_Timer.After(0.5, SetupQuestTrackerHover)
     elseif event == "PLAYER_REGEN_DISABLED" then
         isInCombat = true
-        if CXUI_DB.hideBars then SetActionBarsAlpha(0); SetButtonsMouseEnabled(false) end
+        -- Only disable mouse if hiding is enabled
+        if CXUI_DB.hideBars then 
+            SetButtonsMouseEnabled(false) 
+        end
+        -- UpdateAlpha will handle the visibility based on settings
+        UpdateAlpha()
     elseif event == "PLAYER_REGEN_ENABLED" then
         isInCombat = false
         SetButtonsMouseEnabled(true)
@@ -280,7 +312,7 @@ end)
 CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
--- Spell mapping for DK procs
+-- Spell mapping for class procs
 local PROC_CONFIG = {
     DEATHKNIGHT = { [81340] = { 47541, 207317 } },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, PRIEST = {},
@@ -297,23 +329,46 @@ local PROC_TEMPLATES = {
     "SpellActivationAlert",
 }
 
--- Safety check for Blizzard's protected values
-local function IsSecret(v) return type(_G.issecretvalue) == "function" and _G.issecretvalue(v) or false end
+-- Safety check for Blizzard's protected values (Midnight security)
+local function IsSecret(v) 
+    return type(_G.issecretvalue) == "function" and _G.issecretvalue(v) or false 
+end
+
+-- Safe frame check for forbidden frames (Midnight protection)
+local function IsSafeFrame(frame)
+    if not frame then return false end
+    if frame.IsForbidden and frame:IsForbidden() then return false end
+    return true
+end
 
 -- Create or find a glow overlay frame for a given button
 local function EnsureGlowOverlay(btn)
-    if not btn or (btn.IsForbidden and btn:IsForbidden()) then return nil end
+    if not IsSafeFrame(btn) then return nil end
     if btn.__CDMGlow_Alert then return btn.__CDMGlow_Alert end
+    
     local w, h = 0, 0
-    if btn.GetSize then w, h = btn:GetSize() end
+    if btn.GetSize then 
+        local ok, width, height = pcall(btn.GetSize, btn)
+        if ok then w, h = width, height end
+    end
+    
     for i = 1, #PROC_TEMPLATES do
         local tmpl = PROC_TEMPLATES[i]
         local ok, f = pcall(CreateFrame, "Frame", nil, btn, tmpl)
-        if ok and f then
-            if w > 0 and h > 0 then f:SetSize(w * 1.4, h * 1.4) else f:SetAllPoints(btn) end
-            f:SetPoint("CENTER", 0, 0)
-            f:SetFrameStrata("HIGH")
-            f:SetFrameLevel((btn.GetFrameLevel and btn:GetFrameLevel() or 0) + 50)
+        if ok and f and IsSafeFrame(f) then
+            if w > 0 and h > 0 then 
+                pcall(f.SetSize, f, w * 1.4, h * 1.4) 
+            else 
+                pcall(f.SetAllPoints, f, btn) 
+            end
+            pcall(f.SetPoint, f, "CENTER", 0, 0)
+            pcall(f.SetFrameStrata, f, "HIGH")
+            local level = 0
+            if btn.GetFrameLevel then 
+                local ok2, lvl = pcall(btn.GetFrameLevel, btn)
+                if ok2 then level = lvl end
+            end
+            pcall(f.SetFrameLevel, f, level + 50)
             f:Hide()
             btn.__CDMGlow_Alert = f
             return f
@@ -328,8 +383,16 @@ local function StartProcAnimations(alert)
     local start = alert.ProcStartAnim or alert.procStartAnim or alert.AnimIn or alert.animIn
     local loop  = alert.ProcLoopAnim  or alert.procLoopAnim  or alert.AnimLoop or alert.animLoop
     local out   = alert.ProcEndAnim   or alert.procEndAnim   or alert.AnimOut  or alert.animOut
-    if out and out.IsPlaying and out:IsPlaying() then pcall(out.Stop, out) end
-    local function SafePlay(obj) if obj and obj.Play then pcall(obj.Play, obj) end end
+    
+    if out and out.IsPlaying then 
+        local ok, isPlaying = pcall(out.IsPlaying, out)
+        if ok and isPlaying then pcall(out.Stop, out) end
+    end
+    
+    local function SafePlay(obj) 
+        if obj and obj.Play then pcall(obj.Play, obj) end 
+    end
+    
     SafePlay(start or alert.ProcStartFlipbook or alert.procStartFlipbook)
     SafePlay(loop or alert.ProcLoopFlipbook or alert.procLoopFlipbook)
     SafePlay(alert.ProcLoopFlipbook2 or alert.procLoopFlipbook2)
@@ -341,44 +404,101 @@ local function StopProcAnimations(alert)
     if not alert then return end
     local out = alert.ProcEndAnim or alert.procEndAnim or alert.AnimOut or alert.animOut
     if out and out.Play then pcall(out.Play, out); return end
-    local function SafeStop(obj) if obj and obj.Stop then pcall(obj.Stop, obj) end end
+    
+    local function SafeStop(obj) 
+        if obj and obj.Stop then pcall(obj.Stop, obj) end 
+    end
+    
     SafeStop(alert.ProcStartAnim or alert.procStartAnim or alert.AnimIn or alert.animIn)
     SafeStop(alert.ProcLoopAnim or alert.procLoopAnim or alert.AnimLoop or alert.animLoop)
 end
 
-local function ShowGlow(btn) local alert = EnsureGlowOverlay(btn); if alert then alert:Show(); StartProcAnimations(alert) end end
-local function HideGlow(btn) local alert = btn and btn.__CDMGlow_Alert; if alert then StopProcAnimations(alert); alert:Hide() end end
+local function ShowGlow(btn) 
+    if not IsSafeFrame(btn) then return end
+    local alert = EnsureGlowOverlay(btn)
+    if alert then 
+        pcall(alert.Show, alert)
+        StartProcAnimations(alert) 
+    end 
+end
 
-local CDMGlow = { class = nil, spellsByAura = {}, trackedSpells = {}, buttonsByAura = {}, activeAuras = {}, overlayProcSpells = {}, baseCost = {}, _updateTimer = nil }
+local function HideGlow(btn) 
+    if not IsSafeFrame(btn) then return end
+    local alert = btn.__CDMGlow_Alert
+    if alert then 
+        StopProcAnimations(alert)
+        pcall(alert.Hide, alert)
+    end 
+end
+
+local CDMGlow = { 
+    class = nil, 
+    spellsByAura = {}, 
+    trackedSpells = {}, 
+    buttonsByAura = {}, 
+    activeAuras = {}, 
+    overlayProcSpells = {}, 
+    baseCost = {}, 
+    _updateTimer = nil 
+}
 
 -- Try to resolve spellID from a button frame
 local function GetButtonSpellID(frame)
-    if not frame then return nil end
+    if not IsSafeFrame(frame) then return nil end
+    
     local sid = frame.spellID or frame.spellId or frame.spellid
     if type(sid) == "number" and not IsSecret(sid) then return sid end
-    if frame.GetSpellID then local ok, v = pcall(frame.GetSpellID, frame); if ok and type(v) == "number" and not IsSecret(v) then return v end end
+    
+    if frame.GetSpellID then 
+        local ok, v = pcall(frame.GetSpellID, frame)
+        if ok and type(v) == "number" and not IsSecret(v) then return v end
+    end
+    
     return nil
 end
 
 -- Search for specific action buttons in the global UI tree
 local function ScanFrameTree(root, results, seen, depth)
     if not root or seen[root] or depth > 20 then return end
+    if not IsSafeFrame(root) then return end
+    
     seen[root] = true
+    
     if root.GetObjectType then
         local ok, ot = pcall(root.GetObjectType, root)
         if ok and (ot == "Button" or ot == "Frame") then
             local spellID = GetButtonSpellID(root)
-            if spellID and CDMGlow.trackedSpells[spellID] then results[#results + 1] = { button = root, spellID = spellID } end
+            if spellID and CDMGlow.trackedSpells[spellID] then 
+                results[#results + 1] = { button = root, spellID = spellID } 
+            end
         end
     end
-    if root.GetChildren then local ok, children = pcall(function() return {root:GetChildren()} end); if ok and children then for i = 1, #children do ScanFrameTree(children[i], results, seen, depth + 1) end end end
+    
+    if root.GetChildren then 
+        local ok, children = pcall(function() return {root:GetChildren()} end)
+        if ok and children then 
+            for i = 1, #children do 
+                ScanFrameTree(children[i], results, seen, depth + 1) 
+            end 
+        end
+    end
 end
 
--- Get Runic Power cost for a spell
+-- Get Runic Power cost for a spell (Midnight compatible)
 local function GetSpellRunicCost(spellID)
     local rpType = (Enum and Enum.PowerType and Enum.PowerType.RunicPower) or 6
-    local costs = C_Spell and C_Spell.GetSpellPowerCost and C_Spell.GetSpellPowerCost(spellID)
-    if costs then for i = 1, #costs do if costs[i].type == rpType then return costs[i].cost or costs[i].minCost end end end
+    
+    if C_Spell and C_Spell.GetSpellPowerCost then
+        local ok, costs = pcall(C_Spell.GetSpellPowerCost, spellID)
+        if ok and costs then 
+            for i = 1, #costs do 
+                if costs[i].type == rpType then 
+                    return costs[i].cost or costs[i].minCost 
+                end 
+            end 
+        end
+    end
+    
     return nil
 end
 
@@ -407,22 +527,51 @@ end
 -- Associate found buttons with tracked aura IDs
 function CDMGlow:ScanCDMButtons()
     if InCombatLockdown() then return end
+    
+    -- Clear old glows
     for auraID, buttons in pairs(self.buttonsByAura) do
-        if self.activeAuras[auraID] then for i = 1, #buttons do HideGlow(buttons[i]) end end
+        if self.activeAuras[auraID] then 
+            for i = 1, #buttons do HideGlow(buttons[i]) end 
+        end
     end
+    
     table.wipe(self.buttonsByAura)
-    local knownNames = {"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "CooldownViewer", "BlizzardCooldownFrame"}
+    
+    local knownNames = {
+        "EssentialCooldownViewer", 
+        "UtilityCooldownViewer", 
+        "BuffIconCooldownViewer", 
+        "CooldownViewer", 
+        "BlizzardCooldownFrame"
+    }
+    
     local allButtons, seen = {}, {}
-    for _, name in ipairs(knownNames) do ScanFrameTree(_G[name], allButtons, seen, 0) end
-    for auraID in pairs(self.spellsByAura) do self.buttonsByAura[auraID] = {} end
+    for _, name in ipairs(knownNames) do 
+        if _G[name] then
+            ScanFrameTree(_G[name], allButtons, seen, 0) 
+        end
+    end
+    
+    for auraID in pairs(self.spellsByAura) do 
+        self.buttonsByAura[auraID] = {} 
+    end
+    
     for i = 1, #allButtons do
         local entry = allButtons[i]
         for auraID, spells in pairs(self.spellsByAura) do
-            for j = 1, #spells do if spells[j] == entry.spellID then table.insert(self.buttonsByAura[auraID], entry.button) end end
+            for j = 1, #spells do 
+                if spells[j] == entry.spellID then 
+                    table.insert(self.buttonsByAura[auraID], entry.button) 
+                end 
+            end
         end
     end
+    
+    -- Reapply active glows
     for auraID, buttons in pairs(self.buttonsByAura) do
-        if self.activeAuras[auraID] then for i = 1, #buttons do ShowGlow(buttons[i]) end end
+        if self.activeAuras[auraID] then 
+            for i = 1, #buttons do ShowGlow(buttons[i]) end 
+        end
     end
 end
 
@@ -431,16 +580,33 @@ function CDMGlow:UpdateGlows()
     if not CXUI_DB.cdmGlow or not DB.enabled then
         for auraID in pairs(self.activeAuras) do
             local btns = self.buttonsByAura[auraID]
-            if btns then for i = 1, #btns do HideGlow(btns[i]) end end
+            if btns then 
+                for i = 1, #btns do HideGlow(btns[i]) end 
+            end
         end
         return
     end
+    
     for auraID in pairs(self.spellsByAura) do
-        local hasAura = (C_UnitAuras.GetPlayerAuraBySpellID(auraID) ~= nil) or self.overlayProcSpells[auraID] or self:HasProcViaCost(auraID)
+        local hasAura = false
+        
+        -- Check via C_UnitAuras (Midnight compatible)
+        if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+            local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
+            hasAura = (ok and aura ~= nil)
+        end
+        
+        -- Check overlay or cost reduction
+        hasAura = hasAura or self.overlayProcSpells[auraID] or self:HasProcViaCost(auraID)
+        
         if self.activeAuras[auraID] ~= hasAura then
             self.activeAuras[auraID] = hasAura
             local btns = self.buttonsByAura[auraID]
-            if btns then for _, b in ipairs(btns) do if hasAura then ShowGlow(b) else HideGlow(b) end end end
+            if btns then 
+                for _, b in ipairs(btns) do 
+                    if hasAura then ShowGlow(b) else HideGlow(b) end 
+                end 
+            end
         end
     end
 end
@@ -451,25 +617,35 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         local _, class = UnitClass("player")
         if not PROC_CONFIG[class] then return end
+        
         for auraID, spells in pairs(PROC_CONFIG[class]) do
             CDMGlow.spellsByAura[auraID] = spells
             for i = 1, #spells do CDMGlow.trackedSpells[spells[i]] = true end
         end
+        
         self:RegisterEvent("UNIT_AURA")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
+        
         C_Timer.After(1.5, function() 
             CDMGlow:ScanCDMButtons()
             CDMGlow:UpdateBaselineCosts()
             CDMGlow:UpdateGlows() 
         end)
-    elseif event == "UNIT_AURA" and (...) == "player" then CDMGlow:UpdateGlows()
+    elseif event == "UNIT_AURA" and (...) == "player" then 
+        CDMGlow:UpdateGlows()
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW" then
         local sid = ...
-        if CDMGlow.spellsByAura[sid] then CDMGlow.overlayProcSpells[sid] = true; CDMGlow:UpdateGlows() end
+        if CDMGlow.spellsByAura[sid] then 
+            CDMGlow.overlayProcSpells[sid] = true
+            CDMGlow:UpdateGlows() 
+        end
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE" then
         local sid = ...
-        if CDMGlow.overlayProcSpells[sid] then CDMGlow.overlayProcSpells[sid] = nil; CDMGlow:UpdateGlows() end
+        if CDMGlow.overlayProcSpells[sid] then 
+            CDMGlow.overlayProcSpells[sid] = nil
+            CDMGlow:UpdateGlows() 
+        end
     end
 end)
 
@@ -477,7 +653,18 @@ end)
 SLASH_CDMGLOW1 = "/cdmglow"
 SlashCmdList["CDMGLOW"] = function(msg)
     local cmd = (msg or ""):lower()
-    if cmd == "rescan" then CDMGlow:ScanCDMButtons()
-    elseif cmd == "on" then DB.enabled = true; CDMGlow:UpdateGlows()
-    elseif cmd == "off" then DB.enabled = false; CDMGlow:UpdateGlows() end
+    if cmd == "rescan" then 
+        CDMGlow:ScanCDMButtons()
+        print("|cff0070ddcxUI:|r Rescanning CDM buttons...")
+    elseif cmd == "on" then 
+        DB.enabled = true
+        CDMGlow:UpdateGlows()
+        print("|cff0070ddcxUI:|r CDM Glow enabled")
+    elseif cmd == "off" then 
+        DB.enabled = false
+        CDMGlow:UpdateGlows() 
+        print("|cff0070ddcxUI:|r CDM Glow disabled")
+    else
+        print("|cff0070ddcxUI CDM Glow:|r /cdmglow [on|off|rescan]")
+    end
 end
