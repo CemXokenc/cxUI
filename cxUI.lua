@@ -1,5 +1,5 @@
 -- ===========================================================================
--- MODULE 1: SETTINGS UI & DATABASE
+-- MODULE 0: SETTINGS UI & DATABASE
 -- ===========================================================================
 
 -- Initialize database with default values if it doesn't exist
@@ -10,6 +10,25 @@ CXUI_DB = CXUI_DB or {
     cdmGlow = true,
     showAbsorb = true
 }
+
+-- Ensure all keys exist (for existing characters with old DB)
+local function EnsureDBDefaults()
+    local defaults = {
+        hideBars = true,
+        hideMicro = true,
+        hideQuests = true,
+        cdmGlow = true,
+        showAbsorb = true,
+        hideAlerts = true
+    }
+    for k, v in pairs(defaults) do
+        if CXUI_DB[k] == nil then
+            CXUI_DB[k] = v
+        end
+    end
+end
+
+EnsureDBDefaults()
 
 local optionsPanel = CreateFrame("Frame", "CXUI_OptionsPanel", UIParent)
 optionsPanel.name = "cxUI"
