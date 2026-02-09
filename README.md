@@ -1,89 +1,197 @@
-# cemxokenc UI Suite
+<div align="center">
 
-A lightweight, high-performance modular addon for World of Warcraft (Retail) designed to declutter the interface and enhance combat awareness.
+# cxUI
 
-## Key Features
+**Minimalist interface addon for World of Warcraft**
 
-* **Dynamic UI Hiding**: Automatically fades out Action Bars, Stance/Pet bars, Micro Menu, and Bags. 
-* **Intelligent Hover Logic**: Elements become visible only when your cursor is nearby, keeping the screen clean for immersion.
-* **Quest Tracker Management**: The Objective Tracker is hidden by default and only shows up when you hover over its designated area.
-* **Absorb Display**: Shows your total shield/absorb amount in the center of the screen for easy tracking.
-* **CDM Glow Engine**: Custom spell activation highlights (procs) integrated for Cooldown Manager (CDM) and Blizzard bars.
-* **Alert Suppression**: Hides annoying talent-related alerts and notifications (Module 4).
-* **Zero-Lag Performance**: Optimized event-driven code with a tiny memory footprint.
+A lightweight, performance-focused suite that declutters your screen and enhances combat awareness.
 
-## How It Works
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/CemXokenc/cxUI)
+[![Game Version](https://img.shields.io/badge/game-11.0.7-orange.svg)](https://worldofwarcraft.com)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-The addon is divided into five main functional modules:
+</div>
 
-1.  **Action Bar Module**: Tracks mouse position and combat status. Prevents bars from showing during combat to avoid accidental clicks and tooltip clutter.
-2.  **UI Group Module**: Handles the Micro Menu and Bag bar separately to ensure accessibility.
-3.  **Objective Tracker Module**: Creates an invisible trigger frame over the quest log area.
-4.  **Absorb Display Module**: Monitors your shield amounts and displays them prominently on screen.
-5.  **CDM Glow Engine**: Scans your UI for specific Spell IDs and applies a high-visibility "spell alert" animation when a proc is detected.
-6.  **Hide Alerts Module**: Suppresses annoying in-game notifications like "You have unspent talent points", "Choose your hero talents", and similar help tips.
-7.  **Mega Macro Override**: Automatically redirects the default Game Menu "Macros" button to the Mega Macro interface.
+---
 
-## Customization: Adding Spells for Highlighting
+## 📦 Installation
 
-The CDM Glow Engine is class-aware. By default, it is configured for Death Knights (Sudden Doom/Death Coil procs). To add your own spells, follow these steps:
+1. **Download** the latest release or clone this repository
+2. **Extract** the `cxUI` folder into:
+   ```
+   World of Warcraft\_retail_\Interface\AddOns\
+   ```
+3. **Restart** the game or type `/reload`
+4. **Configure** via ESC → Options → AddOns → cxUI
 
-1.  Open `Module_CDMGlow.lua`.
-2.  Locate the `PROC_CONFIG` table at the top of the file.
-3.  Add your class and spell IDs in the following format:
+---
 
-    ```lua
-    local PROC_CONFIG = {
-        CLASS_NAME = { 
-            [Aura_Spell_ID] = { Target_Spell_ID_1, Target_Spell_ID_2 } 
-        }
-    }
-    ```
+## 🎯 Modules
 
-    * **Aura_Spell_ID**: The ID of the buff (proc) you are tracking.
-    * **Target_Spell_ID**: The ID of the spell on your bar that should glow when the buff is active.
+cxUI consists of 5 independent modules, each addressing a specific aspect of UI optimization:
 
-4.  Example for a Paladin (Art of War):
+### 🌫️ **Module 1: Transparency & Auto-Hide**
 
-    ```lua
-    PALADIN = { [59578] = { 879 } } -- 59578 is Art of War, 879 is Exorcism
-    ```
+Intelligently fades UI elements based on context and mouse position.
 
-## In-Game Settings
+**Features:**
+- **Action Bars**: Automatically hide out of combat, reveal on mouseover
+- **Micro Menu & Bags**: Fade until hovered
+- **Quest Tracker**: Only visible when you need it (mouseover)
 
-Access settings through the game's Interface Options menu (ESC → Options → AddOns → cxUI).
+**Use case:** Clean screen during exploration and questing, full accessibility during combat.
 
-The addon includes the following toggleable options:
+---
 
-### Module 1: Transparency & Auto-hide
-- **Action Bar Auto-hide**: Hides action bars out of combat, shows on mouseover
-- **Micro Menu Auto-hide**: Hides Micro Menu and Bags, shows on mouseover
-- **Quest Tracker Hover**: Quest tracker only visible on mouseover (requires reload)
+### 🛡️ **Module 2: Absorb Display**
 
-### Module 2: Absorb Display
-- **Enable Absorb Display**: Shows total shield amount in screen center (requires reload)
+Track your shield strength at a glance.
 
-### Module 3: CDM Glow
-- **Enable CDM Proc Glow**: Special highlights for class-specific procs
+**Features:**
+- Displays total absorb amount in the center of your screen
+- Auto-scales numbers (1.2K, 450K, etc.)
+- Updates in real-time
 
-### Module 4: Small Tweaks
-- **Hide Talent Alerts**: Suppresses annoying notifications like "You have unspent talent points", "Choose your hero talents", and other help tips (requires reload)
-- **Mega Macro Override**: Automatically redirects the default Game Menu "Macros" button to the Mega Macro interface
+**Use case:** Essential for tanks and healers who rely on shields. Know your mitigation status without checking unit frames.
 
-*Note: Options marked with red asterisk require `/reload` to take effect.*
+---
 
-## Installation
+### ✨ **Module 3: CDM Glow**
 
-1. Download the latest release.
-2. Extract the `cxUI` folder into your `World of Warcraft/_retail_/Interface/AddOns/` directory.
-3. Restart the game or type `/reload`.
+Visual proc highlighting for class abilities.
 
-## Commands
+**Features:**
+- Custom glow effects when key procs activate
+- Scans action bars automatically
+- Works with Blizzard Cooldown Viewer and custom bars
 
-- `/cdmglow on` - Enable CDM Glow
-- `/cdmglow off` - Disable CDM Glow
-- `/cdmglow rescan` - Rescan action bars for tracked spells
+**Default configuration:** Death Knight (Sudden Doom → Death Coil glow)
 
-## Support
+#### 🔧 How to Add Your Own Spells
 
-For issues, suggestions, or contributions, please visit the addon's repository or contact cemxokenc.
+1. Open `Module_CDMGlow.lua`
+2. Find the `PROC_CONFIG` table near the top
+3. Add your class and spell IDs:
+
+```lua
+local PROC_CONFIG = {
+    DEATHKNIGHT = { [81340] = { 47541, 207317 } },
+    PALADIN = { [59578] = { 879 } },  -- Art of War → Exorcism
+    WARRIOR = { [85739] = { 100 } },  -- Slam proc → Mortal Strike
+    -- Add more classes here
+}
+```
+
+**Format explanation:**
+- `[Aura_Spell_ID]` = The buff/proc you're tracking
+- `{ Target_Spell_ID_1, Target_Spell_ID_2 }` = Abilities that should glow
+
+**Finding Spell IDs:**
+- Use `/dump GetSpellInfo("Spell Name")` in-game
+- Or check [Wowhead](https://www.wowhead.com) spell pages (ID is in the URL)
+
+**Commands:**
+```
+/cdmglow on       Enable the module
+/cdmglow off      Disable the module
+/cdmglow rescan   Force rescan of action bars
+```
+
+---
+
+### ❤️ **Module 4: Low Health Alert**
+
+Visual and audio warnings when your health drops dangerously low.
+
+**Features:**
+- Screen edge vignette effect at low HP
+- Customizable threshold
+- Automatic disable when dead/ghost
+
+**Use case:** Stay aware of your health during intense combat without constantly watching your health bar.
+
+---
+
+### 🔧 **Module 5: Small Tweaks**
+
+Quality-of-life improvements and UI decluttering.
+
+**Features:**
+- **Hide Help Tips**: Suppresses notifications like "You have unspent talent points" and "Choose your hero talents"
+- **Mega Macro Override**: Redirects the default Macros button to Mega Macro addon (if installed)
+
+**Use case:** Remove visual clutter and streamline addon integration.
+
+---
+
+## ⚙️ Settings
+
+Access the settings panel:
+```
+ESC → Options → AddOns → cxUI
+```
+
+**Options marked with `(Requires Reload)*` need `/reload` to take effect.**
+
+### Available Toggles:
+
+| Module | Setting | Reload Required |
+|--------|---------|-----------------|
+| Transparency | Action Bar Auto-hide | ❌ |
+| Transparency | Micro Menu Auto-hide | ❌ |
+| Transparency | Quest Tracker Hover | ✅ |
+| Absorb | Enable Absorb Display | ✅ |
+| CDM Glow | Enable Proc Glow | ❌ |
+| Low Health | Enable Low Health Alert | ❌ |
+| Small Tweaks | Hide Talent Alerts | ✅ |
+| Small Tweaks | Mega Macro Override | ❌ |
+
+---
+
+## 🚀 Performance
+
+cxUI is designed for **zero impact** on gameplay:
+
+- Event-driven architecture (no polling)
+- Minimal memory footprint (~500KB)
+- Efficient frame updates (OnUpdate limited to 10 FPS)
+- Conditional module loading
+
+---
+
+## 🐛 Troubleshooting
+
+**Settings panel not showing?**
+- Make sure the addon is enabled in the character select screen
+- Try `/reload` after installation
+
+**CDM Glow not working?**
+- Verify spell IDs are correct
+- Use `/cdmglow rescan` to rebuild the button cache
+- Check that Blizzard Cooldown Viewer is enabled
+
+**Quest Tracker not hiding?**
+- This feature requires a UI reload after toggling
+
+---
+
+## 📝 Credits
+
+**Author:** cemxokenc  
+**Inspiration:** Minimalist UI philosophy, ElvUI, LortiUI
+
+---
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+---
+
+<div align="center">
+
+**[Report an Issue](https://github.com/CemXokenc/cxUI/issues)** • **[Request a Feature](https://github.com/CemXokenc/cxUI/issues/new)**
+
+Made with ❤️ for the WoW community
+
+</div>
