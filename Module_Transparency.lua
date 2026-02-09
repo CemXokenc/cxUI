@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- MODULE 1: TRANSPARENCY LOGIC
+-- MODULE: TRANSPARENCY LOGIC
 -- ===========================================================================
 
 local actionBarFrames = { MainActionBar, MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, StanceBar, PetActionBar }

@@ -1,5 +1,5 @@
 ## Interface: 120000
-## Title: |cff0070ddcem|cffffff00xokenc|r
+## Title: |cff0070ddcx|cffffff00UI|r
 ## Notes: Minimalist UI suite: Auto-hiding Action Bars, Micro Menu, and Quest Log with CDM Proc Highlighter.
 ## Notes-ukUA: Мінімалістичний інтерфейс: авто-ховання панелей та квест-лога, підсвітка проків для CDM.
 ## Version: 1.0.0
@@ -12,4 +12,4 @@ Core.lua
 Module_Transparency.lua
 Module_Absorb.lua
 Module_CDMGlow.lua
-Module_TEST.lua
+Module_Alerts.lua

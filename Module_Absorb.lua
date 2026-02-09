@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- MODULE 2: ABSORB LOGIC
+-- MODULE: ABSORB LOGIC
 -- ===========================================================================
 
 local absorbFrame = CreateFrame("Frame", nil, UIParent)

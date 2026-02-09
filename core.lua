@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- MODULE 0: SETTINGS UI & DATABASE
+-- MODULE: SETTINGS UI & DATABASE
 -- ===========================================================================
 
 -- Initialize database with default values if it doesn't exist
@@ -10,7 +10,8 @@ CXUI_DB = CXUI_DB or {
     hideMicro = true,
     hideQuests = true,
     cdmGlow = true,
-    showAbsorb = true
+    showAbsorb = true,
+    hideAlerts = true
 }
 
 -- Ensure all keys exist (for existing characters with old DB)
@@ -30,32 +31,10 @@ local function EnsureDBDefaults()
     end
 end
 
-EnsureDBDefaults()
-
 local optionsPanel = CreateFrame("Frame", "CXUI_OptionsPanel", UIParent)
 optionsPanel.name = "cxUI"
 
-local panelOpenSnapshot = {}  -- Snapshot when panel opens
 local reloadButton
-
--- Detect if critical settings (requiring ReloadUI) have changed since panel was opened
-local function ReloadRequiredSettingsChanged()
-    local criticalKeys = { "hideQuests", "showAbsorb" }
-    for _, k in ipairs(criticalKeys) do
-        if CXUI_DB[k] ~= panelOpenSnapshot[k] then return true end
-    end
-    return false
-end
-
--- Change button color to red if a reload is necessary
-local function UpdateReloadButtonStyle()
-    if not reloadButton then return end
-    if ReloadRequiredSettingsChanged() then
-        reloadButton:SetBackdropColor(0.5, 0.1, 0.1, 1) -- Muted Red
-    else
-        reloadButton:SetBackdropColor(0.2, 0.2, 0.2, 1) -- Standard Grey
-    end
-end
 
 -- Helper: Create a section header with a decorative line
 local function CreateHeader(text, yOffset)
@@ -85,15 +64,16 @@ local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
     end)
     check:SetScript("OnLeave", function() GameTooltip:Hide() end)
     
+    -- Set initial state when panel is shown
     check:SetScript("OnShow", function(self)
+        -- Ensure DB is initialized
+        EnsureDBDefaults()
         self:SetChecked(CXUI_DB[dbKey])
-        UpdateReloadButtonStyle()
     end)
     
     check:SetScript("OnClick", function(self)
         local newValue = self:GetChecked()
         CXUI_DB[dbKey] = newValue
-        UpdateReloadButtonStyle()
     end)
     return check
 end
@@ -101,7 +81,7 @@ end
 -- Title setup
 local title = optionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", 16, -16)
-title:SetText("|cff0070ddcem|cffffff00xokenc|r UI")
+title:SetText("|cff0070ddCem Xokenc |cffffff00UI|r")
 
 -- Module 1 Setup
 CreateHeader("Module 1: Transparency & Auto-hide", -50)
@@ -117,7 +97,11 @@ CreateCheckbox("Enable Absorb Display", "showAbsorb", "Shows total shield amount
 CreateHeader("Module 3: CDM Glow", -240)
 CreateCheckbox("Enable CDM Proc Glow", "cdmGlow", "Special highlights for class-specific procs.", -265, false)
 
--- Reload Button setup
+-- Module 4 Setup
+CreateHeader("Module 4: Hide Alerts", -305)
+CreateCheckbox("Hide Talent Alerts", "hideAlerts", "Hides annoying talent-related notifications.", -330, true)
+
+-- Reload Button setup (always red)
 reloadButton = CreateFrame("Button", nil, optionsPanel, "BackdropTemplate, UIPanelButtonTemplate")
 reloadButton:SetSize(140, 30)
 reloadButton:SetPoint("BOTTOMLEFT", 16, 16)
@@ -128,26 +112,47 @@ reloadButton:SetBackdrop({
     tile = true, tileSize = 16, edgeSize = 16,
     insets = { left = 4, right = 4, top = 4, bottom = 4 }
 })
+-- Button is always red
+reloadButton:SetBackdropColor(0.5, 0.1, 0.1, 1)
 reloadButton:SetScript("OnClick", ReloadUI)
 
+-- Ensure all settings are loaded when panel is shown
 optionsPanel:SetScript("OnShow", function()
-    table.wipe(panelOpenSnapshot)
-    for k, v in pairs(CXUI_DB) do 
-        panelOpenSnapshot[k] = v 
-    end
-    UpdateReloadButtonStyle()
+    EnsureDBDefaults()
 end)
 
--- Safe registration for Settings API
+-- Safe registration for Settings API (multiple methods)
 local function RegisterSettings()
+    -- Method 1: Modern Settings API (11.0+)
     if Settings and Settings.RegisterCanvasLayoutCategory then
-        local category = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name)
+        local category, layout = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name)
+        category.ID = optionsPanel.name
         if Settings.RegisterAddOnCategory then
             Settings.RegisterAddOnCategory(category)
         end
-    elseif InterfaceOptions_AddCategory then
+    end
+    
+    -- Method 2: Legacy API (older versions)
+    if InterfaceOptions_AddCategory then
         InterfaceOptions_AddCategory(optionsPanel)
+    end
+    
+    -- Method 3: Direct addon settings (fallback)
+    if SettingsPanel and SettingsPanel.AddOns then
+        -- Register in addons list
+        optionsPanel:SetParent(SettingsPanel.AddOns)
     end
 end
 
-C_Timer.After(0.1, RegisterSettings)
+-- Register after addon is loaded
+local initFrame = CreateFrame("Frame")
+initFrame:RegisterEvent("ADDON_LOADED")
+initFrame:SetScript("OnEvent", function(self, event, loadedAddon)
+    if loadedAddon == "cxUI" then
+        -- Ensure DB is fully initialized
+        EnsureDBDefaults()
+        -- Register settings panel with delay to ensure UI is ready
+        C_Timer.After(0.5, RegisterSettings)
+        self:UnregisterEvent("ADDON_LOADED")
+    end
+end)

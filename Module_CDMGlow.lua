@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- MODULE 3: CDM GLOW LOGIC
+-- MODULE: CDM GLOW LOGIC
 -- ===========================================================================
 
 CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
