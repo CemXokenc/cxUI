@@ -9,8 +9,8 @@
 
 # Scripts
 core.lua
-Module_Transparency.lua
-Module_Absorb.lua
-Module_CDMGlow.lua
-Module_SmallTweaks.lua
-Module_LowHealth.lua
+modules\Module_Transparency.lua
+modules\Module_Absorb.lua
+modules\Module_CDMGlow.lua
+modules\Module_SmallTweaks.lua
+modules\Module_LowHealth.lua
