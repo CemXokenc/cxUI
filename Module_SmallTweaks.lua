@@ -1,9 +1,10 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- MODULE: HIDE ALERTS (Talent Notifications)
+-- MODULE: SMALL TWEAKS
 -- ===========================================================================
 
+-- HIDE ALERTS (Talent Notifications)
 -- This module hides annoying notifications about unspent talents,
 -- hero talents, and other similar tips
 
@@ -65,3 +66,42 @@ testFrame:SetScript("OnEvent", function(self, event, arg1)
         end
     end
 end)
+
+-- MEGA MACRO OVERRIDE
+
+local function OpenMegaMacro()
+    -- Directly call MegaMacro's window show function
+    if MegaMacroWindow and MegaMacroWindow.Show then
+        MegaMacroWindow.Show()
+    end
+
+    -- Close standard Blizzard frames to prevent overlapping
+    if not InCombatLockdown() then
+        if MacroFrame and MacroFrame:IsShown() then
+            HideUIPanel(MacroFrame)
+        end
+        
+        if GameMenuFrame and GameMenuFrame:IsShown() then
+            HideUIPanel(GameMenuFrame)
+        end
+    end
+end
+
+-- Intercept the default Macro UI call
+hooksecurefunc("ShowMacroFrame", function()
+    if CXUI_DB and CXUI_DB.overrideMacroFrame then
+        OpenMegaMacro()
+    end
+end)
+
+-- Replace the Game Menu button script for a seamless transition
+if GameMenuButtonMacros then
+    GameMenuButtonMacros:SetScript("OnClick", function()
+        if CXUI_DB and CXUI_DB.overrideMacroFrame then
+            OpenMegaMacro()
+        else
+            -- Call default Blizzard behavior
+            ShowMacroFrame()
+        end
+    end)
+end

@@ -11,7 +11,8 @@ CXUI_DB = CXUI_DB or {
     hideQuests = true,
     cdmGlow = true,
     showAbsorb = true,
-    hideAlerts = true
+    hideAlerts = true,
+	overrideMacroFrame = true,
 }
 
 -- Ensure all keys exist (for existing characters with old DB)
@@ -22,7 +23,8 @@ local function EnsureDBDefaults()
         hideQuests = true,
         cdmGlow = true,
         showAbsorb = true,
-        hideAlerts = true
+        hideAlerts = true,
+		overrideMacroFrame = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then
@@ -98,8 +100,9 @@ CreateHeader("Module 3: CDM Glow", -240)
 CreateCheckbox("Enable CDM Proc Glow", "cdmGlow", "Special highlights for class-specific procs.", -265, false)
 
 -- Module 4 Setup
-CreateHeader("Module 4: Hide Alerts", -305)
+CreateHeader("Module 4: Small Tweaks", -305)
 CreateCheckbox("Hide Talent Alerts", "hideAlerts", "Hides annoying talent-related notifications.", -330, true)
+CreateCheckbox("Mega Macro Override", "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.", -360, false)
 
 -- Reload Button setup (always red)
 reloadButton = CreateFrame("Button", nil, optionsPanel, "BackdropTemplate, UIPanelButtonTemplate")

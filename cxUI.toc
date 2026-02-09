@@ -12,4 +12,4 @@ core.lua
 Module_Transparency.lua
 Module_Absorb.lua
 Module_CDMGlow.lua
-Module_Alerts.lua
+Module_SmallTweaks.lua
