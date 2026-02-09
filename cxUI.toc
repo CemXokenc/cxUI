@@ -8,7 +8,7 @@
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
 
 # Scripts
-Core.lua
+core.lua
 Module_Transparency.lua
 Module_Absorb.lua
 Module_CDMGlow.lua

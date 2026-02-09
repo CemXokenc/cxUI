@@ -73,7 +73,7 @@ The addon includes the following toggleable options:
 ## Installation
 
 1. Download the latest release.
-2. Extract the `cemxokenc` folder into your `World of Warcraft/_retail_/Interface/AddOns/` directory.
+2. Extract the `cxUI` folder into your `World of Warcraft/_retail_/Interface/AddOns/` directory.
 3. Restart the game or type `/reload`.
 
 ## Commands
