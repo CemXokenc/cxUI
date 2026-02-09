@@ -13,3 +13,4 @@ Module_Transparency.lua
 Module_Absorb.lua
 Module_CDMGlow.lua
 Module_SmallTweaks.lua
+Module_LowHealth.lua

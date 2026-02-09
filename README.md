@@ -22,6 +22,7 @@ The addon is divided into five main functional modules:
 4.  **Absorb Display Module**: Monitors your shield amounts and displays them prominently on screen.
 5.  **CDM Glow Engine**: Scans your UI for specific Spell IDs and applies a high-visibility "spell alert" animation when a proc is detected.
 6.  **Hide Alerts Module**: Suppresses annoying in-game notifications like "You have unspent talent points", "Choose your hero talents", and similar help tips.
+7.  **Mega Macro Override**: Automatically redirects the default Game Menu "Macros" button to the Mega Macro interface.
 
 ## Customization: Adding Spells for Highlighting
 
@@ -65,8 +66,9 @@ The addon includes the following toggleable options:
 ### Module 3: CDM Glow
 - **Enable CDM Proc Glow**: Special highlights for class-specific procs
 
-### Module 4: Hide Alerts
+### Module 4: Small Tweaks
 - **Hide Talent Alerts**: Suppresses annoying notifications like "You have unspent talent points", "Choose your hero talents", and other help tips (requires reload)
+- **Mega Macro Override**: Automatically redirects the default Game Menu "Macros" button to the Mega Macro interface
 
 *Note: Options marked with red asterisk require `/reload` to take effect.*
 

@@ -13,6 +13,7 @@ CXUI_DB = CXUI_DB or {
     showAbsorb = true,
     hideAlerts = true,
 	overrideMacroFrame = true,
+	lowHealthAlert = true,	
 }
 
 -- Ensure all keys exist (for existing characters with old DB)
@@ -25,6 +26,7 @@ local function EnsureDBDefaults()
         showAbsorb = true,
         hideAlerts = true,
 		overrideMacroFrame = true,
+		lowHealthAlert = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then
@@ -103,6 +105,10 @@ CreateCheckbox("Enable CDM Proc Glow", "cdmGlow", "Special highlights for class-
 CreateHeader("Module 4: Small Tweaks", -305)
 CreateCheckbox("Hide Talent Alerts", "hideAlerts", "Hides annoying talent-related notifications.", -330, true)
 CreateCheckbox("Mega Macro Override", "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.", -360, false)
+
+-- Module 5 Setup: Low Health Alert
+CreateHeader("Module 5: Health Safety", -395)
+CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.", -420, false)
 
 -- Reload Button setup (always red)
 reloadButton = CreateFrame("Button", nil, optionsPanel, "BackdropTemplate, UIPanelButtonTemplate")
