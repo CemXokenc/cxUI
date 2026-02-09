@@ -7,7 +7,7 @@
 A lightweight, performance-focused suite that declutters your screen and enhances combat awareness.
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/CemXokenc/cxUI)
-[![Game Version](https://img.shields.io/badge/game-11.0.7-orange.svg)](https://worldofwarcraft.com)
+[![Game Version](https://img.shields.io/badge/game-12.0.0-orange.svg)](https://worldofwarcraft.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 </div>
