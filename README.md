@@ -49,6 +49,7 @@ Track your shield strength at a glance.
 
 **Features:**
 - Displays total absorb amount in the center of your screen
+- Only visible during combat - automatically hides when out of combat
 - Auto-scales numbers (1.2K, 450K, etc.)
 - Updates in real-time
 

@@ -8,7 +8,9 @@ CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
 local PROC_CONFIG = {
-    DEATHKNIGHT = { [81340] = { 47541, 207317 } },
+    DEATHKNIGHT = {
+		[81340] = { 47541, 207317 }
+	},
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, PRIEST = {},
     SHAMAN = {}, MAGE = {}, WARLOCK = {}, MONK = {}, DRUID = {},
     DEMONHUNTER = {}, EVOKER = {},
