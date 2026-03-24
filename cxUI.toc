@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 120001, 120000
 ## Title: |cff0070ddcx|cffffff00UI|r
 ## Notes: Minimalist UI suite: Auto-hiding Action Bars, Micro Menu, and Quest Log with CDM Proc Highlighter.
 ## Notes-ukUA: Мінімалістичний інтерфейс: авто-ховання панелей та квест-лога, підсвітка проків для CDM.
