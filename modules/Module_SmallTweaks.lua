@@ -105,3 +105,32 @@ if GameMenuButtonMacros then
         end
     end)
 end
+
+-- AUDIO ALERTS
+-- Plays ready check sound through the Master channel
+ 
+local function OnReadyCheck()
+    if not CXUI_DB.altTabAlerts then return end
+    PlaySound(SOUNDKIT.READY_CHECK, "Master")
+end
+ 
+-- EVENT HANDLER
+local tweaksFrame = CreateFrame("Frame")
+tweaksFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+tweaksFrame:RegisterEvent("ADDON_LOADED")
+tweaksFrame:RegisterEvent("READY_CHECK")
+ 
+tweaksFrame:SetScript("OnEvent", function(self, event, arg1)
+    if event == "PLAYER_ENTERING_WORLD" then
+        C_Timer.After(1, InitHideAlerts)
+ 
+    elseif event == "ADDON_LOADED" and arg1 == "Blizzard_HelpTip" then
+        if CXUI_DB.hideAlerts then
+            EnsureHelpTipHooks()
+            HideAllHelpTips(UIParent, nil)
+        end
+ 
+    elseif event == "READY_CHECK" then
+        OnReadyCheck()
+    end
+end)

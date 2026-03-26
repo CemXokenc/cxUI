@@ -120,6 +120,7 @@ Quality-of-life improvements and UI decluttering.
 **Features:**
 - **Hide Help Tips**: Suppresses notifications like "You have unspent talent points" and "Choose your hero talents"
 - **Mega Macro Override**: Redirects the default Macros button to Mega Macro addon (if installed)
+- **Audio Alerts**: Plays ready check sound through the Master audio channel
 
 **Use case:** Remove visual clutter and streamline addon integration.
 
