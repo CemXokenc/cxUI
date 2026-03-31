@@ -134,3 +134,15 @@ tweaksFrame:SetScript("OnEvent", function(self, event, arg1)
         OnReadyCheck()
     end
 end)
+
+-- RIGHT CLICK MODIFIER
+-- Block Right-Click Targeting in Combat (Dungeons & Raids)
+
+WorldFrame:HookScript("OnMouseUp", function(self, button)
+    if button ~= "RightButton" then return end
+    if not CXUI_DB.rcm then return end
+    local inInstance, instanceType = IsInInstance()    
+	if inInstance and (instanceType == "party" or instanceType == "raid") and UnitAffectingCombat("player") then
+        MouselookStop()
+    end
+end)

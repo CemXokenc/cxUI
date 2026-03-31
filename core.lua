@@ -15,6 +15,7 @@ CXUI_DB = CXUI_DB or {
 	overrideMacroFrame = true,
 	lowHealthAlert = true,
 	altTabAlerts = true,
+	rcm = true,
 }
 
 -- Ensure all keys exist (for existing characters with old DB)
@@ -29,6 +30,7 @@ local function EnsureDBDefaults()
 		overrideMacroFrame = true,
 		lowHealthAlert = true,
 		altTabAlerts = true,
+		rcm = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then
@@ -108,10 +110,12 @@ CreateHeader("Module 4: Small Tweaks", -305)
 CreateCheckbox("Hide Talent Alerts", "hideAlerts", "Hides annoying talent-related notifications.", -330, true)
 CreateCheckbox("Mega Macro Override", "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.", -360, false)
 CreateCheckbox("Ready Check Alert", "altTabAlerts", "Plays ready check sound through Master channel. Audible when alt-tabbed.", -390, false)
+CreateCheckbox("Block Right-Click Targeting in Combat (Dungeons & Raids)", "rcm", "Prevents accidental right-click targeting in dungeons and raids.", -420, false)
 
 -- Module 5 Setup: Low Health Alert
-CreateHeader("Module 5: Health Safety", -425)
-CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.", -450, false)
+CreateHeader("Module 5: Health Safety", -460)
+CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.", -485, false)
+
 
 -- Reload Button setup (always red)
 reloadButton = CreateFrame("Button", nil, optionsPanel, "BackdropTemplate, UIPanelButtonTemplate")
