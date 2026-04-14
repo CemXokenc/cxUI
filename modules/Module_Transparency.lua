@@ -123,9 +123,12 @@ end
 
 -- ---------------------------------------------------------------------------
 -- QUEST TRACKER HOVER FRAME
--- An invisible frame slightly larger than the tracker used as a hover sensor,
--- since a fully transparent frame won't fire OnEnter/OnLeave reliably.
+-- An invisible frame covering the top 60% of the tracker (by height) used as
+-- a hover sensor, since a fully transparent frame won't fire OnEnter/OnLeave
+-- reliably. The bottom 40% is intentionally excluded so hovering over the
+-- lower portion of the tracker (e.g. bottom-right corner) does nothing.
 -- Anchored to the tracker so WoW's layout system keeps it in sync automatically.
+-- OnSizeChanged recalculates bounds whenever the quest list grows or shrinks.
 -- ---------------------------------------------------------------------------
 
 local function SetupQuestTrackerHover()
@@ -135,9 +138,20 @@ local function SetupQuestTrackerHover()
 
     questTrackerHoverFrame = CreateFrame("Frame", nil, UIParent)
     questTrackerHoverFrame:SetFrameStrata("LOW")
-    questTrackerHoverFrame:SetPoint("TOPLEFT",     tracker, -15,  15)
-    questTrackerHoverFrame:SetPoint("BOTTOMRIGHT", tracker,  15, -15)
     questTrackerHoverFrame:EnableMouse(true)
+
+    -- Recalculates bounds whenever the tracker resizes (quest list grows/shrinks).
+    -- BOTTOMRIGHT is anchored to tracker's TOPRIGHT and pushed down by 60% of
+    -- the current height — so only the top 60% of the tracker acts as a hover zone.
+    local function UpdateHoverBounds()
+        local h = tracker:GetHeight()
+        questTrackerHoverFrame:ClearAllPoints()
+        questTrackerHoverFrame:SetPoint("TOPLEFT",     tracker, "TOPLEFT",  -15,  15)
+        questTrackerHoverFrame:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT",  15, -(h * 0.6))
+    end
+
+    UpdateHoverBounds()
+    tracker:HookScript("OnSizeChanged", UpdateHoverBounds)
 
     tracker:SetAlpha(0)
 
