@@ -10,6 +10,7 @@ CXUI_DB = CXUI_DB or {
     hideMicro = true,
     hideQuests = true,
     cdmGlow = true,
+    cdmGlowSuppressUntracked = false,
     showAbsorb = true,
     hideAlerts = true,
 	overrideMacroFrame = true,
@@ -25,6 +26,7 @@ local function EnsureDBDefaults()
         hideMicro = true,
         hideQuests = true,
         cdmGlow = true,
+        cdmGlowSuppressUntracked = false,
         showAbsorb = true,
         hideAlerts = true,
 		overrideMacroFrame = true,
@@ -104,17 +106,18 @@ CreateCheckbox("Enable Absorb Display", "showAbsorb", "Shows total shield amount
 -- Module 3 Setup
 CreateHeader("Module 3: CDM Glow", -240)
 CreateCheckbox("Enable CDM Proc Glow", "cdmGlow", "Special highlights for class-specific procs.", -265, false)
+CreateCheckbox("Suppress Untracked Glows", "cdmGlowSuppressUntracked", "Only glow procs configured in PROC_CONFIG. All other CDM proc glows are hidden.", -295, false)
 
 -- Module 4 Setup
-CreateHeader("Module 4: Small Tweaks", -305)
-CreateCheckbox("Hide Talent Alerts", "hideAlerts", "Hides annoying talent-related notifications.", -330, true)
-CreateCheckbox("Mega Macro Override", "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.", -360, false)
-CreateCheckbox("Ready Check Alert", "altTabAlerts", "Plays ready check sound through Master channel. Audible when alt-tabbed.", -390, false)
-CreateCheckbox("Block Right-Click Targeting in Combat (Dungeons & Raids)", "rcm", "Prevents accidental right-click targeting in dungeons and raids.", -420, false)
+CreateHeader("Module 4: Small Tweaks", -335)
+CreateCheckbox("Hide Talent Alerts", "hideAlerts", "Hides annoying talent-related notifications.", -360, true)
+CreateCheckbox("Mega Macro Override", "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.", -390, false)
+CreateCheckbox("Ready Check Alert", "altTabAlerts", "Plays ready check sound through Master channel. Audible when alt-tabbed.", -420, false)
+CreateCheckbox("Block Right-Click Targeting in Combat (Dungeons & Raids)", "rcm", "Prevents accidental right-click targeting in dungeons and raids.", -450, false)
 
 -- Module 5 Setup: Low Health Alert
-CreateHeader("Module 5: Health Safety", -460)
-CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.", -485, false)
+CreateHeader("Module 5: Health Safety", -490)
+CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.", -515, false)
 
 
 -- Reload Button setup (always red)

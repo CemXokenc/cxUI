@@ -269,6 +269,32 @@ function CDMGlow:HookCDM()
         end)
         self._reanchorHooked = true
     end
+
+    -- Hook ShowAlert to suppress untracked proc glows when the option is enabled.
+    -- CDM's own hook on ShowAlert runs first (hooksecurefunc is FIFO), so by the
+    -- time our hook runs, CDM has already shown its custom glow. We then hide it
+    -- for any spell that is not in our trackedSpells list.
+    local alertMgr = _G.ActionButtonSpellAlertManager
+    if alertMgr and alertMgr.ShowAlert then
+        hooksecurefunc(alertMgr, "ShowAlert", function(_, frame)
+            if not CXUI_DB.cdmGlowSuppressUntracked then return end
+            if not IsSafeFrame(frame) then return end
+
+            local spellID = GetButtonSpellID(frame)
+            if spellID and CDMGlow.trackedSpells[spellID] then
+                -- Tracked spell — our module handles it, leave it alone.
+                return
+            end
+
+            -- Untracked spell — hide both Blizzard and CDM glows.
+            local alert = frame.SpellActivationAlert
+            if alert then alert:SetAlpha(0); alert:Hide() end
+
+            if cdm and cdm.Glow then
+                cdm.Glow:StopGlow(frame)
+            end
+        end)
+    end
 end
 
 -- ---------------------------------------------------------------------------
