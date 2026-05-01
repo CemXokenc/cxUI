@@ -9,11 +9,18 @@ local DB = CDMProcGlowDB
 
 local PROC_CONFIG = {
     DEATHKNIGHT = {
-        [81340] = { 47541, 207317, 1242174, 383269 }
+        [81340] = { 47541, 207317, 1242174, 383269 }	-- Sudden Doom        → Death Coil, Epidemic, Necrotic Coil, Graveyard
+    },
+    MAGE = {
+        [44544]   = { 30455 },          				-- Fingers of Frost   → Ice Lance
+        [1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
+        [1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
+    },
+    WARLOCK = {
+        [264173]  = { 264178 },         				-- Demonic Core       → Demonbolt
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, PRIEST = {},
-    SHAMAN = {}, MAGE = {}, WARLOCK = {}, MONK = {}, DRUID = {},
-    DEMONHUNTER = {}, EVOKER = {},
+    SHAMAN = {}, MONK = {}, DRUID = {}, DEMONHUNTER = {}, EVOKER = {},
 }
 
 local CDMGlow = {
