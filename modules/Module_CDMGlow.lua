@@ -15,25 +15,34 @@ local PROC_CONFIG = {
         [44544]   = { 30455 },          				-- Fingers of Frost   → Ice Lance
         [1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
         [1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
+        [190446]  = { 44614 },         					-- Brain Freeze       → Flurry
     },
     WARLOCK = {
         [264173]  = { 264178 },         				-- Demonic Core       → Demonbolt
+        [433885]  = { 434635, 434636 },         		-- Ruination          → Ruination
+        [433891]  = { 434506 },         				-- Infernal Bolt      → Infernal Bolt
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, PRIEST = {},
-    SHAMAN = {}, MONK = {}, DRUID = {}, DEMONHUNTER = {}, EVOKER = {},
+    SHAMAN = {}, MONK = {}, DRUID = {},
+	DEMONHUNTER = {
+		--[1256302]  = { 1226019, 1225826, 1245453 },		-- Voidfall       	  → Reap, Eradicate, Cull
+		[1256302]  = { 1226019, 1245453 },		-- Voidfall       	  → Reap, Eradicate, Cull
+		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    → always glow if present in CDM
+	},
+	EVOKER = {},
 }
 
 local CDMGlow = {
-    spellsByAura      = {},
-    trackedSpells     = {},
-    spellToAura       = {},
-    activeAuras       = {},
-    overlayProcSpells = {},
-    baseCost          = {},
-    -- frames currently glowing, keyed by frame object → auraID
-    activeGlowFrames  = {},
-    _pendingUpdate    = false,
-    _reanchorHooked   = false,
+    spellsByAura          = {},
+    trackedSpells         = {},
+    spellToAura           = {},
+    activeAuras           = {},
+    overlayProcSpells     = {},
+    baseCost              = {},
+    activeGlowFrames      = {},
+    _pendingUpdate        = false,
+    _overlayUpdateGen     = 0,      -- generation counter replacing _pendingOverlayUpdate boolean
+    _reanchorHooked       = false,
 }
 
 -- ---------------------------------------------------------------------------
@@ -189,14 +198,20 @@ function CDMGlow:UpdateGlows()
     for auraID in pairs(self.spellsByAura) do
         local hasAura = false
 
-        if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
-            local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
-            hasAura = (ok and aura ~= nil)
+        if type(auraID) == "string" and auraID:sub(1, 4) == "cdm:" then
+            -- CDM-presence sentinel: glow whenever the spell is visible in CDM,
+            -- regardless of any player buff. Used for spells like Collapsing Star
+            -- that CDM shows automatically based on its own internal logic.
+            hasAura = currentFrames[auraID] ~= nil and #currentFrames[auraID] > 0
+        else
+            if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+                local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
+                hasAura = (ok and aura ~= nil)
+            end
+            hasAura = hasAura or self.overlayProcSpells[auraID] or self:HasProcViaCost(auraID)
         end
 
-        hasAura = hasAura or self.overlayProcSpells[auraID] or self:HasProcViaCost(auraID)
         self.activeAuras[auraID] = hasAura
-
         ApplyGlowState(auraID, hasAura, currentFrames[auraID])
     end
 end
@@ -282,16 +297,55 @@ function CDMGlow:HookCDM()
 
             local spellID = GetButtonSpellID(frame)
             if spellID and CDMGlow.trackedSpells[spellID] then
-                -- Tracked spell — our module handles it, leave it alone.
+                -- Tracked by our module — leave it alone.
                 return
             end
 
-            -- Untracked spell — hide both Blizzard and CDM glows.
+            -- If CDM itself has flagged this frame as an "always glow" buff
+            -- (e.g. Frozen Orb not on cooldown), respect that and don't suppress.
+            if cdm and cdm.Glow and cdm.Glow.buffHookedFrames then
+                for _, hookedFrame in pairs(cdm.Glow.buffHookedFrames) do
+                    if hookedFrame == frame then return end
+                end
+            end
+
+            -- Suppress Blizzard's glow on the action bar button.
             local alert = frame.SpellActivationAlert
             if alert then alert:SetAlpha(0); alert:Hide() end
 
-            if cdm and cdm.Glow then
-                cdm.Glow:StopGlow(frame)
+            -- Suppress CDM's glow on its own CDM frame. CDM's ShowAlert hook maps
+            -- the action bar frame to a CDM frame internally — we cannot call
+            -- StopGlow(actionBarFrame) because CDM won't find it. Instead, scan
+            -- activeGlowFrames and stop any glow whose spell matches this action bar
+            -- button's spell. This correctly targets the CDM frame, not the AB frame.
+            if cdm and cdm.Glow and spellID then
+                for glowFrame, auraID in pairs(CDMGlow.activeGlowFrames) do
+                    local spells = CDMGlow.spellsByAura[auraID]
+                    if spells then
+                        for _, sid in ipairs(spells) do
+                            if sid == spellID then
+                                RequestGlow(glowFrame, false)
+                                CDMGlow.activeGlowFrames[glowFrame] = nil
+                                break
+                            end
+                        end
+                    end
+                end
+                -- Also call StopGlow directly on all CDM viewers to catch
+                -- cases where the frame is not yet in activeGlowFrames.
+                for _, name in ipairs(CDM_VIEWER_NAMES) do
+                    local viewer = _G[name]
+                    if viewer and viewer.GetChildren then
+                        local ok, children = pcall(function() return { viewer:GetChildren() } end)
+                        if ok and children then
+                            for _, child in ipairs(children) do
+                                if IsSafeFrame(child) and GetButtonSpellID(child) == spellID then
+                                    pcall(cdm.Glow.StopGlow, cdm.Glow, child)
+                                end
+                            end
+                        end
+                    end
+                end
             end
         end)
     end
@@ -312,7 +366,11 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
             CDMGlow.spellsByAura[auraID] = spells
             for i = 1, #spells do
                 CDMGlow.trackedSpells[spells[i]] = true
-                CDMGlow.spellToAura[spells[i]] = auraID
+                -- String keys like "cdm:1221150" are CDM-presence sentinels,
+                -- not real aura IDs — skip reverse aura mapping for them.
+                if type(auraID) == "number" then
+                    CDMGlow.spellToAura[spells[i]] = auraID
+                end
             end
         end
 
@@ -350,19 +408,48 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
 
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW" then
         local sid = ...
-        -- This event sends a spell ID (e.g. 47541), not an aura ID (e.g. 81340).
         local auraID = CDMGlow.spellToAura[sid]
         if auraID then
             CDMGlow.overlayProcSpells[auraID] = true
-            CDMGlow:UpdateGlows()
+            -- Generation counter debounce: unlike a boolean flag, each new GLOW_SHOW
+            -- increments the counter and schedules its own callback. Only the latest
+            -- callback runs — earlier ones see a stale generation and skip.
+            -- This fixes the pull-start issue where multiple procs firing within
+            -- 0.15s caused the boolean to block all but the first GLOW_SHOW.
+            CDMGlow._overlayUpdateGen = CDMGlow._overlayUpdateGen + 1
+            local gen = CDMGlow._overlayUpdateGen
+            C_Timer.After(0.15, function()
+                if gen ~= CDMGlow._overlayUpdateGen then return end
+                CDMGlow:UpdateGlows()
+            end)
         end
 
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE" then
         local sid = ...
         local auraID = CDMGlow.spellToAura[sid]
         if auraID and CDMGlow.overlayProcSpells[auraID] then
-            CDMGlow.overlayProcSpells[auraID] = nil
-            CDMGlow:UpdateGlows()
+            local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
+            if ok and aura ~= nil then
+                -- Aura still exists — this is a stack consumption (e.g. Fingers of
+                -- Frost, Demonic Core). Debounce so we don't flicker between stacks.
+                if not CDMGlow._pendingUpdate then
+                    CDMGlow._pendingUpdate = true
+                    C_Timer.After(0.1, function()
+                        CDMGlow._pendingUpdate = false
+                        for aID in pairs(CDMGlow.overlayProcSpells) do
+                            local ok2, aura2 = pcall(C_UnitAuras.GetPlayerAuraBySpellID, aID)
+                            if ok2 and aura2 == nil then
+                                CDMGlow.overlayProcSpells[aID] = nil
+                            end
+                        end
+                        CDMGlow:UpdateGlows()
+                    end)
+                end
+            else
+                -- Aura is completely gone — hide immediately, no debounce needed.
+                CDMGlow.overlayProcSpells[auraID] = nil
+                CDMGlow:UpdateGlows()
+            end
         end
     end
 end)
@@ -387,5 +474,47 @@ SlashCmdList["CDMGLOW"] = function(msg)
         print("|cff0070ddcxUI:|r CDM Glow refreshed")
     else
         print("|cff0070ddcxUI CDM Glow:|r /cdmglow [on|off|refresh]")
+    end
+end
+
+SLASH_CXSCAN1 = "/cxscan"
+SlashCmdList["CXSCAN"] = function()
+    local function scan(f, d)
+        if d > 8 or not f then return end
+        if f.spellID then
+            print(d, f.spellID, C_Spell.GetSpellName(f.spellID))
+        end
+        if f.GetChildren then
+            for _, c in ipairs({f:GetChildren()}) do
+                scan(c, d + 1)
+            end
+        end
+    end
+    scan(_G["EssentialCooldownViewer"], 0)
+end
+
+SLASH_CXSCAN2 = "/cxscan2"
+SlashCmdList["CXSCAN2"] = function()
+    local viewers = {
+        "EssentialCooldownViewer","UtilityCooldownViewer",
+        "BuffIconCooldownViewer","CooldownViewer"
+    }
+    for _, name in ipairs(viewers) do
+        local v = _G[name]
+        if v then
+            print(">>> " .. name)
+            local function scan(f, d)
+                if d > 12 or not f then return end
+                local sid = f.spellID or f.spellId or f.spellid
+                local name2 = f.GetName and f:GetName() or "?"
+                if sid then print(d, sid, name2, C_Spell.GetSpellName(sid)) end
+                if f.GetChildren then
+                    for _, c in ipairs({f:GetChildren()}) do
+                        scan(c, d+1)
+                    end
+                end
+            end
+            scan(v, 0)
+        end
     end
 end
