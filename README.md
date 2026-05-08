@@ -6,7 +6,7 @@
 
 A lightweight, performance-focused suite that declutters your screen and enhances combat awareness.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/CemXokenc/cxUI)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/CemXokenc/cxUI)
 [![Game Version](https://img.shields.io/badge/game-12.0.0-orange.svg)](https://worldofwarcraft.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -28,7 +28,7 @@ A lightweight, performance-focused suite that declutters your screen and enhance
 
 ## 🎯 Modules
 
-cxUI consists of 5 independent modules, each addressing a specific aspect of UI optimization:
+cxUI consists of 6 independent modules, each addressing a specific aspect of UI optimization:
 
 ### 🌫️ **Module 1: Transparency & Auto-Hide**
 
@@ -49,7 +49,7 @@ Track your shield strength at a glance.
 
 **Features:**
 - Displays total absorb amount in the center of your screen
-- Only visible during combat - automatically hides when out of combat
+- Only visible during combat — automatically hides when out of combat
 - Auto-scales numbers (1.2K, 450K, etc.)
 - Updates in real-time
 
@@ -100,30 +100,40 @@ local PROC_CONFIG = {
 
 ---
 
-### ❤️ **Module 4: Low Health Alert**
-
-Visual and audio warnings when your health drops dangerously low.
-
-**Features:**
-- Screen edge vignette effect at low HP
-- Customizable threshold
-- Automatic disable when dead/ghost
-
-**Use case:** Stay aware of your health during intense combat without constantly watching your health bar.
-
----
-
-### 🔧 **Module 5: Small Tweaks**
+### 🔧 **Module 4: Small Tweaks**
 
 Quality-of-life improvements and UI decluttering.
 
 **Features:**
 - **Hide Help Tips**: Suppresses notifications like "You have unspent talent points" and "Choose your hero talents"
 - **Mega Macro Override**: Redirects the default Macros button to Mega Macro addon (if installed)
-- **Audio Alerts**: Plays ready check sound through the Master audio channel
-- **Right Click Modifier**: Block Right-Click Targeting in Combat (Dungeons & Raids)
+- **Ready Check Alert**: Plays ready check sound through the Master audio channel — audible even when alt-tabbed
+- **Block Right-Click Targeting**: Prevents accidental right-click targeting in Dungeons & Raids during combat
 
 **Use case:** Remove visual clutter and streamline addon integration.
+
+---
+
+### ❤️ **Module 5: Health Safety**
+
+Visual and audio warnings when your health drops dangerously low.
+
+**Features:**
+- Audio alert at critically low HP
+- Automatic disable when dead/ghost
+
+**Use case:** Stay aware of your health during intense combat without constantly watching your health bar.
+
+---
+
+### ⚔️ **Module 6: Class Features**
+
+Contextual combat overlays tailored to specific class mechanics.
+
+**Features:**
+- **Enemy Counter — Unholy DK**: Displays a live enemy count above the Death Coil button in the CDM panel during combat. Helps decide when to swap from Death Coil to Epidemic (3+ enemies).
+
+**Use case:** Removes the mental overhead of counting nearby enemies — the number is always visible, right where your eyes already are.
 
 ---
 
@@ -145,9 +155,13 @@ ESC → Options → AddOns → cxUI
 | Transparency | Quest Tracker Hover | ✅ |
 | Absorb | Enable Absorb Display | ✅ |
 | CDM Glow | Enable Proc Glow | ❌ |
-| Low Health | Enable Low Health Alert | ❌ |
+| CDM Glow | Suppress Untracked Glows | ❌ |
 | Small Tweaks | Hide Talent Alerts | ✅ |
 | Small Tweaks | Mega Macro Override | ❌ |
+| Small Tweaks | Ready Check Alert | ❌ |
+| Small Tweaks | Block Right-Click Targeting | ❌ |
+| Health Safety | Low Health Sound Alert | ❌ |
+| Class Features | Enemy Counter — Unholy DK | ❌ |
 
 ---
 
@@ -172,6 +186,12 @@ cxUI is designed for **zero impact** on gameplay:
 - Verify spell IDs are correct
 - Use `/cdmglow rescan` to rebuild the button cache
 - Check that Blizzard Cooldown Viewer is enabled
+
+**Enemy Counter not appearing?**
+- Make sure you are playing Unholy Death Knight (spec 3)
+- The counter only shows during active combat with enemies in range
+- Run `/cxaoe scan` out of combat to verify the Death Coil CDM frame is found
+- If `frames=0`, try `/reload` — CDM may not have fully initialized yet
 
 **Quest Tracker not hiding?**
 - This feature requires a UI reload after toggling

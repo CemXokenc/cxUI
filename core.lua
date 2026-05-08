@@ -16,7 +16,7 @@ CXUI_DB = CXUI_DB or {
     lowHealthAlert            = true,
     altTabAlerts              = true,
     rcm                       = true,
-    cdmAoESwap                = false,
+    cdmEnemyCounter           = true,
 }
 
 local function EnsureDBDefaults()
@@ -32,7 +32,7 @@ local function EnsureDBDefaults()
         lowHealthAlert            = true,
         altTabAlerts              = true,
         rcm                       = true,
-        cdmAoESwap                = false,
+        cdmEnemyCounter           = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
@@ -155,11 +155,11 @@ CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound
 -- Module 6
 -- ---------------------------------------------------------------------------
 CreateHeader("Module 6: Class Features", -515)
+
 CreateCheckbox(
-    "AoE Swap — Unholy DK",
-    "cdmAoESwap",
-    "Swaps the Death Coil icon in CDM with the recommended AoE spell based on visible enemy count.\n"
-    .. "3+ enemies: Epidemic | Army active (<6): Necrotic Coil | Army active (6+): Graveyard.",
+    "Enemy Counter — Unholy DK",
+    "cdmEnemyCounter",
+    "Shows enemy count on Death Coil CDM icon.",
     -540,
     false
 )

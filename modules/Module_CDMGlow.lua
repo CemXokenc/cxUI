@@ -16,17 +16,20 @@ local PROC_CONFIG = {
         [1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
         [1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
         [190446]  = { 44614 },         					-- Brain Freeze       → Flurry
+        [270232]  = { 190356 },        					-- Freezeng Rain      → Blizzard
     },
     WARLOCK = {
         [264173]  = { 264178 },         				-- Demonic Core       → Demonbolt
         [433885]  = { 434635, 434636 },         		-- Ruination          → Ruination
         [433891]  = { 434506 },         				-- Infernal Bolt      → Infernal Bolt
     },
-    WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, PRIEST = {},
+    WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
+	PRIEST = {
+		
+	},
     SHAMAN = {}, MONK = {}, DRUID = {},
 	DEMONHUNTER = {
-		--[1256302]  = { 1226019, 1225826, 1245453 },		-- Voidfall       	  → Reap, Eradicate, Cull
-		[1256302]  = { 1226019, 1245453 },		-- Voidfall       	  → Reap, Eradicate, Cull
+		--[1256302]  = { 1226019, 1225826, 1245453 },		-- Voidfall       	  → Reap, Eradicate, Cull		
 		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    → always glow if present in CDM
 	},
 	EVOKER = {},
@@ -150,30 +153,31 @@ end
 -- Glow state management
 -- ---------------------------------------------------------------------------
 
--- Apply or remove glow on all frames for a given auraID based on hasAura.
--- Also transitions cleanly when CDM has reassigned frames (Army of the Dead,
--- Festering Strike, pet summons): hides glow on old frames, shows on new ones.
 local function ApplyGlowState(auraID, hasAura, currentFrames)
     local newSet = {}
     if currentFrames then
         for _, f in ipairs(currentFrames) do newSet[f] = true end
     end
 
-    -- Hide glow on any frame that is no longer showing this spell.
-    for frame, fAuraID in pairs(CDMGlow.activeGlowFrames) do
-        if fAuraID == auraID and not newSet[frame] then
-            RequestGlow(frame, false)
-            CDMGlow.activeGlowFrames[frame] = nil
-        end
-    end
+    local hasNewFrames = currentFrames and #currentFrames > 0
 
-    if hasAura and currentFrames then
+    if hasAura and hasNewFrames then
+        -- New frames found — transition: hide glow on old frames, show on new ones.
+        for frame, fAuraID in pairs(CDMGlow.activeGlowFrames) do
+            if fAuraID == auraID and not newSet[frame] then
+                RequestGlow(frame, false)
+                CDMGlow.activeGlowFrames[frame] = nil
+            end
+        end
         for _, frame in ipairs(currentFrames) do
             RequestGlow(frame, true)
             CDMGlow.activeGlowFrames[frame] = auraID
         end
+    elseif hasAura and not hasNewFrames then
+        -- Proc is active but CDM has no frames right now (ForceReanchor in progress).
+        -- Keep existing glows alive — ScheduleRescan will find the new frames shortly.
     elseif not hasAura then
-        -- Proc ended — hide glow on all remaining frames for this aura.
+        -- Proc ended — hide glow on all frames for this aura.
         for frame, fAuraID in pairs(CDMGlow.activeGlowFrames) do
             if fAuraID == auraID then
                 RequestGlow(frame, false)
@@ -453,68 +457,3 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
         end
     end
 end)
-
--- ---------------------------------------------------------------------------
--- Slash commands
--- ---------------------------------------------------------------------------
-
-SLASH_CDMGLOW1 = "/cdmglow"
-SlashCmdList["CDMGLOW"] = function(msg)
-    local cmd = (msg or ""):lower()
-    if cmd == "on" then
-        DB.enabled = true
-        CDMGlow:UpdateGlows()
-        print("|cff0070ddcxUI:|r CDM Glow enabled")
-    elseif cmd == "off" then
-        DB.enabled = false
-        CDMGlow:UpdateGlows()
-        print("|cff0070ddcxUI:|r CDM Glow disabled")
-    elseif cmd == "refresh" then
-        CDMGlow:UpdateGlows()
-        print("|cff0070ddcxUI:|r CDM Glow refreshed")
-    else
-        print("|cff0070ddcxUI CDM Glow:|r /cdmglow [on|off|refresh]")
-    end
-end
-
-SLASH_CXSCAN1 = "/cxscan"
-SlashCmdList["CXSCAN"] = function()
-    local function scan(f, d)
-        if d > 8 or not f then return end
-        if f.spellID then
-            print(d, f.spellID, C_Spell.GetSpellName(f.spellID))
-        end
-        if f.GetChildren then
-            for _, c in ipairs({f:GetChildren()}) do
-                scan(c, d + 1)
-            end
-        end
-    end
-    scan(_G["EssentialCooldownViewer"], 0)
-end
-
-SLASH_CXSCAN2 = "/cxscan2"
-SlashCmdList["CXSCAN2"] = function()
-    local viewers = {
-        "EssentialCooldownViewer","UtilityCooldownViewer",
-        "BuffIconCooldownViewer","CooldownViewer"
-    }
-    for _, name in ipairs(viewers) do
-        local v = _G[name]
-        if v then
-            print(">>> " .. name)
-            local function scan(f, d)
-                if d > 12 or not f then return end
-                local sid = f.spellID or f.spellId or f.spellid
-                local name2 = f.GetName and f:GetName() or "?"
-                if sid then print(d, sid, name2, C_Spell.GetSpellName(sid)) end
-                if f.GetChildren then
-                    for _, c in ipairs({f:GetChildren()}) do
-                        scan(c, d+1)
-                    end
-                end
-            end
-            scan(v, 0)
-        end
-    end
-end
