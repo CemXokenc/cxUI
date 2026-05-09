@@ -13,23 +13,26 @@ local PROC_CONFIG = {
     },
     MAGE = {
         [44544]   = { 30455 },          				-- Fingers of Frost   → Ice Lance
-        [1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
-        [1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
+        --[1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
+        --[1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
         [190446]  = { 44614 },         					-- Brain Freeze       → Flurry
         [270232]  = { 190356 },        					-- Freezeng Rain      → Blizzard
+		["cdm:199786"] = {199786},						-- Glacial Spike      → always glow if present in CDM
     },
     WARLOCK = {
         [264173]  = { 264178 },         				-- Demonic Core       → Demonbolt
-        [433885]  = { 434635, 434636 },         		-- Ruination          → Ruination
-        [433891]  = { 434506 },         				-- Infernal Bolt      → Infernal Bolt
+        --[433885]  = { 434635, 434636 },         		-- Ruination          → Ruination
+        --[433891]  = { 434506 },         				-- Infernal Bolt      → Infernal Bolt
+		["cdm:434635"] = {434635},						-- Ruination    	  → always glow if present in CDM
+		["cdm:434506"] = {434506},						-- Infernal Bolt      → always glow if present in CDM
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
 	PRIEST = {
-		
+		--
 	},
     SHAMAN = {}, MONK = {}, DRUID = {},
 	DEMONHUNTER = {
-		--[1256302]  = { 1226019, 1225826, 1245453 },		-- Voidfall       	  → Reap, Eradicate, Cull		
+		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       	  → Reap, Eradicate, Cull		
 		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    → always glow if present in CDM
 	},
 	EVOKER = {},
@@ -52,19 +55,13 @@ local CDMGlow = {
 -- CDM Glow API access
 -- ---------------------------------------------------------------------------
 
-local function GetCDMGlowAPI()
-    local cdm = _G["Ayije_CDM"]
-    if cdm and cdm.Glow and cdm.Glow.RequestBuffGlow then
-        return cdm.Glow
-    end
-    return nil
-end
-
 local function RequestGlow(frame, enabled)
-    local api = GetCDMGlowAPI()
-    if not api then return end
-    -- RequestBuffGlow(frame, enabled, overrideColor, sourceID)
-    api:RequestBuffGlow(frame, enabled, nil, nil)
+    -- Wrap in pcall: CDM's glow API can fail when the UI is tainted by
+    -- third-party addons (e.g. EXBoss countdown). The pcall prevents the
+    -- error from bubbling up and breaking subsequent glow calls.
+    local cdm = _G["Ayije_CDM"]
+    if not (cdm and cdm.Glow and cdm.Glow.RequestBuffGlow) then return end
+    pcall(cdm.Glow.RequestBuffGlow, cdm.Glow, frame, enabled, nil, nil)
 end
 
 -- ---------------------------------------------------------------------------
