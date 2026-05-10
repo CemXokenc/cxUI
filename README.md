@@ -108,9 +108,11 @@ Quality-of-life improvements and UI decluttering.
 - **Hide Help Tips**: Suppresses notifications like "You have unspent talent points" and "Choose your hero talents"
 - **Mega Macro Override**: Redirects the default Macros button to Mega Macro addon (if installed)
 - **Ready Check Alert**: Plays ready check sound through the Master audio channel — audible even when alt-tabbed
+- **Group Invite Sound**: Plays the dungeon finder alarm through Master when a group invite arrives — never miss an invite while alt-tabbed
+- **Pull Timer Countdown**: Plays audio at 10, 5, 3, 2, 1 seconds and "Pull" on zero for any pull timer — `/pull` command, BigWigs, DBM, and BG/arena preparation timers all supported. Uses SharedMedia_Causese countdown sounds
 - **Block Right-Click Targeting**: Prevents accidental right-click targeting in Dungeons & Raids during combat
 
-**Use case:** Remove visual clutter and streamline addon integration.
+**Use case:** Remove visual clutter, never miss invites or pull timers regardless of audio settings.
 
 ---
 
@@ -159,6 +161,8 @@ ESC → Options → AddOns → cxUI
 | Small Tweaks | Hide Talent Alerts | ✅ |
 | Small Tweaks | Mega Macro Override | ❌ |
 | Small Tweaks | Ready Check Alert | ❌ |
+| Small Tweaks | Group Invite Sound | ❌ |
+| Small Tweaks | Pull Timer Countdown Sound | ❌ |
 | Small Tweaks | Block Right-Click Targeting | ❌ |
 | Health Safety | Low Health Sound Alert | ❌ |
 | Class Features | Enemy Counter — Unholy DK | ❌ |
@@ -193,8 +197,10 @@ cxUI is designed for **zero impact** on gameplay:
 - Run `/cxaoe scan` out of combat to verify the Death Coil CDM frame is found
 - If `frames=0`, try `/reload` — CDM may not have fully initialized yet
 
-**Quest Tracker not hiding?**
-- This feature requires a UI reload after toggling
+**Pull Timer not playing sounds?**
+- Make sure `SharedMedia_Causese` addon is installed (provides the countdown sound files)
+- The setting requires `/reload` if toggled for the first time
+- Supported sources: `/pull` command, BigWigs, DBM, BG/arena preparation timers
 
 ---
 

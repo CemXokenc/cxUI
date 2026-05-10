@@ -100,40 +100,34 @@ end
 -- ---------------------------------------------------------------------------
 -- PULL TIMER COUNTDOWN
 -- Plays SharedMedia_Causese sounds at 10, 5, 3, 2, 1 seconds remaining.
--- Falls back to SOUNDKIT.READY_CHECK if LibSharedMedia is unavailable.
---
--- Sound names map directly to filenames in SharedMedia_Causese/sound/:
---   [10] = "10", [5] = "5", [3] = "3", [2] = "2", [1] = "1"
--- Change the names here if your SharedMedia addon uses different keys.
+-- Falls back to SOUNDKIT.READY_CHECK if a file is not found.
 -- ---------------------------------------------------------------------------
 
-local PULL_COUNTDOWN_MARKS = { 10, 5, 3, 2, 1 }
-
-local PULL_SOUND_NAMES = {
-    [10] = "10",
-    [5]  = "5",
-    [3]  = "3",
-    [2]  = "2",
-    [1]  = "1",
+local PULL_SOUND_PATHS = {
+    [10] = "Interface\\AddOns\\SharedMedia_Causese\\sound\\10.ogg",
+    [5]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\5.ogg",
+    [4]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\4.ogg",
+    [3]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\3.ogg",
+    [2]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\2.ogg",
+    [1]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\1.ogg",
+    [0]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\Go.ogg",
 }
 
+local PULL_COUNTDOWN_MARKS = { 10, 5, 4, 3, 2, 1, 0 }
+
 local function PlayCountdownSound(mark)
-    local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
-    if LSM then
-        local name = PULL_SOUND_NAMES[mark]
-        local path = name and LSM:Fetch("sound", name)
-        if path then
-            PlaySoundFile(path, "Master")
-            return
-        end
+    local path = PULL_SOUND_PATHS[mark]
+    if path then
+        PlaySoundFile(path, "Master")
+    else
+        PlaySound(SOUNDKIT.READY_CHECK, "Master")
     end
-    -- Fallback if SharedMedia not available or sound not found
-    PlaySound(SOUNDKIT.READY_CHECK, "Master")
 end
 
 local pullCountdownGen = 0
 
 local function SchedulePullCountdown(secondsRemaining)
+    if not CXUI_DB.pullTimerSound then return end
     pullCountdownGen = pullCountdownGen + 1
     local gen = pullCountdownGen
 
@@ -160,7 +154,9 @@ end
 local tweaksFrame = CreateFrame("Frame")
 tweaksFrame:RegisterEvent("READY_CHECK")
 tweaksFrame:RegisterEvent("PARTY_INVITE_REQUEST")
-tweaksFrame:RegisterEvent("START_TIMER")
+tweaksFrame:RegisterEvent("START_PLAYER_COUNTDOWN")   -- /pull, BigWigs, DBM
+tweaksFrame:RegisterEvent("CANCEL_PLAYER_COUNTDOWN")  -- pull cancelled
+tweaksFrame:RegisterEvent("START_TIMER")              -- BG/arena prep timers
 tweaksFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 
 tweaksFrame:SetScript("OnEvent", function(self, event, ...)
@@ -170,11 +166,16 @@ tweaksFrame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "PARTY_INVITE_REQUEST" then
         OnGroupInvite()
 
+    elseif event == "START_PLAYER_COUNTDOWN" then
+        local _, timeSeconds = ...
+        SchedulePullCountdown(tonumber(timeSeconds) or 0)
+
+    elseif event == "CANCEL_PLAYER_COUNTDOWN" then
+        CancelPullCountdown()
+
     elseif event == "START_TIMER" then
-        -- timerType 3 = TIMER_TYPE_PREPARATION (pull countdown)
         local timerType, timeSeconds = ...
         if tonumber(timerType) == 3 then
-            if not CXUI_DB.pullTimerSound then return end
             SchedulePullCountdown(tonumber(timeSeconds) or 0)
         end
 

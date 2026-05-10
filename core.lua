@@ -17,6 +17,8 @@ CXUI_DB = CXUI_DB or {
     altTabAlerts              = true,
     rcm                       = true,
     cdmEnemyCounter           = true,
+    inviteSound               = true,
+    pullTimerSound            = true,
 }
 
 local function EnsureDBDefaults()
@@ -33,6 +35,8 @@ local function EnsureDBDefaults()
         altTabAlerts              = true,
         rcm                       = true,
         cdmEnemyCounter           = true,
+        inviteSound               = true,
+        pullTimerSound            = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
@@ -144,25 +148,21 @@ CreateCheckbox("Hide Talent Alerts",                               "hideAlerts",
 CreateCheckbox("Mega Macro Override",                              "overrideMacroFrame","Redirects the default 'Macros' menu button to Mega Macro.",               -350, false)
 CreateCheckbox("Ready Check Alert",                                "altTabAlerts",      "Plays ready check sound through Master channel. Audible when alt-tabbed.",-380, false)
 CreateCheckbox("Block Right-Click Targeting in Combat (Dungeons & Raids)", "rcm",      "Prevents accidental right-click targeting in dungeons and raids.",         -410, false)
+CreateCheckbox("Group Invite Sound",                                       "inviteSound",   "Plays a sound through Master when a group invite arrives.",                -440, false)
+CreateCheckbox("Pull Timer Countdown Sound",                               "pullTimerSound","Plays audio for the preparation countdown (5, 4, 3, 2, 1).",              -470, false)
 
 -- ---------------------------------------------------------------------------
 -- Module 5
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Health Safety", -450)
-CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.",        -475, false)
+CreateHeader("Module 5: Health Safety", -510)
+CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.",        -535, false)
 
 -- ---------------------------------------------------------------------------
 -- Module 6
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 6: Class Features", -515)
+CreateHeader("Module 6: Class Features", -575)
 
-CreateCheckbox(
-    "Enemy Counter — Unholy DK",
-    "cdmEnemyCounter",
-    "Shows enemy count on Death Coil CDM icon.",
-    -540,
-    false
-)
+CreateCheckbox("Enemy Counter — Unholy DK", "cdmEnemyCounter", "Shows enemy count on Death Coil CDM icon.", -600, false)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
