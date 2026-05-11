@@ -89,11 +89,13 @@ end
 -- ---------------------------------------------------------------------------
 -- GROUP INVITE SOUND
 -- Same sound as dungeon finder queue pop, plays through Master.
+-- Fires both when receiving an invite and when actually joining the group.
 -- ---------------------------------------------------------------------------
+
+local wasInGroup = false
 
 local function OnGroupInvite()
     if not CXUI_DB.inviteSound then return end
-    -- LFG_QUEUE_STARTED = the "dungeon found" alarm sound
     PlaySound(SOUNDKIT.LFG_QUEUE_STARTED or SOUNDKIT.READY_CHECK, "Master")
 end
 
@@ -106,14 +108,13 @@ end
 local PULL_SOUND_PATHS = {
     [10] = "Interface\\AddOns\\SharedMedia_Causese\\sound\\10.ogg",
     [5]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\5.ogg",
-    [4]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\4.ogg",
     [3]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\3.ogg",
     [2]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\2.ogg",
     [1]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\1.ogg",
-    [0]  = "Interface\\AddOns\\SharedMedia_Causese\\sound\\Go.ogg",
+    [0]  = "Interface\\AddOns\\Wildu_SharedMedia\\Media\\Sound\\Jenny\\Pull.ogg",
 }
 
-local PULL_COUNTDOWN_MARKS = { 10, 5, 4, 3, 2, 1, 0 }
+local PULL_COUNTDOWN_MARKS = { 10, 5, 3, 2, 1, 0 }
 
 local function PlayCountdownSound(mark)
     local path = PULL_SOUND_PATHS[mark]
@@ -154,6 +155,7 @@ end
 local tweaksFrame = CreateFrame("Frame")
 tweaksFrame:RegisterEvent("READY_CHECK")
 tweaksFrame:RegisterEvent("PARTY_INVITE_REQUEST")
+tweaksFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 tweaksFrame:RegisterEvent("START_PLAYER_COUNTDOWN")   -- /pull, BigWigs, DBM
 tweaksFrame:RegisterEvent("CANCEL_PLAYER_COUNTDOWN")  -- pull cancelled
 tweaksFrame:RegisterEvent("START_TIMER")              -- BG/arena prep timers
@@ -164,7 +166,16 @@ tweaksFrame:SetScript("OnEvent", function(self, event, ...)
         OnReadyCheck()
 
     elseif event == "PARTY_INVITE_REQUEST" then
+        -- Received a group invite
         OnGroupInvite()
+
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        -- Accepted an invite and joined a group
+        local inGroup = IsInGroup() or IsInRaid()
+        if not wasInGroup and inGroup then
+            OnGroupInvite()
+        end
+        wasInGroup = inGroup
 
     elseif event == "START_PLAYER_COUNTDOWN" then
         local _, timeSeconds = ...

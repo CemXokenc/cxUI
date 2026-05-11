@@ -109,7 +109,7 @@ Quality-of-life improvements and UI decluttering.
 - **Mega Macro Override**: Redirects the default Macros button to Mega Macro addon (if installed)
 - **Ready Check Alert**: Plays ready check sound through the Master audio channel — audible even when alt-tabbed
 - **Group Invite Sound**: Plays the dungeon finder alarm through Master when a group invite arrives — never miss an invite while alt-tabbed
-- **Pull Timer Countdown**: Plays audio at 10, 5, 3, 2, 1 seconds and "Pull" on zero for any pull timer — `/pull` command, BigWigs, DBM, and BG/arena preparation timers all supported. Uses SharedMedia_Causese countdown sounds
+- **Pull Timer Countdown**: Plays audio at 10, 5, 4, 3, 2, 1 seconds and "Go" on zero for any pull timer — `/pull` command, BigWigs, DBM, and BG/arena preparation timers all supported. Uses SharedMedia_Causese countdown sounds
 - **Block Right-Click Targeting**: Prevents accidental right-click targeting in Dungeons & Raids during combat
 
 **Use case:** Remove visual clutter, never miss invites or pull timers regardless of audio settings.
