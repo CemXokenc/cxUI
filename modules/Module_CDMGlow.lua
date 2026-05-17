@@ -12,12 +12,12 @@ local PROC_CONFIG = {
         [81340] = { 47541, 207317, 1242174, 383269 }	-- Sudden Doom        → Death Coil, Epidemic, Necrotic Coil, Graveyard
     },
     MAGE = {
-        [44544]   = { 30455 },          				-- Fingers of Frost   → Ice Lance
+        ----[44544]   = { 30455 },          				-- Fingers of Frost   → Ice Lance
         --[1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
         --[1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
-        [190446]  = { 44614 },         					-- Brain Freeze       → Flurry
-        [270232]  = { 190356 },        					-- Freezeng Rain      → Blizzard
-		["cdm:199786"] = {199786},						-- Glacial Spike      → always glow if present in CDM
+        ----[190446]  = { 44614 },         					-- Brain Freeze       → Flurry
+        ----[270232]  = { 190356 },        					-- Freezeng Rain      → Blizzard
+		----["cdm:199786"] = {199786},						-- Glacial Spike      → always glow if present in CDM
     },
     WARLOCK = {
         [264173]  = { 264178 },         				-- Demonic Core       → Demonbolt
@@ -28,7 +28,10 @@ local PROC_CONFIG = {
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
 	PRIEST = {
-		--
+		--["cdm:450405"] = {450405},					-- Void Blast	      → always glow if present in CDM
+		--["cdm:1242173"] = {1242173},					-- Void Volley   	  → always glow if present in CDM
+		--["cdm:263165"] = {263165},					-- Void Torrent   	  → always glow if present in CDM
+		--["cdm:228260"] = {228260},					-- Voidform		   	  → always glow if present in CDM
 	},
     SHAMAN = {}, MONK = {}, DRUID = {},
 	DEMONHUNTER = {

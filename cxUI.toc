@@ -7,6 +7,9 @@
 ## SavedVariables: CXUI_DB, CDMProcGlowDB
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
 
+# Libraries
+libs\LibCustomGlow-1.0.lua
+
 # Scripts
 core.lua
 modules\Module_Transparency.lua

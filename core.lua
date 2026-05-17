@@ -17,6 +17,9 @@ CXUI_DB = CXUI_DB or {
     altTabAlerts              = true,
     rcm                       = true,
     cdmEnemyCounter           = true,
+    cdmFesteringGlow          = false,
+    cdmPutrefyCross           = false,
+    cdmFlurryCross            = false,
     inviteSound               = true,
     pullTimerSound            = true,
 }
@@ -35,6 +38,9 @@ local function EnsureDBDefaults()
         altTabAlerts              = true,
         rcm                       = true,
         cdmEnemyCounter           = true,
+        cdmFesteringGlow          = false,
+        cdmPutrefyCross           = false,
+            cdmFlurryCross            = false,
         inviteSound               = true,
         pullTimerSound            = true,
     }
@@ -138,7 +144,7 @@ CreateCheckbox("Enable Absorb Display",  "showAbsorb", "Shows total shield amoun
 -- ---------------------------------------------------------------------------
 CreateHeader("Module 3: CDM Glow", -200)
 CreateCheckbox("Enable CDM Proc Glow",       "cdmGlow",                  "Special highlights for class-specific procs.",                                         -225, false)
-CreateCheckbox("Suppress Untracked Glows",   "cdmGlowSuppressUntracked", "Only glow procs in PROC_CONFIG. All other CDM proc glows are hidden.",                 -255, false)
+CreateCheckbox("Suppress Untracked Glows |cffff0000(Sometimes the glow disappears with this, but maybe it is an Ayije_CDM issue)|r", "cdmGlowSuppressUntracked", "Only glow procs in PROC_CONFIG. All other CDM proc glows are hidden.", -255, false)
 
 -- ---------------------------------------------------------------------------
 -- Module 4
@@ -163,6 +169,9 @@ CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound
 CreateHeader("Module 6: Class Features", -575)
 
 CreateCheckbox("Enemy Counter — Unholy DK", "cdmEnemyCounter", "Shows enemy count on Death Coil CDM icon.", -600, false)
+CreateCheckbox("Festering Strike Glow — Unholy DK",  "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",  -630, false)
+CreateCheckbox("Putrefy Cross — Unholy DK",          "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",       -660, false)
+CreateCheckbox("Flurry Cross — Frost Mage",          "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",  -690, false)
 
 -- ---------------------------------------------------------------------------
 -- Panel events

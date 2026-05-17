@@ -92,8 +92,6 @@ end
 -- Fires both when receiving an invite and when actually joining the group.
 -- ---------------------------------------------------------------------------
 
-local wasInGroup = false
-
 local function OnGroupInvite()
     if not CXUI_DB.inviteSound then return end
     PlaySound(SOUNDKIT.LFG_QUEUE_STARTED or SOUNDKIT.READY_CHECK, "Master")
@@ -155,7 +153,6 @@ end
 local tweaksFrame = CreateFrame("Frame")
 tweaksFrame:RegisterEvent("READY_CHECK")
 tweaksFrame:RegisterEvent("PARTY_INVITE_REQUEST")
-tweaksFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 tweaksFrame:RegisterEvent("START_PLAYER_COUNTDOWN")   -- /pull, BigWigs, DBM
 tweaksFrame:RegisterEvent("CANCEL_PLAYER_COUNTDOWN")  -- pull cancelled
 tweaksFrame:RegisterEvent("START_TIMER")              -- BG/arena prep timers
@@ -166,16 +163,7 @@ tweaksFrame:SetScript("OnEvent", function(self, event, ...)
         OnReadyCheck()
 
     elseif event == "PARTY_INVITE_REQUEST" then
-        -- Received a group invite
         OnGroupInvite()
-
-    elseif event == "GROUP_ROSTER_UPDATE" then
-        -- Accepted an invite and joined a group
-        local inGroup = IsInGroup() or IsInRaid()
-        if not wasInGroup and inGroup then
-            OnGroupInvite()
-        end
-        wasInGroup = inGroup
 
     elseif event == "START_PLAYER_COUNTDOWN" then
         local _, timeSeconds = ...
