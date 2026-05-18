@@ -9,34 +9,36 @@ local DB = CDMProcGlowDB
 
 local PROC_CONFIG = {
     DEATHKNIGHT = {
-        [81340] = { 47541, 207317, 1242174, 383269 }	-- Sudden Doom        → Death Coil, Epidemic, Necrotic Coil, Graveyard
+        [81340] = { 47541, 207317, 1242174, 383269 }	-- Sudden Doom        		→ Death Coil, Epidemic, Necrotic Coil, Graveyard
     },
     MAGE = {
-        ----[44544]   = { 30455 },          				-- Fingers of Frost   → Ice Lance
-        --[1247729] = { 30455 },          				-- Thermal Void       → Ice Lance
-        --[1222865] = { 199786 },         				-- Glacial Spike!     → Glacial Spike
-        ----[190446]  = { 44614 },         					-- Brain Freeze       → Flurry
-        ----[270232]  = { 190356 },        					-- Freezeng Rain      → Blizzard
-		----["cdm:199786"] = {199786},						-- Glacial Spike      → always glow if present in CDM
+        ----[44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance
+        --[1247729] = { 30455 },          				-- Thermal Void       		→ Ice Lance
+        --[1222865] = { 199786 },         				-- Glacial Spike!     		→ Glacial Spike
+        ----[190446]  = { 44614 },         					-- Brain Freeze     	  	→ Flurry
+        ----[270232]  = { 190356 },        					-- Freezeng Rain    	  	→ Blizzard
+		----["cdm:199786"] = {199786},						-- Glacial Spike     		 → always glow if present in CDM
     },
     WARLOCK = {
-        [264173]  = { 264178 },         				-- Demonic Core       → Demonbolt
-        --[433885]  = { 434635, 434636 },         		-- Ruination          → Ruination
-        --[433891]  = { 434506 },         				-- Infernal Bolt      → Infernal Bolt
-		["cdm:434635"] = {434635},						-- Ruination    	  → always glow if present in CDM
-		["cdm:434506"] = {434506},						-- Infernal Bolt      → always glow if present in CDM
+        [264173]  = { 264178 },         				-- Demonic Core       		→ Demonbolt
+        --[433885]  = { 434635, 434636 },         		-- Ruination          		→ Ruination
+        --[433891]  = { 434506 },         				-- Infernal Bolt      		→ Infernal Bolt
+		["cdm:434635"] = {434635},						-- Ruination    	  		→ always glow if present in CDM
+		["cdm:434506"] = {434506},						-- Infernal Bolt      		→ always glow if present in CDM
+		["cdm:1276452"] = {1276452},					-- Grimoire: Imp Lord 		→ always glow if present in CDM
+		["cdm:1276467"] = {1276467},					-- Grimoire: Fel Ravager	→ always glow if present in CDM
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
 	PRIEST = {
-		--["cdm:450405"] = {450405},					-- Void Blast	      → always glow if present in CDM
-		--["cdm:1242173"] = {1242173},					-- Void Volley   	  → always glow if present in CDM
-		--["cdm:263165"] = {263165},					-- Void Torrent   	  → always glow if present in CDM
-		--["cdm:228260"] = {228260},					-- Voidform		   	  → always glow if present in CDM
+		--["cdm:450405"] = {450405},					-- Void Blast	      	    → always glow if present in CDM
+		--["cdm:1242173"] = {1242173},					-- Void Volley   	 		→ always glow if present in CDM
+		--["cdm:263165"] = {263165},					-- Void Torrent   	 		→ always glow if present in CDM
+		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM
 	},
     SHAMAN = {}, MONK = {}, DRUID = {},
 	DEMONHUNTER = {
-		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       	  → Reap, Eradicate, Cull		
-		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    → always glow if present in CDM
+		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       			→ Reap, Eradicate, Cull		
+		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    		→ always glow if present in CDM
 	},
 	EVOKER = {},
 }

@@ -89,12 +89,14 @@ end
 -- ---------------------------------------------------------------------------
 -- GROUP INVITE SOUND
 -- Same sound as dungeon finder queue pop, plays through Master.
--- Fires both when receiving an invite and when actually joining the group.
+-- Covers all invite types:
+--   PARTY_INVITE_REQUEST                    — direct invite from a player
+--   LFG_LIST_APPLICATION_STATUS_UPDATED     — Group Finder invite (M+ key, raid, world boss)
 -- ---------------------------------------------------------------------------
 
 local function OnGroupInvite()
     if not CXUI_DB.inviteSound then return end
-    PlaySound(SOUNDKIT.LFG_QUEUE_STARTED or SOUNDKIT.READY_CHECK, "Master")
+    PlaySound(8960, "Master")
 end
 
 -- ---------------------------------------------------------------------------
@@ -153,6 +155,7 @@ end
 local tweaksFrame = CreateFrame("Frame")
 tweaksFrame:RegisterEvent("READY_CHECK")
 tweaksFrame:RegisterEvent("PARTY_INVITE_REQUEST")
+tweaksFrame:RegisterEvent("LFG_LIST_APPLICATION_STATUS_UPDATED")  -- Group Finder: M+ key, raid, world boss
 tweaksFrame:RegisterEvent("START_PLAYER_COUNTDOWN")   -- /pull, BigWigs, DBM
 tweaksFrame:RegisterEvent("CANCEL_PLAYER_COUNTDOWN")  -- pull cancelled
 tweaksFrame:RegisterEvent("START_TIMER")              -- BG/arena prep timers
@@ -164,6 +167,12 @@ tweaksFrame:SetScript("OnEvent", function(self, event, ...)
 
     elseif event == "PARTY_INVITE_REQUEST" then
         OnGroupInvite()
+
+    elseif event == "LFG_LIST_APPLICATION_STATUS_UPDATED" then
+        local _, newStatus = ...
+        if newStatus == "invited" then
+            OnGroupInvite()
+        end
 
     elseif event == "START_PLAYER_COUNTDOWN" then
         local _, timeSeconds = ...
