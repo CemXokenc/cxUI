@@ -6,7 +6,7 @@
 
 A lightweight, performance-focused suite that declutters your screen and enhances combat awareness.
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/CemXokenc/cxUI)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/CemXokenc/cxUI)
 [![Game Version](https://img.shields.io/badge/game-12.0.0-orange.svg)](https://worldofwarcraft.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -26,132 +26,155 @@ A lightweight, performance-focused suite that declutters your screen and enhance
 
 ---
 
+## 🗂️ Structure
+
+```
+cxUI/
+├── core.lua                        # Settings DB & options panel
+├── cxUI.toc
+├── libs/
+│   └── LibCustomGlow-1.0.lua
+├── media/
+│   └── lowhp.ogg
+└── modules/
+    ├── Transparency/               # Module 1 — auto-hide bars & tracker
+    │   └── Transparency.lua
+    ├── Absorb/                     # Module 2 — absorb display
+    │   └── Absorb.lua
+    ├── CDM/                        # Module 3 — CDM proc glow
+    │   └── CDMGlow.lua
+    ├── SmallTweaks/                # Module 4 — one file per tweak
+    │   ├── Alerts.lua              #   suppress talent notifications
+    │   ├── MacroOverride.lua       #   redirect Macros → Mega Macro
+    │   ├── Sounds.lua              #   ready check / invite / pull timer / low health
+    │   └── RCM.lua                 #   block right-click targeting in combat
+    └── ClassFeatures/              # Module 5 — class-specific overlays
+        ├── Shared.lua              #   frame scan & overlay helpers (loads first)
+        ├── DeathKnight.lua         #   enemy counter, festering glow, putrefy cross, frost swap
+        └── Mage.lua                #   flurry cross
+```
+
+Every module lives in its own folder for consistent structure. Modules with multiple independent features (`SmallTweaks`, `ClassFeatures`) have one file per feature so each can be edited or disabled without touching anything else.
+
+Shared helpers between `DeathKnight.lua` and `Mage.lua` (frame scan, overlay creation, glow/cross utilities) live in `Shared.lua` and are exported via the `ns.CF` addon namespace table.
+
+---
+
 ## 🎯 Modules
 
-cxUI consists of 6 independent modules, each addressing a specific aspect of UI optimization:
-
-### 🌫️ **Module 1: Transparency & Auto-Hide**
+### 🌫️ Module 1: Transparency & Auto-Hide — `Module_Transparency.lua`
 
 Intelligently fades UI elements based on context and mouse position.
 
-**Features:**
-- **Action Bars**: Automatically hide out of combat, reveal on mouseover
-- **Micro Menu & Bags**: Fade until hovered
-- **Quest Tracker**: Only visible when you need it (mouseover)
-
-**Use case:** Clean screen during exploration and questing, full accessibility during combat.
-
----
-
-### 🛡️ **Module 2: Absorb Display**
-
-Track your shield strength at a glance.
-
-**Features:**
-- Displays total absorb amount in the center of your screen
-- Only visible during combat — automatically hides when out of combat
-- Auto-scales numbers (1.2K, 450K, etc.)
-- Updates in real-time
-
-**Use case:** Essential for tanks and healers who rely on shields. Know your mitigation status without checking unit frames.
+| Feature | Behaviour |
+|---|---|
+| Action Bars | Hide out of combat, reveal on mouseover |
+| Micro Menu & Bags | Fade until hovered |
+| Quest Tracker | Only visible on mouseover |
 
 ---
 
-### ✨ **Module 3: CDM Glow**
+### 🛡️ Module 2: Absorb Display — `Module_Absorb.lua`
 
-Visual proc highlighting for class abilities.
+Displays total shield amount in the center of the screen during combat. Auto-scales numbers (1.2K, 450K, …) and hides when out of combat.
 
-**Features:**
-- Custom glow effects when key procs activate
-- Scans action bars automatically
-- Works with Blizzard Cooldown Viewer and custom bars
+---
 
-**Default configuration:** Death Knight (Sudden Doom → Death Coil glow)
+### ✨ Module 3: CDM Glow — `Module_CDMGlow.lua`
 
-#### 🔧 How to Add Your Own Spells
+Custom glow effects when class procs activate. Scans action bars automatically and works with Blizzard Cooldown Viewer and custom bar addons.
 
-1. Open `Module_CDMGlow.lua`
-2. Find the `PROC_CONFIG` table near the top
-3. Add your class and spell IDs:
+**Default:** Death Knight — Sudden Doom → Death Coil glow.
+
+#### Adding your own spells
+
+Open `Module_CDMGlow.lua` and edit the `PROC_CONFIG` table:
 
 ```lua
 local PROC_CONFIG = {
     DEATHKNIGHT = { [81340] = { 47541, 207317 } },
-    PALADIN = { [59578] = { 879 } },  -- Art of War → Exorcism
-    WARRIOR = { [85739] = { 100 } },  -- Slam proc → Mortal Strike
-    -- Add more classes here
+    PALADIN = { [59578] = { 879 } },   -- Art of War → Exorcism
+    WARRIOR = { [85739] = { 100 } },   -- Slam proc → Mortal Strike
 }
 ```
 
-**Format explanation:**
-- `[Aura_Spell_ID]` = The buff/proc you're tracking
-- `{ Target_Spell_ID_1, Target_Spell_ID_2 }` = Abilities that should glow
+- `[Aura_Spell_ID]` — the buff/proc you're tracking
+- `{ Target_Spell_ID, … }` — abilities that should glow
 
-**Finding Spell IDs:**
-- Use `/dump GetSpellInfo("Spell Name")` in-game
-- Or check [Wowhead](https://www.wowhead.com) spell pages (ID is in the URL)
+Spell IDs are in Wowhead URLs or via `/dump GetSpellInfo("Name")` in-game.
 
 **Commands:**
 ```
-/cdmglow on       Enable the module
-/cdmglow off      Disable the module
+/cdmglow on       Enable
+/cdmglow off      Disable
 /cdmglow rescan   Force rescan of action bars
 ```
 
 ---
 
-### 🔧 **Module 4: Small Tweaks**
+### 🔧 Module 4: Small Tweaks — `modules/SmallTweaks/`
 
-Quality-of-life improvements and UI decluttering.
+Quality-of-life improvements, one file per feature.
 
-**Features:**
-- **Hide Help Tips**: Suppresses notifications like "You have unspent talent points" and "Choose your hero talents"
-- **Mega Macro Override**: Redirects the default Macros button to Mega Macro addon (if installed)
-- **Ready Check Alert**: Plays ready check sound through the Master audio channel — audible even when alt-tabbed
-- **Group Invite Sound**: Plays the dungeon finder alarm through Master when a group invite arrives — never miss an invite while alt-tabbed
-- **Pull Timer Countdown**: Plays audio at 10, 5, 4, 3, 2, 1 seconds and "Go" on zero for any pull timer — `/pull` command, BigWigs, DBM, and BG/arena preparation timers all supported. Uses SharedMedia_Causese countdown sounds
-- **Block Right-Click Targeting**: Prevents accidental right-click targeting in Dungeons & Raids during combat
+| File | Feature | What it does |
+|---|---|---|
+| `Alerts.lua` | Hide Help Tips | Suppresses "You have unspent talent points" and similar notifications |
+| `MacroOverride.lua` | Mega Macro Override | Redirects the default Macros button to Mega Macro (if installed) |
+| `Sounds.lua` | Ready Check Alert | Plays ready check sound through Master — audible when alt-tabbed |
+| `Sounds.lua` | Group Invite Sound | Plays dungeon-finder alarm through Master on any group invite |
+| `Sounds.lua` | Pull Timer Countdown | Audio at 10, 5, 4, 3, 2, 1 s for `/pull`, BigWigs, DBM, BG/arena timers. Requires `SharedMedia_Causese` |
+| `Sounds.lua` | Low Health Alert | Plays a custom sound when your health drops critically low |
+| `RCM.lua` | Block Right-Click Targeting | Prevents accidental right-click targeting in Dungeons & Raids during combat |
 
-**Use case:** Remove visual clutter, never miss invites or pull timers regardless of audio settings.
-
----
-
-### ❤️ **Module 5: Health Safety**
-
-Visual and audio warnings when your health drops dangerously low.
-
-**Features:**
-- Audio alert at critically low HP
-- Automatic disable when dead/ghost
-
-**Use case:** Stay aware of your health during intense combat without constantly watching your health bar.
+To disable a single tweak without a reload, you can comment out its line in `cxUI.toc`.
 
 ---
 
-### ⚔️ **Module 6: Class Features**
+### ⚔️ Module 5: Class Features — `modules/ClassFeatures/`
 
-Contextual combat overlays tailored to specific class mechanics.
+Contextual combat overlays for specific class mechanics. Only the file matching your class runs; the others return immediately.
 
-**Features:**
-- **Enemy Counter — Unholy DK**: Displays a live enemy count above the Death Coil button in the CDM panel during combat. Helps decide when to swap from Death Coil to Epidemic (3+ enemies).
+**`Shared.lua`** loads first and exports frame-scan and overlay utilities (`ns.CF`) used by both class files.
 
-**Use case:** Removes the mental overhead of counting nearby enemies — the number is always visible, right where your eyes already are.
+#### Death Knight (`DeathKnight.lua`)
+
+| Feature | DB key | Description |
+|---|---|---|
+| Enemy Counter | `cdmEnemyCounter` | Live enemy count above the Death Coil CDM button. Helps decide DC vs Epidemic (3+ enemies). Unholy only. |
+| Festering Strike Glow | `cdmFesteringGlow` | White glow on Festering Strike/Scythe CDM when buff has <5 s left. Unholy only. |
+| Putrefy Cross | `cdmPutrefyCross` | Red × on Putrefy CDM when Dark Transformation has <9 s CD. Unholy only. |
+| Frost Bar Swap | `cdmFrostBarSwap` | Swaps Obliterate/Scythe and FS/GA icons on CDM after action bar page changes. Frost only. |
+
+**Debug commands:**
+```
+/cxaoe scan     Rescan CDM frames and print counts
+/cxaoe status   Print spec, enemy count, glow/cross state
+```
+
+#### Mage (`Mage.lua`)
+
+| Feature | DB key | Description |
+|---|---|---|
+| Flurry Cross | `cdmFlurryCross` | Red × on Flurry CDM when both procs (190446 & 1247729) are active. Cleared on Ice Lance cast. |
+
+**Debug commands:**
+```
+/cxmage scan    Rescan CDM frames
+/cxmage force   Force-show the cross for testing
+```
 
 ---
 
 ## ⚙️ Settings
 
-Access the settings panel:
 ```
 ESC → Options → AddOns → cxUI
 ```
 
-**Options marked with `(Requires Reload)*` need `/reload` to take effect.**
+Options marked **`(Requires Reload)*`** need `/reload` to take effect.
 
-### Available Toggles:
-
-| Module | Setting | Reload Required |
-|--------|---------|-----------------|
+| Module | Setting | Reload |
+|---|---|---|
 | Transparency | Action Bar Auto-hide | ❌ |
 | Transparency | Micro Menu Auto-hide | ❌ |
 | Transparency | Quest Tracker Hover | ✅ |
@@ -163,44 +186,41 @@ ESC → Options → AddOns → cxUI
 | Small Tweaks | Ready Check Alert | ❌ |
 | Small Tweaks | Group Invite Sound | ❌ |
 | Small Tweaks | Pull Timer Countdown Sound | ❌ |
+| Small Tweaks | Low Health Sound Alert | ❌ |
 | Small Tweaks | Block Right-Click Targeting | ❌ |
-| Health Safety | Low Health Sound Alert | ❌ |
 | Class Features | Enemy Counter — Unholy DK | ❌ |
+| Class Features | Festering Strike Glow — Unholy DK | ❌ |
+| Class Features | Putrefy Cross — Unholy DK | ❌ |
+| Class Features | Flurry Cross — Frost Mage | ❌ |
+| Class Features | Swap ST/AOE — Frost DK | ❌ |
 
 ---
 
 ## 🚀 Performance
 
-cxUI is designed for **zero impact** on gameplay:
-
-- Event-driven architecture (no polling)
-- Minimal memory footprint (~500KB)
-- Efficient frame updates (OnUpdate limited to 10 FPS)
-- Conditional module loading
+- Event-driven architecture — no polling
+- Class files early-return for non-matching classes
+- Minimal memory footprint (~500 KB)
+- Frame updates only on relevant events
 
 ---
 
 ## 🐛 Troubleshooting
 
 **Settings panel not showing?**
-- Make sure the addon is enabled in the character select screen
-- Try `/reload` after installation
+Try `/reload`. Make sure the addon is enabled on the character select screen.
 
 **CDM Glow not working?**
-- Verify spell IDs are correct
-- Use `/cdmglow rescan` to rebuild the button cache
-- Check that Blizzard Cooldown Viewer is enabled
+Verify spell IDs, then run `/cdmglow rescan`. Check that Blizzard Cooldown Viewer is enabled.
 
 **Enemy Counter not appearing?**
-- Make sure you are playing Unholy Death Knight (spec 3)
-- The counter only shows during active combat with enemies in range
-- Run `/cxaoe scan` out of combat to verify the Death Coil CDM frame is found
-- If `frames=0`, try `/reload` — CDM may not have fully initialized yet
+Must be Unholy Death Knight (spec 3), in active combat, with enemies on nameplates. Run `/cxaoe scan` out of combat to verify the Death Coil CDM frame is found. If `counter=0`, try `/reload` — CDM may not have fully initialized yet.
 
 **Pull Timer not playing sounds?**
-- Make sure `SharedMedia_Causese` addon is installed (provides the countdown sound files)
-- The setting requires `/reload` if toggled for the first time
-- Supported sources: `/pull` command, BigWigs, DBM, BG/arena preparation timers
+`SharedMedia_Causese` must be installed. Supported sources: `/pull`, BigWigs, DBM, BG/arena preparation timers.
+
+**Festering or Putrefy overlays not showing?**
+Run `/cxaoe scan` to rebuild CDM frame references, then check `/cxaoe status` for state.
 
 ---
 
@@ -213,7 +233,7 @@ cxUI is designed for **zero impact** on gameplay:
 
 ## 📄 License
 
-This project is open source and available under the MIT License.
+Open source under the MIT License.
 
 ---
 

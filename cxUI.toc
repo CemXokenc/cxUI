@@ -10,11 +10,25 @@
 # Libraries
 libs\LibCustomGlow-1.0.lua
 
-# Scripts
+# Core
 core.lua
-modules\Module_Transparency.lua
-modules\Module_Absorb.lua
-modules\Module_CDMGlow.lua
-modules\Module_SmallTweaks.lua
-modules\Module_LowHealth.lua
-modules\Module_ClassFeatures.lua
+
+# Module: Transparency
+modules\Transparency\Transparency.lua
+
+# Module: Absorb
+modules\Absorb\Absorb.lua
+
+# Module: CDM
+modules\CDM\CDMGlow.lua
+
+# Module: Small Tweaks
+modules\SmallTweaks\Alerts.lua
+modules\SmallTweaks\MacroOverride.lua
+modules\SmallTweaks\Sounds.lua
+modules\SmallTweaks\RCM.lua
+
+# Module: Class Features (Shared must load first)
+modules\ClassFeatures\Shared.lua
+modules\ClassFeatures\DeathKnight.lua
+modules\ClassFeatures\Mage.lua

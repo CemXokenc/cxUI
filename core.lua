@@ -17,11 +17,12 @@ CXUI_DB = CXUI_DB or {
     altTabAlerts              = true,
     rcm                       = true,
     cdmEnemyCounter           = true,
-    cdmFesteringGlow          = false,
-    cdmPutrefyCross           = false,
-    cdmFlurryCross            = false,
+    cdmFesteringGlow          = true,
+    cdmPutrefyCross           = true,
+    cdmFlurryCross            = true,
     inviteSound               = true,
     pullTimerSound            = true,
+    cdmFrostBarSwap           = true,
 }
 
 local function EnsureDBDefaults()
@@ -38,11 +39,12 @@ local function EnsureDBDefaults()
         altTabAlerts              = true,
         rcm                       = true,
         cdmEnemyCounter           = true,
-        cdmFesteringGlow          = false,
-        cdmPutrefyCross           = false,
-            cdmFlurryCross            = false,
+        cdmFesteringGlow          = true,
+        cdmPutrefyCross           = true,
+        cdmFlurryCross            = true,
         inviteSound               = true,
         pullTimerSound            = true,
+		cdmFrostBarSwap           = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
@@ -155,23 +157,19 @@ CreateCheckbox("Mega Macro Override",                              "overrideMacr
 CreateCheckbox("Ready Check Alert",                                "altTabAlerts",      "Plays ready check sound through Master channel. Audible when alt-tabbed.",-380, false)
 CreateCheckbox("Block Right-Click Targeting in Combat (Dungeons & Raids)", "rcm",      "Prevents accidental right-click targeting in dungeons and raids.",         -410, false)
 CreateCheckbox("Group Invite Sound",                                       "inviteSound",   "Plays a sound through Master when a group invite arrives.",                -440, false)
-CreateCheckbox("Pull Timer Countdown Sound",                               "pullTimerSound","Plays audio for the preparation countdown (5, 4, 3, 2, 1).",              -470, false)
+CreateCheckbox("Pull Timer Countdown Sound",                               "pullTimerSound", "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",             -470, false)
+CreateCheckbox("Low Health Sound Alert",                                   "lowHealthAlert", "Plays a custom sound when your health is low.",                           -500, false)
 
 -- ---------------------------------------------------------------------------
 -- Module 5
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Health Safety", -510)
-CreateCheckbox("Low Health Sound Alert", "lowHealthAlert", "Plays a custom sound when your health is low.",        -535, false)
+CreateHeader("Module 5: Class Features", -540)
 
--- ---------------------------------------------------------------------------
--- Module 6
--- ---------------------------------------------------------------------------
-CreateHeader("Module 6: Class Features", -575)
-
-CreateCheckbox("Enemy Counter — Unholy DK", "cdmEnemyCounter", "Shows enemy count on Death Coil CDM icon.", -600, false)
-CreateCheckbox("Festering Strike Glow — Unholy DK",  "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",  -630, false)
-CreateCheckbox("Putrefy Cross — Unholy DK",          "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",       -660, false)
-CreateCheckbox("Flurry Cross — Frost Mage",          "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",  -690, false)
+CreateCheckbox("Enemy Counter — Unholy DK",          "cdmEnemyCounter",  "Shows enemy count on Death Coil CDM icon.",                          -565, false)
+CreateCheckbox("Festering Strike Glow — Unholy DK",  "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",      -595, false)
+CreateCheckbox("Putrefy Cross — Unholy DK",          "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",          -625, false)
+CreateCheckbox("Flurry Cross — Frost Mage",          "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",     -655, false)
+CreateCheckbox("Swap ST/AOE — Frost DK",             "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",   -685, false)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
