@@ -24,6 +24,7 @@ local HideXCross           = CF.HideXCross
 local TEX_FESTERING_SCYTHE = "3997563"
 local TEX_FESTERING_STRIKE = "879926"
 local TEX_PUTREFY          = "7439191"
+local TEX_REAPER           = "636333"
 
 local SPELL_FESTERING_SCYTHE    = 458128
 local SPELL_FESTERING_STRIKE    = 85948
@@ -34,6 +35,8 @@ local SPELL_FROSTSCYTHE         = 207230
 local FESTERING_DELAY  = 20   -- 25s buff - 5s warning
 local PUTREFY_DELAY    = 36   -- 45s DT CD - 9s warning
 local PUTREFY_DURATION = 9
+local REAPER_DELAY     = 35   -- 45s DT CD - 10s warning
+local REAPER_DURATION  = 10
 
 -- ---------------------------------------------------------------------------
 -- ENEMY COUNTER (cdmEnemyCounter)
@@ -184,20 +187,7 @@ local cdmFesteringOverlays = {}
 local festeringTimer       = nil
 local festeringGlowActive  = false
 
-local function CreateFesteringCDMOverlays()
-    for _, ov in pairs(cdmFesteringOverlays) do
-        if ov._glowActive and LCG and LCG.ButtonGlow_Stop then LCG.ButtonGlow_Stop(ov) end
-        ov:Hide()
-    end
-    wipe(cdmFesteringOverlays)
-    festeringGlowActive = false
-    ScanFramesByTexture({TEX_FESTERING_SCYTHE, TEX_FESTERING_STRIKE}, function(frame)
-        if not cdmFesteringOverlays[frame] then
-            cdmFesteringOverlays[frame] = CreateOverlay(frame)
-        end
-    end)
-end
-
+-- Single EnumerateFrames pass for festering, putrefy and reaper overlays.
 local function HideFesteringGlow()
     if festeringTimer then festeringTimer:Cancel(); festeringTimer = nil end
     festeringGlowActive = false
@@ -230,19 +220,6 @@ local putrefyWarningActive = false
 local putrefyWarningTimer  = nil
 local putrefyDurationTimer = nil
 
-local function CreatePutrefyCDMOverlays()
-    for _, ov in pairs(cdmPutrefyOverlays) do ov:Hide() end
-    wipe(cdmPutrefyOverlays)
-    putrefyWarningActive = false
-    ScanFramesByTexture({TEX_PUTREFY}, function(frame)
-        if not cdmPutrefyOverlays[frame] then
-            local ov = CreateOverlay(frame)
-            AttachXCross(ov)
-            cdmPutrefyOverlays[frame] = ov
-        end
-    end)
-end
-
 local function StopPutrefyWarning()
     putrefyWarningActive = false
     if putrefyWarningTimer  then putrefyWarningTimer:Cancel();  putrefyWarningTimer  = nil end
@@ -261,14 +238,59 @@ local function ShowPutrefyWarning()
     end)
 end
 
+local DB_REAPER = "cdmReaperCross"
+
+local cdmReaperOverlays    = {}
+local reaperWarningActive  = false
+local reaperWarningTimer   = nil
+local reaperDurationTimer  = nil
+local ShowReaperWarning    -- forward declaration
+
 local function OnDarkTransformationCast()
+    -- Putrefy: cross at 9s remaining (delay 36s)
     if putrefyWarningTimer  then putrefyWarningTimer:Cancel();  putrefyWarningTimer  = nil end
     if putrefyDurationTimer then putrefyDurationTimer:Cancel(); putrefyDurationTimer = nil end
     putrefyWarningActive = false
     for _, ov in pairs(cdmPutrefyOverlays) do HideXCross(ov) end
-    if not CXUI_DB[DB_PUTREFY] then return end
-    putrefyWarningTimer = C_Timer.NewTimer(PUTREFY_DELAY, function()
-        putrefyWarningTimer = nil; ShowPutrefyWarning()
+    if CXUI_DB[DB_PUTREFY] then
+        putrefyWarningTimer = C_Timer.NewTimer(PUTREFY_DELAY, function()
+            putrefyWarningTimer = nil; ShowPutrefyWarning()
+        end)
+    end
+    -- Reaper: cross at 10s remaining (delay 35s)
+    if reaperWarningTimer  then reaperWarningTimer:Cancel();  reaperWarningTimer  = nil end
+    if reaperDurationTimer then reaperDurationTimer:Cancel(); reaperDurationTimer = nil end
+    reaperWarningActive = false
+    for _, ov in pairs(cdmReaperOverlays) do HideXCross(ov) end
+    if CXUI_DB[DB_REAPER] then
+        reaperWarningTimer = C_Timer.NewTimer(REAPER_DELAY, function()
+            reaperWarningTimer = nil; ShowReaperWarning()
+        end)
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- REAPER CROSS (cdmReaperCross)
+-- Red × on Reaper CDM when Dark Transformation has <10s CD remaining.
+-- Identical pattern to Putrefy Cross: triggered by SPELL_DARK_TRANSFORMATION
+-- cast, waits REAPER_DELAY seconds, then shows cross for REAPER_DURATION.
+-- ---------------------------------------------------------------------------
+
+local function StopReaperWarning()
+    reaperWarningActive = false
+    if reaperWarningTimer  then reaperWarningTimer:Cancel();  reaperWarningTimer  = nil end
+    if reaperDurationTimer then reaperDurationTimer:Cancel(); reaperDurationTimer = nil end
+    for _, ov in pairs(cdmReaperOverlays) do HideXCross(ov) end
+end
+
+ShowReaperWarning = function()
+    if reaperDurationTimer then reaperDurationTimer:Cancel(); reaperDurationTimer = nil end
+    reaperWarningActive = true
+    if CXUI_DB[DB_REAPER] then
+        for _, ov in pairs(cdmReaperOverlays) do ShowXCross(ov) end
+    end
+    reaperDurationTimer = C_Timer.NewTimer(REAPER_DURATION, function()
+        reaperDurationTimer = nil; StopReaperWarning()
     end)
 end
 
@@ -341,10 +363,52 @@ end
 -- Full rescan
 -- ---------------------------------------------------------------------------
 
+-- Single EnumerateFrames pass for all three CDM overlay types.
+-- Must be defined after all overlay table declarations.
+local function ScanCDMOverlays()
+    for _, ov in pairs(cdmFesteringOverlays) do
+        if ov._glowActive and LCG and LCG.ButtonGlow_Stop then LCG.ButtonGlow_Stop(ov) end
+        ov:Hide()
+    end
+    wipe(cdmFesteringOverlays)
+    festeringGlowActive = false
+
+    for _, ov in pairs(cdmPutrefyOverlays) do ov:Hide() end
+    wipe(cdmPutrefyOverlays)
+    putrefyWarningActive = false
+
+    for _, ov in pairs(cdmReaperOverlays) do ov:Hide() end
+    wipe(cdmReaperOverlays)
+    reaperWarningActive = false
+
+    ScanFramesByTexture(
+        {TEX_FESTERING_SCYTHE, TEX_FESTERING_STRIKE, TEX_PUTREFY, TEX_REAPER},
+        function(frame)
+            local tex = tostring(frame.Icon:GetTexture())
+            if tex == TEX_FESTERING_SCYTHE or tex == TEX_FESTERING_STRIKE then
+                if not cdmFesteringOverlays[frame] then
+                    cdmFesteringOverlays[frame] = CreateOverlay(frame)
+                end
+            elseif tex == TEX_PUTREFY then
+                if not cdmPutrefyOverlays[frame] then
+                    local ov = CreateOverlay(frame)
+                    AttachXCross(ov)
+                    cdmPutrefyOverlays[frame] = ov
+                end
+            elseif tex == TEX_REAPER then
+                if not cdmReaperOverlays[frame] then
+                    local ov = CreateOverlay(frame)
+                    AttachXCross(ov)
+                    cdmReaperOverlays[frame] = ov
+                end
+            end
+        end
+    )
+end
+
 local function DKRescan()
     RescanCounterFrames()
-    CreateFesteringCDMOverlays()
-    CreatePutrefyCDMOverlays()
+    ScanCDMOverlays()
     BuildFrostSwapFrames()
 end
 
@@ -382,6 +446,7 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "PLAYER_REGEN_ENABLED" then
         Counter:StopTicker()
         StopPutrefyWarning()
+        StopReaperWarning()
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         C_Timer.After(1, function() DKRescan() end)
@@ -391,6 +456,7 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
         Counter:StopTicker()
         HideFesteringGlow()
         StopPutrefyWarning()
+        StopReaperWarning()
         StopNpTracker(); StartNpTracker()
         C_Timer.After(2, function() DKRescan() end)
 
@@ -419,13 +485,15 @@ SlashCmdList["CXAOEDEBUG"] = function(msg)
     local cmd = (msg or ""):lower()
     if cmd == "scan" then
         DKRescan()
-        local cf, cp, cs, cc = 0, 0, 0, 0
+        local cf, cp, cs, cc, cr = 0, 0, 0, 0, 0
         for _ in pairs(cdmFesteringOverlays) do cf = cf + 1 end
         for _ in pairs(cdmPutrefyOverlays)   do cp = cp + 1 end
         for _ in ipairs(oblFrames)            do cs = cs + 1 end
         for _ in pairs(counterFrames)         do cc = cc + 1 end
+        for _ in pairs(cdmReaperOverlays)     do cr = cr + 1 end
         print("|cff0070ddcxUI:|r counter=" .. cc
-            .. "  festering=" .. cf .. "  putrefy=" .. cp .. "  frostswap=" .. cs)
+            .. "  festering=" .. cf .. "  putrefy=" .. cp
+            .. "  frostswap=" .. cs .. "  reaper=" .. cr)
     elseif cmd == "status" then
         local count  = GetEnemyCount()
         local npCount = 0; for _ in pairs(npActive) do npCount = npCount + 1 end
@@ -433,6 +501,7 @@ SlashCmdList["CXAOEDEBUG"] = function(msg)
             .. "  enemies=" .. count .. "  npActive=" .. npCount
             .. "  festering=" .. tostring(festeringGlowActive)
             .. "  putrefy=" .. tostring(putrefyWarningActive)
+            .. "  reaper=" .. tostring(reaperWarningActive)
             .. "  barpage=" .. tostring(GetActionBarPage()))
     else
         print("|cff0070ddcxUI:|r /cxaoe [scan|status]")

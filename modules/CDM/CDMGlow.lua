@@ -7,24 +7,27 @@ local addonName, ns = ...
 CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
+local LCG = LibStub and LibStub("LibCustomGlow-1.0", true)
+local GLOW_COLOR = { 1, 0.82, 0, 0.9 }
+
 local PROC_CONFIG = {
     DEATHKNIGHT = {
         [81340] = { 47541, 207317, 1242174, 383269 },	-- Sudden Doom        		→ Death Coil, Epidemic, Necrotic Coil, Graveyard
-		--[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe		
-		--[59052] = { 49184 },                          -- Rime                     → Howling Blast									
+		[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe		
+		[59052] = { 49184 }, --but this not trackeble   -- Rime                     → Howling Blast									
 		["cdm:1228433"] = {1228433}, 					-- Frostbane				→ always glow if present in CDM
     },
     MAGE = {
-        --[44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance
+        [44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance
         --[1247729] = { 30455 },          				-- Thermal Void       		→ Ice Lance        
-        --[190446]  = { 44614 },         				-- Brain Freeze     	  	→ Flurry
-        --[270232]  = { 190356 },        				-- Freezeng Rain    	  	→ Blizzard
-		--["cdm:199786"] = {199786},					-- Glacial Spike     		→ always glow if present in CDM
+        [190446]  = { 44614 },         					-- Brain Freeze     	  	→ Flurry
+        [270232]  = { 190356 },        					-- Freezeng Rain    	  	→ Blizzard
+		["cdm:199786"] = {199786},						-- Glacial Spike     		→ always glow if present in CDM
     },
     WARLOCK = {
-        --[264173]  = { 264178 },         				-- Demonic Core       		→ Demonbolt        
-		--["cdm:434635"] = {434635},					-- Ruination    	  		→ always glow if present in CDM
-		--["cdm:434506"] = {434506},					-- Infernal Bolt      		→ always glow if present in CDM
+        [264173]  = { 264178 },         				-- Demonic Core       		→ Demonbolt        
+		["cdm:434635"] = {434635},						-- Ruination    	  		→ always glow if present in CDM
+		["cdm:434506"] = {434506},						-- Infernal Bolt      		→ always glow if present in CDM
 		["cdm:1276452"] = {1276452},					-- Grimoire: Imp Lord 		→ always glow if present in CDM
 		["cdm:1276467"] = {1276467},					-- Grimoire: Fel Ravager	→ always glow if present in CDM
     },
@@ -35,7 +38,12 @@ local PROC_CONFIG = {
 		--["cdm:263165"] = {263165},					-- Void Torrent   	 		→ always glow if present in CDM
 		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM
 	},
-    SHAMAN = {}, MONK = {}, DRUID = {},
+    SHAMAN = {}, 
+	MONK = {
+		[438443]  = { 101546 },         				-- Dance of Chi-Ji     		→ Spinning Crane Kick
+		[443112]  = { 124682 },         				-- Strength of the Black Ox → Enveloping Mist        
+		--[392883]  = { 399491 },         				-- Vivacious Vivification   → Sheilun's Gift        
+	}, DRUID = {},
 	DEMONHUNTER = {
 		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       			→ Reap, Eradicate, Cull		
 		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    		→ always glow if present in CDM
@@ -60,13 +68,26 @@ local CDMGlow = {
 -- CDM Glow API access
 -- ---------------------------------------------------------------------------
 
+local cdmOverlays = {}
+
+local function GetOrCreateCDMOverlay(frame)
+    if cdmOverlays[frame] then return cdmOverlays[frame] end
+    local ov = CreateFrame("Frame", nil, frame)
+    ov:SetAllPoints(frame)
+    ov:SetFrameStrata("TOOLTIP")
+    ov:SetFrameLevel(frame:GetFrameLevel() + 10)
+    cdmOverlays[frame] = ov
+    return ov
+end
+
 local function RequestGlow(frame, enabled)
-    -- Wrap in pcall: CDM's glow API can fail when the UI is tainted by
-    -- third-party addons (e.g. EXBoss countdown). The pcall prevents the
-    -- error from bubbling up and breaking subsequent glow calls.
-    local cdm = _G["Ayije_CDM"]
-    if not (cdm and cdm.Glow and cdm.Glow.RequestBuffGlow) then return end
-    pcall(cdm.Glow.RequestBuffGlow, cdm.Glow, frame, enabled, nil, nil)
+    if not LCG then return end
+    local overlay = GetOrCreateCDMOverlay(frame)
+    if enabled then
+        LCG.ProcGlow_Start(overlay, { color = GLOW_COLOR, startAnim = false })
+    else
+        LCG.ProcGlow_Stop(overlay)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -138,7 +159,26 @@ local function FindCurrentCDMFrames()
         if _G[name] then ScanFrameTree(_G[name], results, seen, 0) end
     end
 
+    -- Each CDM spell may appear on both a parent Frame and child Button.
+    -- Keep only the smallest frame per spellID to avoid double-glowing.
+    local smallest = {}  -- [spellID] = { frame, area }
     for _, entry in ipairs(results) do
+        local area = 999999
+        pcall(function()
+            local w, h = entry.frame:GetSize()
+            area = w * h
+        end)
+        local prev = smallest[entry.spellID]
+        if not prev or area < prev.area then
+            smallest[entry.spellID] = { frame = entry.frame, area = area }
+        end
+    end
+    local deduped = {}
+    for spellID, entry in pairs(smallest) do
+        deduped[#deduped + 1] = { frame = entry.frame, spellID = spellID }
+    end
+
+    for _, entry in ipairs(deduped) do
         for auraID, spells in pairs(CDMGlow.spellsByAura) do
             for _, sid in ipairs(spells) do
                 if sid == entry.spellID then
@@ -285,16 +325,11 @@ function CDMGlow:HookCDM()
     local cdm = _G["Ayije_CDM"]
     if cdm and cdm.ForceReanchor then
         hooksecurefunc(cdm, "ForceReanchor", function()
-            -- Army of the Dead calls this repeatedly; ScheduleRescan debounces.
             CDMGlow:ScheduleRescan(0.2)
         end)
         self._reanchorHooked = true
     end
 
-    -- Hook ShowAlert to suppress untracked proc glows when the option is enabled.
-    -- CDM's own hook on ShowAlert runs first (hooksecurefunc is FIFO), so by the
-    -- time our hook runs, CDM has already shown its custom glow. We then hide it
-    -- for any spell that is not in our trackedSpells list.
     local alertMgr = _G.ActionButtonSpellAlertManager
     if alertMgr and alertMgr.ShowAlert then
         hooksecurefunc(alertMgr, "ShowAlert", function(_, frame)
@@ -302,29 +337,21 @@ function CDMGlow:HookCDM()
             if not IsSafeFrame(frame) then return end
 
             local spellID = GetButtonSpellID(frame)
-            if spellID and CDMGlow.trackedSpells[spellID] then
-                -- Tracked by our module — leave it alone.
-                return
-            end
+            local isTracked = spellID and CDMGlow.trackedSpells[spellID]
 
-            -- If CDM itself has flagged this frame as an "always glow" buff
-            -- (e.g. Frozen Orb not on cooldown), respect that and don't suppress.
             if cdm and cdm.Glow and cdm.Glow.buffHookedFrames then
                 for _, hookedFrame in pairs(cdm.Glow.buffHookedFrames) do
                     if hookedFrame == frame then return end
                 end
             end
 
-            -- Suppress Blizzard's glow on the action bar button.
+            -- Always suppress Blizzard's SpellActivationAlert.
             local alert = frame.SpellActivationAlert
             if alert then alert:SetAlpha(0); alert:Hide() end
 
-            -- Suppress CDM's glow on its own CDM frame. CDM's ShowAlert hook maps
-            -- the action bar frame to a CDM frame internally — we cannot call
-            -- StopGlow(actionBarFrame) because CDM won't find it. Instead, scan
-            -- activeGlowFrames and stop any glow whose spell matches this action bar
-            -- button's spell. This correctly targets the CDM frame, not the AB frame.
-            if cdm and cdm.Glow and spellID then
+            -- For untracked spells only: also stop CDM's glow.
+            -- For tracked spells our LCG overlay handles the glow — don't interfere.
+            if not isTracked and cdm and cdm.Glow and spellID then
                 for glowFrame, auraID in pairs(CDMGlow.activeGlowFrames) do
                     local spells = CDMGlow.spellsByAura[auraID]
                     if spells then
@@ -337,8 +364,6 @@ function CDMGlow:HookCDM()
                         end
                     end
                 end
-                -- Also call StopGlow directly on all CDM viewers to catch
-                -- cases where the frame is not yet in activeGlowFrames.
                 for _, name in ipairs(CDM_VIEWER_NAMES) do
                     local viewer = _G[name]
                     if viewer and viewer.GetChildren then
@@ -360,6 +385,42 @@ end
 -- ---------------------------------------------------------------------------
 -- Event handler
 -- ---------------------------------------------------------------------------
+
+SLASH_CDMGLOWDEBUG1 = "/cdmglow"
+SlashCmdList["CDMGLOWDEBUG"] = function(msg)
+    local cmd = (msg or ""):lower()
+    if cmd == "debug" then
+        local count = 0
+        for _, name in ipairs(CDM_VIEWER_NAMES) do
+            local viewer = _G[name]
+            if viewer and viewer.GetChildren then
+                local ok, children = pcall(function() return { viewer:GetChildren() } end)
+                if ok and children then
+                    for _, child in ipairs(children) do
+                        if IsSafeFrame(child) then
+                            local sid = GetButtonSpellID(child)
+                            if sid then
+                                count = count + 1
+                                local fw, fh = child:GetSize()
+                                local alert = child.SpellActivationAlert
+                                local aw, ah = alert and alert:GetSize()
+                                print(string.format(
+                                    "|cff0070ddcxUI:|r [%d] spell=%-8s  frame=%dx%d  alert=%s",
+                                    count, tostring(sid),
+                                    math.floor(fw or 0), math.floor(fh or 0),
+                                    alert and string.format("%dx%d", math.floor(aw or 0), math.floor(ah or 0)) or "none"
+                                ))
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if count == 0 then print("|cff0070ddcxUI:|r no CDM frames found") end
+    else
+        print("|cff0070ddcxUI:|r /cdmglow debug — print CDM frame and SpellActivationAlert sizes")
+    end
+end
 
 local procEventFrame = CreateFrame("Frame")
 procEventFrame:RegisterEvent("PLAYER_LOGIN")

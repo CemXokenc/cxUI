@@ -20,6 +20,7 @@ CXUI_DB = CXUI_DB or {
     cdmFesteringGlow          = true,
     cdmPutrefyCross           = true,
     cdmFlurryCross            = true,
+    cdmReaperCross            = true,
     inviteSound               = true,
     pullTimerSound            = true,
     cdmFrostBarSwap           = true,
@@ -42,9 +43,10 @@ local function EnsureDBDefaults()
         cdmFesteringGlow          = true,
         cdmPutrefyCross           = true,
         cdmFlurryCross            = true,
+        cdmReaperCross            = true,
         inviteSound               = true,
         pullTimerSound            = true,
-		cdmFrostBarSwap           = true,
+        cdmFrostBarSwap           = true,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
@@ -94,15 +96,15 @@ local function CreateHeader(text, yOffset)
     header:SetPoint("TOPLEFT", 16, yOffset)
     header:SetText(text)
     local line = content:CreateTexture(nil, "ARTWORK")
-    line:SetSize(380, 1)
+    line:SetSize(500, 1)
     line:SetPoint("TOPLEFT", 16, yOffset - 15)
     line:SetColorTexture(1, 1, 1, 0.2)
     return header
 end
 
-local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
+local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload, xOffset)
     local check = CreateFrame("CheckButton", nil, content, "InterfaceOptionsCheckButtonTemplate")
-    check:SetPoint("TOPLEFT", 16, yOffset)
+    check:SetPoint("TOPLEFT", xOffset or 16, yOffset)
     local text = label
     if needsReload then text = text .. " |cffff0000(Requires Reload)*|r" end
     check.Text:SetText(text)
@@ -127,49 +129,52 @@ local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload)
     return check
 end
 
+local L = 16   -- left column x
+local R = 285  -- right column x
+
 -- ---------------------------------------------------------------------------
--- Module 1
+-- Module 1 — 2 columns
 -- ---------------------------------------------------------------------------
 CreateHeader("Module 1: Transparency & Auto-hide", -10)
-CreateCheckbox("Action Bar Auto-hide",   "hideBars",   "Hides bars out of combat. Hover to reveal.",              -35,  false)
-CreateCheckbox("Micro Menu Auto-hide",   "hideMicro",  "Hides Micro Menu and Bags. Hover to reveal.",             -65,  false)
-CreateCheckbox("Quest Tracker Hover",    "hideQuests", "Quest tracker only visible on mouseover.",                 -95,  true)
+CreateCheckbox("Action Bar Auto-hide", "hideBars",   "Hides bars out of combat. Hover to reveal.",  -35, false, L)
+CreateCheckbox("Micro Menu Auto-hide", "hideMicro",  "Hides Micro Menu and Bags. Hover to reveal.", -35, false, R)
+CreateCheckbox("Quest Tracker Hover",  "hideQuests", "Quest tracker only visible on mouseover.",     -65, true,  L)
 
 -- ---------------------------------------------------------------------------
 -- Module 2
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 2: Absorb Display", -135)
-CreateCheckbox("Enable Absorb Display",  "showAbsorb", "Shows total shield amount in screen center.",              -160, true)
+CreateHeader("Module 2: Absorb Display", -105)
+CreateCheckbox("Enable Absorb Display",  "showAbsorb", "Shows total shield amount in screen center.", -130, true)
 
 -- ---------------------------------------------------------------------------
--- Module 3
+-- Module 3 — 2 columns
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 3: CDM Glow", -200)
-CreateCheckbox("Enable CDM Proc Glow",       "cdmGlow",                  "Special highlights for class-specific procs.",                                         -225, false)
-CreateCheckbox("Suppress Untracked Glows |cffff0000(Sometimes the glow disappears with this, but maybe it is an Ayije_CDM issue)|r", "cdmGlowSuppressUntracked", "Only glow procs in PROC_CONFIG. All other CDM proc glows are hidden.", -255, false)
+CreateHeader("Module 3: CDM Glow", -170)
+CreateCheckbox("Enable CDM Proc Glow",          "cdmGlow",                 "Special highlights for class-specific procs.",                    -195, false, L)
+CreateCheckbox("Suppress Blizzard Glow on CDM", "cdmGlowSuppressUntracked","Hides all Blizzard proc glows on CDM frames. Action bars unaffected.", -195, false, R)
 
 -- ---------------------------------------------------------------------------
--- Module 4
+-- Module 4 — 2 columns
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 4: Small Tweaks", -295)
-CreateCheckbox("Hide Talent Alerts",                               "hideAlerts",        "Hides annoying talent-related notifications.",                            -320, true)
-CreateCheckbox("Mega Macro Override",                              "overrideMacroFrame","Redirects the default 'Macros' menu button to Mega Macro.",               -350, false)
-CreateCheckbox("Ready Check Alert",                                "altTabAlerts",      "Plays ready check sound through Master channel. Audible when alt-tabbed.",-380, false)
-CreateCheckbox("Block Right-Click Targeting in Combat (Dungeons & Raids)", "rcm",      "Prevents accidental right-click targeting in dungeons and raids.",         -410, false)
-CreateCheckbox("Group Invite Sound",                                       "inviteSound",   "Plays a sound through Master when a group invite arrives.",                -440, false)
-CreateCheckbox("Pull Timer Countdown Sound",                               "pullTimerSound", "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",             -470, false)
-CreateCheckbox("Low Health Sound Alert",                                   "lowHealthAlert", "Plays a custom sound when your health is low.",                           -500, false)
+CreateHeader("Module 4: Small Tweaks", -235)
+CreateCheckbox("Hide Talent Alerts",          "hideAlerts",         "Hides annoying talent-related notifications.",                            -260, true,  L)
+CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -260, false, R)
+CreateCheckbox("Ready Check Alert",           "altTabAlerts",       "Plays ready check sound through Master channel. Audible when alt-tabbed.", -290, false, L)
+CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents accidental right-click targeting in dungeons and raids.",         -290, false, R)
+CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -320, false, L)
+CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -320, false, R)
+CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -350, false, L)
 
 -- ---------------------------------------------------------------------------
--- Module 5
+-- Module 5 — 2 columns
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Class Features", -540)
-
-CreateCheckbox("Enemy Counter — Unholy DK",          "cdmEnemyCounter",  "Shows enemy count on Death Coil CDM icon.",                          -565, false)
-CreateCheckbox("Festering Strike Glow — Unholy DK",  "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",      -595, false)
-CreateCheckbox("Putrefy Cross — Unholy DK",          "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",          -625, false)
-CreateCheckbox("Flurry Cross — Frost Mage",          "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",     -655, false)
-CreateCheckbox("Swap ST/AOE — Frost DK",             "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",   -685, false)
+CreateHeader("Module 5: Class Features", -390)
+CreateCheckbox("Enemy Counter — Unholy DK",         "cdmEnemyCounter",  "Shows enemy count on Death Coil CDM icon.",                         -415, false, L)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -415, false, R)
+CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -445, false, L)
+CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -445, false, R)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -475, false, L)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -475, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Panel events

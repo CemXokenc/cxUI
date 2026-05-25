@@ -47,7 +47,7 @@ end
 -- Overlay parented directly to CDM frame (moves with it).
 local function CreateOverlay(cdmFrame)
     local ov = CreateFrame("Frame", nil, cdmFrame)
-    ov:SetFrameStrata("HIGH")
+    ov:SetFrameStrata("TOOLTIP")
     ov:SetAllPoints(cdmFrame)
     ov:SetFrameLevel(cdmFrame:GetFrameLevel() + 10)
     ov._targetFrame = cdmFrame
@@ -56,22 +56,22 @@ local function CreateOverlay(cdmFrame)
     return ov
 end
 
--- White ButtonGlow via LCG.
-local GLOW_COLOR = {1, 1, 1, 1}
+-- Same colour and function as CDMGlow so all addon glows look identical.
+local GLOW_COLOR = { 1, 0.82, 0, 0.9 }
 
 local function StartGlow(overlay)
     if overlay._glowActive then return end
     overlay._glowActive = true
     overlay:Show()
-    if LCG and LCG.ButtonGlow_Start then
-        LCG.ButtonGlow_Start(overlay, GLOW_COLOR, 0.4)
+    if LCG and LCG.ProcGlow_Start then
+        LCG.ProcGlow_Start(overlay, { color = GLOW_COLOR, startAnim = false })
     end
 end
 
 local function StopGlow(overlay)
     if not overlay._glowActive then return end
     overlay._glowActive = false
-    if LCG and LCG.ButtonGlow_Stop then LCG.ButtonGlow_Stop(overlay) end
+    if LCG and LCG.ProcGlow_Stop then LCG.ProcGlow_Stop(overlay) end
     overlay:Hide()
 end
 
