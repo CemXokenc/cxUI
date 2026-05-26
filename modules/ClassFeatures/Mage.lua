@@ -2,7 +2,8 @@ local addonName, ns = ...
 
 -- ===========================================================================
 -- CLASS FEATURES: MAGE (classID 8)
--- Features: Flurry Cross — red × on Flurry CDM when both procs are active.
+-- Features:
+--   · Flurry Cross — red × on Flurry CDM when both procs are active.
 -- ===========================================================================
 
 local CF = ns.CF
