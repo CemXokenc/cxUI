@@ -26,6 +26,8 @@ CXUI_DB = CXUI_DB or {
     cdmFrostBarSwap           = true,
     -- Ability Tracker
     noMovement                = true,
+    -- MogMount integration
+    mogMountFlyingInGround    = false,
 }
 
 local function EnsureDBDefaults()
@@ -51,6 +53,8 @@ local function EnsureDBDefaults()
         cdmFrostBarSwap           = true,
         -- Ability Tracker
         noMovement                = true,
+        -- MogMount integration
+        mogMountFlyingInGround    = false,
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
@@ -168,6 +172,7 @@ CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents ac
 CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -320, false, L)
 CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -320, false, R)
 CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -350, false, L)
+CreateCheckbox("MogMount: Flying in Ground", "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.",  -350, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Module 5 — 2 columns
@@ -175,12 +180,12 @@ CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a cus
 -- ---------------------------------------------------------------------------
 CreateHeader("Module 5: Class Features", -390)
 CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -415, false, L)
-CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -415, false, R)
+CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -415, false, R)
 CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -445, false, L)
 CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -445, false, R)
-CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -475, false, L)
-CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -475, false, R)
-CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -505, false, L)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -475, false, L)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -475, false, R)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -505, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
