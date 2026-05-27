@@ -2,9 +2,9 @@ local addonName, ns = ...
 
 -- ===========================================================================
 -- SMALL TWEAKS: MOGMOUNT — FLYING IN GROUND SLOT
--- MogMount.getSortedGroundMounts() читає MogMountSaved.ShowFlyingInGround
--- напряму при кожному виклику, тому достатньо просто синхронізувати це
--- поле з нашим CXUI_DB.mogMountFlyingInGround — без патчу функцій.
+-- MogMount.getSortedGroundMounts() reads MogMountSaved.ShowFlyingInGround
+-- directly on every call, so syncing that field from CXUI_DB is enough —
+-- no function patching needed.
 -- ===========================================================================
 
 local function Sync()
@@ -14,8 +14,8 @@ local function Sync()
     end
 end
 
--- Синхронізуємо коли налаштування cxUI закриваються (зміна чекбоксу
--- вступить в силу при наступному відкритті панелі MogMount).
+-- Sync when the cxUI options panel closes so any checkbox change takes effect
+-- the next time the MogMount ground-slot panel is opened.
 local function HookOptionsPanel()
     if CXUI_OptionsPanel then
         CXUI_OptionsPanel:HookScript("OnHide", Sync)
@@ -30,11 +30,11 @@ f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:SetScript("OnEvent", function(self, event, addon)
     if event == "ADDON_LOADED" then
         if addon == "MogMount" then
-            -- MogMountSaved вже заповнена в цей момент
+            -- MogMountSaved is already populated at this point
             Sync()
         end
         if addon == addonName then
-            -- core.lua вже виконався, CXUI_OptionsPanel існує
+            -- core.lua has already run, CXUI_OptionsPanel exists
             HookOptionsPanel()
         end
     elseif event == "PLAYER_ENTERING_WORLD" then

@@ -16,13 +16,11 @@ core.lua
 # Module: Transparency
 modules\Transparency\Transparency.lua
 
-# Module: Absorb
-modules\Absorb\Absorb.lua
-
 # Module: CDM
 modules\CDM\CDMGlow.lua
 
 # Module: Small Tweaks
+modules\SmallTweaks\Absorb.lua
 modules\SmallTweaks\Alerts.lua
 modules\SmallTweaks\MacroOverride.lua
 modules\SmallTweaks\Sounds.lua

@@ -4,62 +4,46 @@ local addonName, ns = ...
 -- MODULE: SETTINGS UI & DATABASE
 -- ===========================================================================
 
-CXUI_DB = CXUI_DB or {
-    hideBars                  = true,
-    hideMicro                 = true,
-    hideQuests                = true,
-    cdmGlow                   = true,
-    cdmGlowSuppressUntracked  = false,
-    showAbsorb                = true,
-    hideAlerts                = true,
-    overrideMacroFrame        = true,
-    lowHealthAlert            = true,
-    altTabAlerts              = true,
-    rcm                       = true,
-    cdmEnemyCounter           = true,
-    cdmFesteringGlow          = true,
-    cdmPutrefyCross           = true,
-    cdmFlurryCross            = true,
-    cdmReaperCross            = true,
-    inviteSound               = true,
-    pullTimerSound            = true,
-    cdmFrostBarSwap           = true,
-    -- Ability Tracker
-    noMovement                = true,
-    -- MogMount integration
-    mogMountFlyingInGround    = false,
-}
+-- If SavedVariables don't exist yet (first launch) start with an empty table.
+-- All default values live exclusively in EnsureDBDefaults below.
+CXUI_DB = CXUI_DB or {}
 
 local function EnsureDBDefaults()
     local defaults = {
+		---------------------------------
         hideBars                  = true,
         hideMicro                 = true,
         hideQuests                = true,
+		---------------------------------
         cdmGlow                   = true,
         cdmGlowSuppressUntracked  = false,
-        showAbsorb                = true,
+		---------------------------------
         hideAlerts                = true,
-        overrideMacroFrame        = true,
-        lowHealthAlert            = true,
-        altTabAlerts              = true,
+        showAbsorb                = true,
+        altTabAlerts              = true,		
         rcm                       = true,
+        inviteSound               = true,
+        pullTimerSound            = true,
+        lowHealthAlert            = true,
+        overrideMacroFrame        = true,
+        mogMountFlyingInGround    = true,
+		---------------------------------
         cdmEnemyCounter           = true,
-        cdmFesteringGlow          = true,
+        noMovement                = true,
         cdmPutrefyCross           = true,
         cdmFlurryCross            = true,
         cdmReaperCross            = true,
-        inviteSound               = true,
-        pullTimerSound            = true,
         cdmFrostBarSwap           = true,
-        -- Ability Tracker
-        noMovement                = true,
-        -- MogMount integration
-        mogMountFlyingInGround    = false,
+        cdmFesteringGlow          = true,
+		---------------------------------
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
     end
 end
+
+-- Registry of all checkboxes for explicit state refresh when the panel opens.
+local allCheckboxes = {}
 
 -- ---------------------------------------------------------------------------
 -- Options panel
@@ -125,14 +109,12 @@ local function CreateCheckbox(label, dbKey, tooltipText, yOffset, needsReload, x
     end)
     check:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    check:SetScript("OnShow", function(self)
-        EnsureDBDefaults()
-        self:SetChecked(CXUI_DB[dbKey])
-    end)
-
     check:SetScript("OnClick", function(self)
         CXUI_DB[dbKey] = self:GetChecked()
     end)
+
+    -- Register for explicit refresh from the panel OnShow
+    allCheckboxes[#allCheckboxes + 1] = { frame = check, key = dbKey }
 
     return check
 end
@@ -141,7 +123,7 @@ local L = 16   -- left column x
 local R = 285  -- right column x
 
 -- ---------------------------------------------------------------------------
--- Module 1 — 2 columns
+-- Module 1 — 2 Transparency & Auto-hide
 -- ---------------------------------------------------------------------------
 CreateHeader("Module 1: Transparency & Auto-hide", -10)
 CreateCheckbox("Action Bar Auto-hide", "hideBars",   "Hides bars out of combat. Hover to reveal.",  -35, false, L)
@@ -149,48 +131,49 @@ CreateCheckbox("Micro Menu Auto-hide", "hideMicro",  "Hides Micro Menu and Bags.
 CreateCheckbox("Quest Tracker Hover",  "hideQuests", "Quest tracker only visible on mouseover.",     -65, true,  L)
 
 -- ---------------------------------------------------------------------------
--- Module 2
+-- Module 2 — CDM Glow
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 2: Absorb Display", -105)
-CreateCheckbox("Enable Absorb Display",  "showAbsorb", "Shows total shield amount in screen center.", -130, true)
+CreateHeader("Module 2: CDM Glow", -105)
+CreateCheckbox("Enable CDM Proc Glow",          "cdmGlow",                 "Special highlights for class-specific procs.",                        -130, false, L)
+CreateCheckbox("Suppress Blizzard Glow on CDM", "cdmGlowSuppressUntracked","Hides all Blizzard proc glows on CDM frames. Action bars unaffected.", -130, false, R)
 
 -- ---------------------------------------------------------------------------
--- Module 3 — 2 columns
+-- Module 3 — Small Tweaks
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 3: CDM Glow", -170)
-CreateCheckbox("Enable CDM Proc Glow",          "cdmGlow",                 "Special highlights for class-specific procs.",                    -195, false, L)
-CreateCheckbox("Suppress Blizzard Glow on CDM", "cdmGlowSuppressUntracked","Hides all Blizzard proc glows on CDM frames. Action bars unaffected.", -195, false, R)
+CreateHeader("Module 3: Small Tweaks", -170)
+CreateCheckbox("Hide Talent Alerts",          "hideAlerts",         "Hides annoying talent-related notifications.",                            -195, true,  L)
+CreateCheckbox("Enable Absorb Display",       "showAbsorb",         "Shows total shield amount in screen center.",                              -195, true,  R)
+CreateCheckbox("Ready Check Alert",           "altTabAlerts",       "Plays ready check sound through Master channel. Audible when alt-tabbed.", -225, false, L)
+CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents accidental right-click targeting in dungeons and raids.",         -225, false, R)
+CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -255, false, L)
+CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -255, false, R)
+CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -285, false, L)
+CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -285, false, R)
+CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -315, false, L)
 
 -- ---------------------------------------------------------------------------
--- Module 4 — 2 columns
+-- Module 4 — Class Features
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 4: Small Tweaks", -235)
-CreateCheckbox("Hide Talent Alerts",          "hideAlerts",         "Hides annoying talent-related notifications.",                            -260, true,  L)
-CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -260, false, R)
-CreateCheckbox("Ready Check Alert",           "altTabAlerts",       "Plays ready check sound through Master channel. Audible when alt-tabbed.", -290, false, L)
-CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents accidental right-click targeting in dungeons and raids.",         -290, false, R)
-CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -320, false, L)
-CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -320, false, R)
-CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -350, false, L)
-CreateCheckbox("MogMount: Flying in Ground", "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.",  -350, false, R)
-
--- ---------------------------------------------------------------------------
--- Module 5 — 2 columns
--- (Ability Tracker checkboxes are appended here by Shared.lua)
--- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Class Features", -390)
-CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -415, false, L)
-CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -415, false, R)
-CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -445, false, L)
-CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -445, false, R)
-CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -475, false, L)
-CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -475, false, R)
-CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -505, false, L)
+CreateHeader("Module 4: Class Features", -355)
+CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -380, false, L)
+CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -380, false, R)
+CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -410, false, L)
+CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -410, false, R)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -440, false, L)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -440, false, R)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -470, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
 -- ---------------------------------------------------------------------------
-optionsPanel:SetScript("OnShow", function() EnsureDBDefaults() end)
+-- HookScript instead of SetScript — preserves WoW's own OnShow set by the Settings API.
+-- Explicitly refresh every checkbox so the UI always reflects CXUI_DB.
+optionsPanel:HookScript("OnShow", function()
+    EnsureDBDefaults()
+    for _, cb in ipairs(allCheckboxes) do
+        cb.frame:SetChecked(CXUI_DB[cb.key])
+    end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Settings API registration

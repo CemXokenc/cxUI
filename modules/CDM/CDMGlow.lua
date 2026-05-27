@@ -33,10 +33,12 @@ local PROC_CONFIG = {
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
 	PRIEST = {
+		[375981]  = { 8092, 450983 },         			-- Shadowy Insight     		→ Mind Blast, Void Blast
+		[373204]  = { 335467 },         				-- Mind Devourer    		→ Shadow Word: Madness       
 		--["cdm:450405"] = {450405},					-- Void Blast	      	   	→ always glow if present in CDM
 		--["cdm:1242173"] = {1242173},					-- Void Volley   	 		→ always glow if present in CDM
 		--["cdm:263165"] = {263165},					-- Void Torrent   	 		→ always glow if present in CDM
-		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM
+		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM		
 	},
     SHAMAN = {}, 
 	MONK = {
