@@ -35,6 +35,7 @@ local function EnsureDBDefaults()
         cdmReaperCross            = true,
         cdmFrostBarSwap           = true,
         cdmFesteringGlow          = true,
+        burningRushReminder       = true,
 		---------------------------------
     }
     for k, v in pairs(defaults) do
@@ -77,7 +78,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 900)
+content:SetSize(560, 960)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -162,6 +163,7 @@ CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x
 CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -440, false, L)
 CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -440, false, R)
 CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -470, false, L)
+CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -500, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Panel events

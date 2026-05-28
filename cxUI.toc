@@ -31,3 +31,4 @@ modules\SmallTweaks\MogMountFlyingInGround.lua
 modules\ClassFeatures\Shared.lua
 modules\ClassFeatures\DeathKnight.lua
 modules\ClassFeatures\Mage.lua
+modules\ClassFeatures\Warlock.lua

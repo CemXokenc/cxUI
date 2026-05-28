@@ -13,19 +13,19 @@ local GLOW_COLOR = { 1, 0.82, 0, 0.9 }
 local PROC_CONFIG = {
     DEATHKNIGHT = {
         [81340] = { 47541, 207317, 1242174, 383269 },	-- Sudden Doom        		→ Death Coil, Epidemic, Necrotic Coil, Graveyard
-		[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe		
-		[59052] = { 49184 }, --but this not trackeble   -- Rime                     → Howling Blast									
+		[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe
+		[59052] = { 49184 }, --but this not trackeble   -- Rime                     → Howling Blast
 		["cdm:1228433"] = {1228433}, 					-- Frostbane				→ always glow if present in CDM
     },
     MAGE = {
         [44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance
-        --[1247729] = { 30455 },          				-- Thermal Void       		→ Ice Lance        
+        --[1247729] = { 30455 },          				-- Thermal Void       		→ Ice Lance
         [190446]  = { 44614 },         					-- Brain Freeze     	  	→ Flurry
         [270232]  = { 190356 },        					-- Freezeng Rain    	  	→ Blizzard
 		["cdm:199786"] = {199786},						-- Glacial Spike     		→ always glow if present in CDM
     },
     WARLOCK = {
-        [264173]  = { 264178 },         				-- Demonic Core       		→ Demonbolt        
+        [264173]  = { 264178 },         				-- Demonic Core       		→ Demonbolt
 		["cdm:434635"] = {434635},						-- Ruination    	  		→ always glow if present in CDM
 		["cdm:434506"] = {434506},						-- Infernal Bolt      		→ always glow if present in CDM
 		["cdm:1276452"] = {1276452},					-- Grimoire: Imp Lord 		→ always glow if present in CDM
@@ -34,20 +34,20 @@ local PROC_CONFIG = {
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
 	PRIEST = {
 		[375981]  = { 8092, 450983 },         			-- Shadowy Insight     		→ Mind Blast, Void Blast
-		[373204]  = { 335467 },         				-- Mind Devourer    		→ Shadow Word: Madness       
+		[373204]  = { 335467 },         				-- Mind Devourer    		→ Shadow Word: Madness
 		--["cdm:450405"] = {450405},					-- Void Blast	      	   	→ always glow if present in CDM
 		--["cdm:1242173"] = {1242173},					-- Void Volley   	 		→ always glow if present in CDM
 		--["cdm:263165"] = {263165},					-- Void Torrent   	 		→ always glow if present in CDM
-		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM		
+		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM
 	},
     SHAMAN = {}, 
 	MONK = {
 		[438443]  = { 101546 },         				-- Dance of Chi-Ji     		→ Spinning Crane Kick
-		[443112]  = { 124682 },         				-- Strength of the Black Ox → Enveloping Mist        
-		--[392883]  = { 399491 },         				-- Vivacious Vivification   → Sheilun's Gift        
+		[443112]  = { 124682 },         				-- Strength of the Black Ox → Enveloping Mist
+		--[392883]  = { 399491 },         				-- Vivacious Vivification   → Sheilun's Gift
 	}, DRUID = {},
 	DEMONHUNTER = {
-		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       			→ Reap, Eradicate, Cull		
+		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       			→ Reap, Eradicate, Cull
 		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    		→ always glow if present in CDM
 	},
 	EVOKER = {},
