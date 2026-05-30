@@ -270,10 +270,9 @@ end
 -- ===========================================================================
 
 local function CreateOverlay(cdmFrame)
-    local ov = CreateFrame("Frame", nil, cdmFrame)
-    ov:SetFrameStrata("TOOLTIP")
+    local ov = CreateFrame("Frame", nil, cdmFrame)    
     ov:SetAllPoints(cdmFrame)
-    ov:SetFrameLevel(cdmFrame:GetFrameLevel() + 10)
+    ov:SetFrameLevel(cdmFrame:GetFrameLevel() + 2)
     ov._targetFrame = cdmFrame
     ov._glowActive  = false
     ov:Hide()

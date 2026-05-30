@@ -14,7 +14,7 @@ local PROC_CONFIG = {
     DEATHKNIGHT = {
         [81340] = { 47541, 207317, 1242174, 383269 },	-- Sudden Doom        		→ Death Coil, Epidemic, Necrotic Coil, Graveyard
 		[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe
-		[59052] = { 49184 }, --but this not trackeble   -- Rime                     → Howling Blast
+		--[59052] = { 49184 }, --but this not trackeble -- Rime                     → Howling Blast
 		["cdm:1228433"] = {1228433}, 					-- Frostbane				→ always glow if present in CDM
     },
     MAGE = {
@@ -75,9 +75,8 @@ local cdmOverlays = {}
 local function GetOrCreateCDMOverlay(frame)
     if cdmOverlays[frame] then return cdmOverlays[frame] end
     local ov = CreateFrame("Frame", nil, frame)
-    ov:SetAllPoints(frame)
-    ov:SetFrameStrata("TOOLTIP")
-    ov:SetFrameLevel(frame:GetFrameLevel() + 10)
+    ov:SetAllPoints(frame)    
+    ov:SetFrameLevel(frame:GetFrameLevel() + 2)
     cdmOverlays[frame] = ov
     return ov
 end
