@@ -21,8 +21,8 @@ local PROC_CONFIG = {
 		["cdm:1228433"] = {1228433}, 					-- Frostbane				→ always glow if present in CDM
     },
     MAGE = {
-        [44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance
-        --[1247729] = { 30455 },          				-- Thermal Void       		→ Ice Lance
+        [44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance        
+		--[1247729]   = { 30455 },                      -- Thermal Void             → Ice Lance
         [190446]  = { 44614 },         					-- Brain Freeze     	  	→ Flurry
         [270232]  = { 190356 },        					-- Freezeng Rain    	  	→ Blizzard
 		["cdm:199786"] = {199786},						-- Glacial Spike     		→ always glow if present in CDM
@@ -78,7 +78,7 @@ local cdmOverlays = {}
 local function GetOrCreateCDMOverlay(frame)
     if cdmOverlays[frame] then return cdmOverlays[frame] end
     local ov = CreateFrame("Frame", nil, frame)
-    ov:SetAllPoints(frame)    
+    ov:SetAllPoints(frame)
     ov:SetFrameLevel(frame:GetFrameLevel() + 2)
     cdmOverlays[frame] = ov
     return ov
@@ -254,8 +254,7 @@ function CDMGlow:UpdateGlows()
             -- that CDM shows automatically based on its own internal logic.
             hasAura = currentFrames[auraID] ~= nil and #currentFrames[auraID] > 0
         elseif type(auraID) == "string" and auraID:sub(1, 8) == "overlay:" then
-            -- Overlay-only sentinel: aura is private and cannot be read via UNIT_AURA.
-            -- Glow state is driven purely by SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE.
+            -- Overlay sentinel: glow state is driven purely by SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE.
             hasAura = self.overlayProcSpells[auraID] == true
         else
             if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
@@ -354,13 +353,10 @@ function CDMGlow:HookCDM()
             end
 
             -- Always suppress Blizzard's SpellActivationAlert.
-            -- Overlay-only spells (e.g. Rime) are handled via SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE
-            -- and rendered through our LCG overlay, so Blizzard's alert is not needed.
             local alert = frame.SpellActivationAlert
             if alert then alert:SetAlpha(0); alert:Hide() end
 
             -- For untracked spells only: also stop CDM's glow.
-            -- For tracked spells our LCG overlay handles the glow — don't interfere.
             if not isTracked and cdm and cdm.Glow and spellID then
                 for glowFrame, auraID in pairs(CDMGlow.activeGlowFrames) do
                     local spells = CDMGlow.spellsByAura[auraID]
@@ -499,8 +495,6 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
                 -- Generation counter debounce: unlike a boolean flag, each new GLOW_SHOW
                 -- increments the counter and schedules its own callback. Only the latest
                 -- callback runs — earlier ones see a stale generation and skip.
-                -- This fixes the pull-start issue where multiple procs firing within
-                -- 0.15s caused the boolean to block all but the first GLOW_SHOW.
                 CDMGlow._overlayUpdateGen = CDMGlow._overlayUpdateGen + 1
                 local gen = CDMGlow._overlayUpdateGen
                 C_Timer.After(0.15, function()
