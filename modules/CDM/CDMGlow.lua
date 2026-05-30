@@ -14,7 +14,10 @@ local PROC_CONFIG = {
     DEATHKNIGHT = {
         [81340] = { 47541, 207317, 1242174, 383269 },	-- Sudden Doom        		→ Death Coil, Epidemic, Necrotic Coil, Graveyard
 		[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe
-		--[59052] = { 49184 }, --but this not trackeble -- Rime                     → Howling Blast
+		-- Rime (59052) aura is private — not readable via UNIT_AURA.
+		-- "overlay:" prefix: activate glow on SPELL_ACTIVATION_OVERLAY_GLOW_SHOW,
+		-- clear it on SPELL_ACTIVATION_OVERLAY_GLOW_HIDE. No aura check needed.
+		["overlay:49184"] = { 49184 },					-- Rime				    	→ Howling Blast
 		["cdm:1228433"] = {1228433}, 					-- Frostbane				→ always glow if present in CDM
     },
     MAGE = {
@@ -250,6 +253,10 @@ function CDMGlow:UpdateGlows()
             -- regardless of any player buff. Used for spells like Collapsing Star
             -- that CDM shows automatically based on its own internal logic.
             hasAura = currentFrames[auraID] ~= nil and #currentFrames[auraID] > 0
+        elseif type(auraID) == "string" and auraID:sub(1, 8) == "overlay:" then
+            -- Overlay-only sentinel: aura is private and cannot be read via UNIT_AURA.
+            -- Glow state is driven purely by SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE.
+            hasAura = self.overlayProcSpells[auraID] == true
         else
             if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
                 local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
@@ -347,6 +354,8 @@ function CDMGlow:HookCDM()
             end
 
             -- Always suppress Blizzard's SpellActivationAlert.
+            -- Overlay-only spells (e.g. Rime) are handled via SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE
+            -- and rendered through our LCG overlay, so Blizzard's alert is not needed.
             local alert = frame.SpellActivationAlert
             if alert then alert:SetAlpha(0); alert:Hide() end
 
@@ -434,8 +443,9 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
             CDMGlow.spellsByAura[auraID] = spells
             for i = 1, #spells do
                 CDMGlow.trackedSpells[spells[i]] = true
-                -- String keys like "cdm:1221150" are CDM-presence sentinels,
-                -- not real aura IDs — skip reverse aura mapping for them.
+                -- Only numeric aura IDs get a reverse mapping into spellToAura.
+                -- String keys ("cdm:", "overlay:") are sentinel types with their
+                -- own glow logic and don't need a spell → aura reverse lookup.
                 if type(auraID) == "number" then
                     CDMGlow.spellToAura[spells[i]] = auraID
                 end
@@ -476,47 +486,62 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
 
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW" then
         local sid = ...
-        local auraID = CDMGlow.spellToAura[sid]
-        if auraID then
-            CDMGlow.overlayProcSpells[auraID] = true
-            -- Generation counter debounce: unlike a boolean flag, each new GLOW_SHOW
-            -- increments the counter and schedules its own callback. Only the latest
-            -- callback runs — earlier ones see a stale generation and skip.
-            -- This fixes the pull-start issue where multiple procs firing within
-            -- 0.15s caused the boolean to block all but the first GLOW_SHOW.
-            CDMGlow._overlayUpdateGen = CDMGlow._overlayUpdateGen + 1
-            local gen = CDMGlow._overlayUpdateGen
-            C_Timer.After(0.15, function()
-                if gen ~= CDMGlow._overlayUpdateGen then return end
-                CDMGlow:UpdateGlows()
-            end)
+        local overlayKey = "overlay:" .. sid
+        if CDMGlow.spellsByAura[overlayKey] then
+            -- Overlay-only spell (e.g. Rime → Howling Blast): aura is private,
+            -- so we use Blizzard's overlay event as the sole glow trigger.
+            CDMGlow.overlayProcSpells[overlayKey] = true
+            CDMGlow:UpdateGlows()
+        else
+            local auraID = CDMGlow.spellToAura[sid]
+            if auraID then
+                CDMGlow.overlayProcSpells[auraID] = true
+                -- Generation counter debounce: unlike a boolean flag, each new GLOW_SHOW
+                -- increments the counter and schedules its own callback. Only the latest
+                -- callback runs — earlier ones see a stale generation and skip.
+                -- This fixes the pull-start issue where multiple procs firing within
+                -- 0.15s caused the boolean to block all but the first GLOW_SHOW.
+                CDMGlow._overlayUpdateGen = CDMGlow._overlayUpdateGen + 1
+                local gen = CDMGlow._overlayUpdateGen
+                C_Timer.After(0.15, function()
+                    if gen ~= CDMGlow._overlayUpdateGen then return end
+                    CDMGlow:UpdateGlows()
+                end)
+            end
         end
 
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE" then
         local sid = ...
-        local auraID = CDMGlow.spellToAura[sid]
-        if auraID and CDMGlow.overlayProcSpells[auraID] then
-            local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
-            if ok and aura ~= nil then
-                -- Aura still exists — this is a stack consumption (e.g. Fingers of
-                -- Frost, Demonic Core). Debounce so we don't flicker between stacks.
-                if not CDMGlow._pendingUpdate then
-                    CDMGlow._pendingUpdate = true
-                    C_Timer.After(0.1, function()
-                        CDMGlow._pendingUpdate = false
-                        for aID in pairs(CDMGlow.overlayProcSpells) do
-                            local ok2, aura2 = pcall(C_UnitAuras.GetPlayerAuraBySpellID, aID)
-                            if ok2 and aura2 == nil then
-                                CDMGlow.overlayProcSpells[aID] = nil
+        local overlayKey = "overlay:" .. sid
+        if CDMGlow.spellsByAura[overlayKey] then
+            -- Overlay-only spell: clear immediately, no aura check needed.
+            CDMGlow.overlayProcSpells[overlayKey] = nil
+            CDMGlow:UpdateGlows()
+        else
+            local auraID = CDMGlow.spellToAura[sid]
+            if auraID and CDMGlow.overlayProcSpells[auraID] then
+                local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
+                if ok and aura ~= nil then
+                    -- Aura still exists — this is a stack consumption (e.g. Fingers of
+                    -- Frost, Demonic Core). Debounce so we don't flicker between stacks.
+                    if not CDMGlow._pendingUpdate then
+                        CDMGlow._pendingUpdate = true
+                        C_Timer.After(0.1, function()
+                            CDMGlow._pendingUpdate = false
+                            for aID in pairs(CDMGlow.overlayProcSpells) do
+                                local ok2, aura2 = pcall(C_UnitAuras.GetPlayerAuraBySpellID, aID)
+                                if ok2 and aura2 == nil then
+                                    CDMGlow.overlayProcSpells[aID] = nil
+                                end
                             end
-                        end
-                        CDMGlow:UpdateGlows()
-                    end)
+                            CDMGlow:UpdateGlows()
+                        end)
+                    end
+                else
+                    -- Aura is completely gone — hide immediately, no debounce needed.
+                    CDMGlow.overlayProcSpells[auraID] = nil
+                    CDMGlow:UpdateGlows()
                 end
-            else
-                -- Aura is completely gone — hide immediately, no debounce needed.
-                CDMGlow.overlayProcSpells[auraID] = nil
-                CDMGlow:UpdateGlows()
             end
         end
     end
