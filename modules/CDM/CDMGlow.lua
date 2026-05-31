@@ -22,26 +22,44 @@ local GLOW_COLOR = { 0.85, 0.85, 0.95, 0.9 }
 
 local PROC_CONFIG = {
     DEATHKNIGHT = {
+		-- Procs
         [81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
         [51124] = { 49020, 207230 },                     -- Killing Machine        → Obliterate, Frostscythe
         ["overlay:49184"] = { 49184 },                   -- Rime                   → Howling Blast
         ["cdm:1228433"]   = { 1228433 },                 -- Frostbane              → always glow if present in CDM
+		-- CDs
         ["ready:42650"]   = { 42650 },                   -- Army of the Dead       → glow when ready
         ["ready:1249658"] = { 1249658 },                 -- Breath of Sindragosa   → glow when ready
+		-- Utility
+		["ready:47528"] = { 47528 },                 -- Mind Freeze   → glow when ready
+		["ready:49576"] = { 49576 },                 -- Death Grip   → glow when ready
     },
     MAGE = {
-        -- Thermal Void id 1247730
+		-- Procs
         [44544]  = { 30455 },                            -- Fingers of Frost       → Ice Lance
         [190446] = { 44614 },                            -- Brain Freeze           → Flurry
         [270232] = { 190356 },                           -- Freezing Rain          → Blizzard
         ["cdm:199786"] = { 199786 },                     -- Glacial Spike          → always glow if present in CDM
+		-- CDs
+		["ready:84714"]   = { 84714 },                   -- Frozen Orb      → glow when ready
+		-- Utility
+		["ready:2139"]   = { 2139 },                   -- Counterspell      → glow when ready
+		["ready:475"]   = { 475 },                   -- Remove Curse     → glow when ready
+        -- Thermal Void id 1247730
     },
     WARLOCK = {
+		-- Procs
         [264173] = { 264178 },                           -- Demonic Core           → Demonbolt
         ["cdm:434635"]  = { 434635 },                    -- Ruination              → always glow if present in CDM
         ["cdm:434506"]  = { 434506 },                    -- Infernal Bolt          → always glow if present in CDM
+		-- CDs
+		["ready:104316"]  = { 104316 },                  -- Call Dreadstalkers               → glow when ready
+		["ready:265187"]  = { 265187 },                  -- Summon Demonic Tyrant              → glow when ready
         ["cdm:1276452"] = { 1276452 },                   -- Grimoire: Imp Lord     → always glow if present in CDM
         ["cdm:1276467"] = { 1276467 },                   -- Grimoire: Fel Ravager  → always glow if present in CDM
+		-- Utility
+		["ready:119914"]  = { 119914 },                  -- Axe Toss            → glow when ready
+		["ready:119910"]  = { 119910 },                  -- Spell Lock            → glow when ready
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {},
     PRIEST = {
@@ -63,15 +81,24 @@ local PROC_CONFIG = {
     },
     SHAMAN = {},
     MONK = {
-        -- Vivacious Vivification id 392883 | Sheilun's Gift id 399491
+		-- Procs
         [438443] = { 101546 },                           -- Dance of Chi-Ji            → Spinning Crane Kick
         [443112] = { 124682 },                           -- Strength of the Black Ox  → Enveloping Mist
+        -- Vivacious Vivification id 392883 | Sheilun's Gift id 399491
     },
     DRUID = {},
     DEMONHUNTER = {
-        -- Voidfall id 1256302 | Reap id 1226019 | Cull id 1245453
-        ["overlay:49184"] = { 1225826 },                 -- Eradicate              → Eradicate
+		-- Procs
+        ["cdm:1225826"] = { 1225826 },                 -- Eradicate              → Eradicate		
         ["cdm:1221150"]   = { 1221150 },                 -- Collapsing Star        → always glow if present in CDM
+		-- CDs
+		["ready:1217605"]  = { 1217605 },                  -- Void Metamorphosis               → glow when ready
+		["ready:191427"]  = { 191427 },                  -- Metamorphosis               → glow when ready
+		["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
+		-- Utility
+		["ready:183752"]  = { 183752 },                  -- Disrupt             → glow when ready
+		["ready:278326"]  = { 278326 },                  -- Consume Magic            → glow when ready
+        -- Voidfall id 1256302 | Reap id 1226019 | Cull id 1245453
     },
     EVOKER = {},
 }
