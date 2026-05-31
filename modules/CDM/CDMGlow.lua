@@ -8,69 +8,90 @@ CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
 local LCG = LibStub and LibStub("LibCustomGlow-1.0", true)
-local GLOW_COLOR = { 1, 0.82, 0, 0.9 }
+local GLOW_COLOR = { 0.85, 0.85, 0.95, 0.9 }
+
+-- ---------------------------------------------------------------------------
+-- PROC CONFIG
+-- ---------------------------------------------------------------------------
+-- Key types:
+--   [numericAuraID] = { spellID, ... }     glow when aura is active on player
+--   ["cdm:spellID"] = { spellID }          glow whenever frame is visible in CDM
+--   ["overlay:spellID"] = { spellID }      glow driven by SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE
+--   ["ready:spellID"] = { spellID }        glow when spell is not on cooldown and IsSpellUsable
+-- ---------------------------------------------------------------------------
 
 local PROC_CONFIG = {
     DEATHKNIGHT = {
-        [81340] = { 47541, 207317, 1242174, 383269 },	-- Sudden Doom        		→ Death Coil, Epidemic, Necrotic Coil, Graveyard
-		[51124] = { 49020, 207230 }, 					-- Killing Machine			→ Obliterate, Frostscythe
-		-- Rime (59052) aura is private — not readable via UNIT_AURA.
-		-- "overlay:" prefix: activate glow on SPELL_ACTIVATION_OVERLAY_GLOW_SHOW,
-		-- clear it on SPELL_ACTIVATION_OVERLAY_GLOW_HIDE. No aura check needed.
-		["overlay:49184"] = { 49184 },					-- Rime				    	→ Howling Blast
-		["cdm:1228433"] = {1228433}, 					-- Frostbane				→ always glow if present in CDM
+        [81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
+        [51124] = { 49020, 207230 },                     -- Killing Machine        → Obliterate, Frostscythe
+        ["overlay:49184"] = { 49184 },                   -- Rime                   → Howling Blast
+        ["cdm:1228433"]   = { 1228433 },                 -- Frostbane              → always glow if present in CDM
+        ["ready:42650"]   = { 42650 },                   -- Army of the Dead       → glow when ready
+        ["ready:1249658"] = { 1249658 },                 -- Breath of Sindragosa   → glow when ready
     },
     MAGE = {
-        [44544]   = { 30455 },          				-- Fingers of Frost   		→ Ice Lance        
-		--[1247729]   = { 30455 },                      -- Thermal Void             → Ice Lance
-        [190446]  = { 44614 },         					-- Brain Freeze     	  	→ Flurry
-        [270232]  = { 190356 },        					-- Freezeng Rain    	  	→ Blizzard
-		["cdm:199786"] = {199786},						-- Glacial Spike     		→ always glow if present in CDM
+        -- Thermal Void id 1247730
+        [44544]  = { 30455 },                            -- Fingers of Frost       → Ice Lance
+        [190446] = { 44614 },                            -- Brain Freeze           → Flurry
+        [270232] = { 190356 },                           -- Freezing Rain          → Blizzard
+        ["cdm:199786"] = { 199786 },                     -- Glacial Spike          → always glow if present in CDM
     },
     WARLOCK = {
-        [264173]  = { 264178 },         				-- Demonic Core       		→ Demonbolt
-		["cdm:434635"] = {434635},						-- Ruination    	  		→ always glow if present in CDM
-		["cdm:434506"] = {434506},						-- Infernal Bolt      		→ always glow if present in CDM
-		["cdm:1276452"] = {1276452},					-- Grimoire: Imp Lord 		→ always glow if present in CDM
-		["cdm:1276467"] = {1276467},					-- Grimoire: Fel Ravager	→ always glow if present in CDM
+        [264173] = { 264178 },                           -- Demonic Core           → Demonbolt
+        ["cdm:434635"]  = { 434635 },                    -- Ruination              → always glow if present in CDM
+        ["cdm:434506"]  = { 434506 },                    -- Infernal Bolt          → always glow if present in CDM
+        ["cdm:1276452"] = { 1276452 },                   -- Grimoire: Imp Lord     → always glow if present in CDM
+        ["cdm:1276467"] = { 1276467 },                   -- Grimoire: Fel Ravager  → always glow if present in CDM
     },
-    WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {}, 
-	PRIEST = {
-		[375981]  = { 8092, 450983 },         			-- Shadowy Insight     		→ Mind Blast, Void Blast
-		[373204]  = { 335467 },         				-- Mind Devourer    		→ Shadow Word: Madness
-		--["cdm:450405"] = {450405},					-- Void Blast	      	   	→ always glow if present in CDM
-		--["cdm:1242173"] = {1242173},					-- Void Volley   	 		→ always glow if present in CDM
-		--["cdm:263165"] = {263165},					-- Void Torrent   	 		→ always glow if present in CDM
-		--["cdm:228260"] = {228260},					-- Voidform		   	 		→ always glow if present in CDM
-	},
-    SHAMAN = {}, 
-	MONK = {
-		[438443]  = { 101546 },         				-- Dance of Chi-Ji     		→ Spinning Crane Kick
-		[443112]  = { 124682 },         				-- Strength of the Black Ox → Enveloping Mist
-		--[392883]  = { 399491 },         				-- Vivacious Vivification   → Sheilun's Gift
-	}, DRUID = {},
-	DEMONHUNTER = {
-		--[1256302]  = { 1226019, 1225826, 1245453 },	-- Voidfall       			→ Reap, Eradicate, Cull
-		["cdm:1221150"] = { 1221150 },					-- Collapsing Star    		→ always glow if present in CDM
-	},
-	EVOKER = {},
+    WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {},
+    PRIEST = {
+        -- Procs
+        [375981] = { 8092, 450983 },                     -- Shadowy Insight        → Mind Blast, Void Blast
+        [373204] = { 335467 },                           -- Mind Devourer          → Shadow Word: Madness
+        -- CDs
+        ["ready:228260"]  = { 228260 },                  -- Voidform               → glow when ready
+        ["ready:1242173"] = { 1242173 },                 -- Void Volley            → glow when ready
+        ["ready:120644"]  = { 120644 },                  -- Halo                   → glow when ready
+        ["ready:120517"]  = { 120517 },                  -- Halo (Holy)            → glow when ready
+        ["ready:263165"]  = { 263165 },                  -- Void Torrent           → glow when ready
+        ["ready:450983"]  = { 450983 },                  -- Void Blast             → glow when ready
+        -- Utility
+        ["ready:15487"]  = { 15487 },                    -- Silence                → glow when ready
+        ["ready:213634"] = { 213634 },                   -- Purify Disease         → glow when ready
+        ["ready:528"]    = { 528 },                      -- Dispel Magic           → glow when ready
+        ["ready:527"]    = { 527 },                      -- Purify                 → glow when ready
+    },
+    SHAMAN = {},
+    MONK = {
+        -- Vivacious Vivification id 392883 | Sheilun's Gift id 399491
+        [438443] = { 101546 },                           -- Dance of Chi-Ji            → Spinning Crane Kick
+        [443112] = { 124682 },                           -- Strength of the Black Ox  → Enveloping Mist
+    },
+    DRUID = {},
+    DEMONHUNTER = {
+        -- Voidfall id 1256302 | Reap id 1226019 | Cull id 1245453
+        ["overlay:49184"] = { 1225826 },                 -- Eradicate              → Eradicate
+        ["cdm:1221150"]   = { 1221150 },                 -- Collapsing Star        → always glow if present in CDM
+    },
+    EVOKER = {},
 }
 
 local CDMGlow = {
-    spellsByAura          = {},
-    trackedSpells         = {},
-    spellToAura           = {},
-    activeAuras           = {},
-    overlayProcSpells     = {},
-    baseCost              = {},
-    activeGlowFrames      = {},
-    _pendingUpdate        = false,
-    _overlayUpdateGen     = 0,      -- generation counter replacing _pendingOverlayUpdate boolean
-    _reanchorHooked       = false,
+    spellsByAura      = {},
+    trackedSpells     = {},
+    spellToAura       = {},
+    activeAuras       = {},
+    overlayProcSpells = {},
+    readySpells       = {},
+    baseCost          = {},
+    activeGlowFrames  = {},
+    _pendingUpdate    = false,
+    _overlayUpdateGen = 0,
+    _reanchorHooked   = false,
 }
 
 -- ---------------------------------------------------------------------------
--- CDM Glow API access
+-- LCG overlay helpers
 -- ---------------------------------------------------------------------------
 
 local cdmOverlays = {}
@@ -95,7 +116,42 @@ local function RequestGlow(frame, enabled)
 end
 
 -- ---------------------------------------------------------------------------
--- Frame scanning — find CDM frames that currently display a tracked spell
+-- "ready:" spell check
+-- ---------------------------------------------------------------------------
+
+local function IsSpellReady(spellID)
+    if not C_Spell then return false end
+    local info = C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldown(spellID)
+    if not info then return false end
+    local offCooldown = not info.isActive or info.isOnGCD
+    if not offCooldown then return false end
+    local ok, usable = pcall(C_Spell.IsSpellUsable, spellID)
+    return ok and usable == true
+end
+
+-- ---------------------------------------------------------------------------
+-- Shared spell registration helper (used on login and spec change)
+-- ---------------------------------------------------------------------------
+
+local function RegisterClassSpells(class)
+    if not PROC_CONFIG[class] then return end
+    for auraID, spells in pairs(PROC_CONFIG[class]) do
+        CDMGlow.spellsByAura[auraID] = spells
+        for i = 1, #spells do
+            CDMGlow.trackedSpells[spells[i]] = true
+            if type(auraID) == "number" then
+                CDMGlow.spellToAura[spells[i]] = auraID
+            end
+            if type(auraID) == "string" and auraID:sub(1, 6) == "ready:" then
+                local sid = tonumber(auraID:sub(7))
+                if sid then CDMGlow.readySpells[sid] = true end
+            end
+        end
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- Frame scanning
 -- ---------------------------------------------------------------------------
 
 local function IsSecret(v)
@@ -152,8 +208,6 @@ local CDM_VIEWER_NAMES = {
     "BlizzardCooldownFrame",
 }
 
--- Returns { [auraID] = { frame, frame, ... }, ... } for all currently visible
--- CDM frames that match a tracked spell.
 local function FindCurrentCDMFrames()
     local found = {}
     for auraID in pairs(CDMGlow.spellsByAura) do found[auraID] = {} end
@@ -163,9 +217,7 @@ local function FindCurrentCDMFrames()
         if _G[name] then ScanFrameTree(_G[name], results, seen, 0) end
     end
 
-    -- Each CDM spell may appear on both a parent Frame and child Button.
-    -- Keep only the smallest frame per spellID to avoid double-glowing.
-    local smallest = {}  -- [spellID] = { frame, area }
+    local smallest = {}
     for _, entry in ipairs(results) do
         local area = 999999
         pcall(function()
@@ -177,6 +229,7 @@ local function FindCurrentCDMFrames()
             smallest[entry.spellID] = { frame = entry.frame, area = area }
         end
     end
+
     local deduped = {}
     for spellID, entry in pairs(smallest) do
         deduped[#deduped + 1] = { frame = entry.frame, spellID = spellID }
@@ -208,7 +261,6 @@ local function ApplyGlowState(auraID, hasAura, currentFrames)
     local hasNewFrames = currentFrames and #currentFrames > 0
 
     if hasAura and hasNewFrames then
-        -- New frames found — transition: hide glow on old frames, show on new ones.
         for frame, fAuraID in pairs(CDMGlow.activeGlowFrames) do
             if fAuraID == auraID and not newSet[frame] then
                 RequestGlow(frame, false)
@@ -220,10 +272,8 @@ local function ApplyGlowState(auraID, hasAura, currentFrames)
             CDMGlow.activeGlowFrames[frame] = auraID
         end
     elseif hasAura and not hasNewFrames then
-        -- Proc is active but CDM has no frames right now (ForceReanchor in progress).
-        -- Keep existing glows alive — ScheduleRescan will find the new frames shortly.
+        -- Proc active but CDM has no frames yet (ForceReanchor in progress).
     elseif not hasAura then
-        -- Proc ended — hide glow on all frames for this aura.
         for frame, fAuraID in pairs(CDMGlow.activeGlowFrames) do
             if fAuraID == auraID then
                 RequestGlow(frame, false)
@@ -242,20 +292,21 @@ function CDMGlow:UpdateGlows()
         return
     end
 
-    -- Scan CDM frame tree once per update cycle.
     local currentFrames = FindCurrentCDMFrames()
 
     for auraID in pairs(self.spellsByAura) do
         local hasAura = false
 
         if type(auraID) == "string" and auraID:sub(1, 4) == "cdm:" then
-            -- CDM-presence sentinel: glow whenever the spell is visible in CDM,
-            -- regardless of any player buff. Used for spells like Collapsing Star
-            -- that CDM shows automatically based on its own internal logic.
             hasAura = currentFrames[auraID] ~= nil and #currentFrames[auraID] > 0
+
         elseif type(auraID) == "string" and auraID:sub(1, 8) == "overlay:" then
-            -- Overlay sentinel: glow state is driven purely by SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE.
             hasAura = self.overlayProcSpells[auraID] == true
+
+        elseif type(auraID) == "string" and auraID:sub(1, 6) == "ready:" then
+            local sid = tonumber(auraID:sub(7))
+            hasAura = sid ~= nil and IsSpellReady(sid)
+
         else
             if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
                 local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
@@ -270,7 +321,7 @@ function CDMGlow:UpdateGlows()
 end
 
 -- ---------------------------------------------------------------------------
--- Runic power cost fallback (secondary proc detection)
+-- Runic power cost fallback
 -- ---------------------------------------------------------------------------
 
 local function GetSpellRunicCost(spellID)
@@ -307,8 +358,7 @@ function CDMGlow:HasProcViaCost(auraID)
 end
 
 -- ---------------------------------------------------------------------------
--- Rescan scheduler — generation counter so only the LAST call in a burst runs.
--- Army of the Dead fires ForceReanchor many times; earlier callbacks are skipped.
+-- Rescan scheduler
 -- ---------------------------------------------------------------------------
 
 local rescanGen = 0
@@ -323,7 +373,7 @@ function CDMGlow:ScheduleRescan(delay)
 end
 
 -- ---------------------------------------------------------------------------
--- Hook CDM's ForceReanchor so we update glows after every frame rebuild
+-- Hook CDM
 -- ---------------------------------------------------------------------------
 
 function CDMGlow:HookCDM()
@@ -343,45 +393,13 @@ function CDMGlow:HookCDM()
             if not CXUI_DB.cdmGlowSuppressUntracked then return end
             if not IsSafeFrame(frame) then return end
 
-            local spellID = GetButtonSpellID(frame)
-            local isTracked = spellID and CDMGlow.trackedSpells[spellID]
-
-            if cdm and cdm.Glow and cdm.Glow.buffHookedFrames then
-                for _, hookedFrame in pairs(cdm.Glow.buffHookedFrames) do
-                    if hookedFrame == frame then return end
-                end
-            end
-
-            -- Always suppress Blizzard's SpellActivationAlert.
             local alert = frame.SpellActivationAlert
             if alert then alert:SetAlpha(0); alert:Hide() end
 
-            -- For untracked spells only: also stop CDM's glow.
-            if not isTracked and cdm and cdm.Glow and spellID then
-                for glowFrame, auraID in pairs(CDMGlow.activeGlowFrames) do
-                    local spells = CDMGlow.spellsByAura[auraID]
-                    if spells then
-                        for _, sid in ipairs(spells) do
-                            if sid == spellID then
-                                RequestGlow(glowFrame, false)
-                                CDMGlow.activeGlowFrames[glowFrame] = nil
-                                break
-                            end
-                        end
-                    end
-                end
-                for _, name in ipairs(CDM_VIEWER_NAMES) do
-                    local viewer = _G[name]
-                    if viewer and viewer.GetChildren then
-                        local ok, children = pcall(function() return { viewer:GetChildren() } end)
-                        if ok and children then
-                            for _, child in ipairs(children) do
-                                if IsSafeFrame(child) and GetButtonSpellID(child) == spellID then
-                                    pcall(cdm.Glow.StopGlow, cdm.Glow, child)
-                                end
-                            end
-                        end
-                    end
+            if cdm and cdm.Glow then
+                local spellID = GetButtonSpellID(frame)
+                if spellID then
+                    pcall(function() cdm.Glow:StopGlow(frame) end)
                 end
             end
         end)
@@ -389,7 +407,7 @@ function CDMGlow:HookCDM()
 end
 
 -- ---------------------------------------------------------------------------
--- Event handler
+-- Debug slash command
 -- ---------------------------------------------------------------------------
 
 SLASH_CDMGLOWDEBUG1 = "/cdmglow"
@@ -428,34 +446,49 @@ SlashCmdList["CDMGLOWDEBUG"] = function(msg)
     end
 end
 
+-- ---------------------------------------------------------------------------
+-- Event handler
+-- ---------------------------------------------------------------------------
+
 local procEventFrame = CreateFrame("Frame")
 procEventFrame:RegisterEvent("PLAYER_LOGIN")
 procEventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         local _, class = UnitClass("player")
-        if not PROC_CONFIG[class] then return end
-
-        for auraID, spells in pairs(PROC_CONFIG[class]) do
-            CDMGlow.spellsByAura[auraID] = spells
-            for i = 1, #spells do
-                CDMGlow.trackedSpells[spells[i]] = true
-                -- Only numeric aura IDs get a reverse mapping into spellToAura.
-                -- String keys ("cdm:", "overlay:") are sentinel types with their
-                -- own glow logic and don't need a spell → aura reverse lookup.
-                if type(auraID) == "number" then
-                    CDMGlow.spellToAura[spells[i]] = auraID
-                end
-            end
-        end
+        RegisterClassSpells(class)
 
         self:RegisterEvent("UNIT_AURA")
+        self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
+        self:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+        self:RegisterEvent("SPELL_UPDATE_USABLE")
         self:RegisterEvent("PLAYER_ENTERING_WORLD")
         self:RegisterEvent("UNIT_PET")
 
         C_Timer.After(1.5, function()
             CDMGlow:HookCDM()
+            CDMGlow:UpdateBaselineCosts()
+            CDMGlow:UpdateGlows()
+        end)
+
+    elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
+        -- Clear all active glows and state immediately.
+        for frame in pairs(CDMGlow.activeGlowFrames) do
+            RequestGlow(frame, false)
+        end
+        table.wipe(CDMGlow.activeGlowFrames)
+        table.wipe(CDMGlow.spellsByAura)
+        table.wipe(CDMGlow.trackedSpells)
+        table.wipe(CDMGlow.spellToAura)
+        table.wipe(CDMGlow.activeAuras)
+        table.wipe(CDMGlow.overlayProcSpells)
+        table.wipe(CDMGlow.readySpells)
+        table.wipe(CDMGlow.baseCost)
+        -- Re-register after a short delay — spec/talent data isn't ready immediately.
+        C_Timer.After(0.5, function()
+            local _, class = UnitClass("player")
+            RegisterClassSpells(class)
             CDMGlow:UpdateBaselineCosts()
             CDMGlow:UpdateGlows()
         end)
@@ -467,11 +500,9 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
         end)
 
     elseif event == "UNIT_PET" then
-        -- Pet summons (Army of the Dead ghouls) trigger CDM frame rebuilds.
         CDMGlow:ScheduleRescan(0.2)
 
     elseif event == "UNIT_AURA" and (...) == "player" then
-        -- Debounce: UNIT_AURA fires before WoW finishes updating aura data.
         if not CDMGlow._pendingUpdate then
             CDMGlow._pendingUpdate = true
             C_Timer.After(0.1, function()
@@ -480,21 +511,27 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
             end)
         end
 
+    elseif event == "SPELL_UPDATE_COOLDOWN" or event == "SPELL_UPDATE_USABLE" then
+        if next(CDMGlow.readySpells) then
+            if not CDMGlow._pendingUpdate then
+                CDMGlow._pendingUpdate = true
+                C_Timer.After(0.1, function()
+                    CDMGlow._pendingUpdate = false
+                    CDMGlow:UpdateGlows()
+                end)
+            end
+        end
+
     elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW" then
         local sid = ...
         local overlayKey = "overlay:" .. sid
         if CDMGlow.spellsByAura[overlayKey] then
-            -- Overlay-only spell (e.g. Rime → Howling Blast): aura is private,
-            -- so we use Blizzard's overlay event as the sole glow trigger.
             CDMGlow.overlayProcSpells[overlayKey] = true
             CDMGlow:UpdateGlows()
         else
             local auraID = CDMGlow.spellToAura[sid]
             if auraID then
                 CDMGlow.overlayProcSpells[auraID] = true
-                -- Generation counter debounce: unlike a boolean flag, each new GLOW_SHOW
-                -- increments the counter and schedules its own callback. Only the latest
-                -- callback runs — earlier ones see a stale generation and skip.
                 CDMGlow._overlayUpdateGen = CDMGlow._overlayUpdateGen + 1
                 local gen = CDMGlow._overlayUpdateGen
                 C_Timer.After(0.15, function()
@@ -508,7 +545,6 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
         local sid = ...
         local overlayKey = "overlay:" .. sid
         if CDMGlow.spellsByAura[overlayKey] then
-            -- Overlay-only spell: clear immediately, no aura check needed.
             CDMGlow.overlayProcSpells[overlayKey] = nil
             CDMGlow:UpdateGlows()
         else
@@ -516,8 +552,6 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
             if auraID and CDMGlow.overlayProcSpells[auraID] then
                 local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
                 if ok and aura ~= nil then
-                    -- Aura still exists — this is a stack consumption (e.g. Fingers of
-                    -- Frost, Demonic Core). Debounce so we don't flicker between stacks.
                     if not CDMGlow._pendingUpdate then
                         CDMGlow._pendingUpdate = true
                         C_Timer.After(0.1, function()
@@ -532,7 +566,6 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
                         end)
                     end
                 else
-                    -- Aura is completely gone — hide immediately, no debounce needed.
                     CDMGlow.overlayProcSpells[auraID] = nil
                     CDMGlow:UpdateGlows()
                 end

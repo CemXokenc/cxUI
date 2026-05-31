@@ -279,7 +279,7 @@ local function CreateOverlay(cdmFrame)
     return ov
 end
 
-local GLOW_COLOR = { 1, 0.82, 0, 0.9 }
+local GLOW_COLOR = { 0.85, 0.85, 0.95, 0.9 }
 
 local function StartGlow(overlay)
     if overlay._glowActive then return end
