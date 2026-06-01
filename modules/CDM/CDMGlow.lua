@@ -22,44 +22,45 @@ local GLOW_COLOR = { 0.85, 0.85, 0.95, 0.9 }
 
 local PROC_CONFIG = {
     DEATHKNIGHT = {
-		-- Procs
+        -- Procs
         [81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
         [51124] = { 49020, 207230 },                     -- Killing Machine        → Obliterate, Frostscythe
         ["overlay:49184"] = { 49184 },                   -- Rime                   → Howling Blast
         ["cdm:1228433"]   = { 1228433 },                 -- Frostbane              → always glow if present in CDM
-		-- CDs
+        -- CDs
         ["ready:42650"]   = { 42650 },                   -- Army of the Dead       → glow when ready
         ["ready:1249658"] = { 1249658 },                 -- Breath of Sindragosa   → glow when ready
-		-- Utility
-		["ready:47528"] = { 47528 },                 -- Mind Freeze   → glow when ready
-		["ready:49576"] = { 49576 },                 -- Death Grip   → glow when ready
+        -- Utility
+        ["ready:47528"] = { 47528 },                     -- Mind Freeze            → glow when ready
+        ["ready:49576"] = { 49576 },                     -- Death Grip             → glow when ready
     },
     MAGE = {
-		-- Procs
+        -- Procs
         [44544]  = { 30455 },                            -- Fingers of Frost       → Ice Lance
         [190446] = { 44614 },                            -- Brain Freeze           → Flurry
         [270232] = { 190356 },                           -- Freezing Rain          → Blizzard
         ["cdm:199786"] = { 199786 },                     -- Glacial Spike          → always glow if present in CDM
-		-- CDs
-		["ready:84714"]   = { 84714 },                   -- Frozen Orb      → glow when ready
-		-- Utility
-		["ready:2139"]   = { 2139 },                   -- Counterspell      → glow when ready
-		["ready:475"]   = { 475 },                   -- Remove Curse     → glow when ready
+        -- CDs
+        ["ready:84714"] = { 84714 },                     -- Frozen Orb             → glow when ready
+        -- Utility
+        ["ready:2139"] = { 2139 },                       -- Counterspell           → glow when ready
+        ["ready:475"]  = { 475 },                        -- Remove Curse           → glow when ready
         -- Thermal Void id 1247730
     },
     WARLOCK = {
-		-- Procs
+        -- Procs
         [264173] = { 264178 },                           -- Demonic Core           → Demonbolt
         ["cdm:434635"]  = { 434635 },                    -- Ruination              → always glow if present in CDM
         ["cdm:434506"]  = { 434506 },                    -- Infernal Bolt          → always glow if present in CDM
-		-- CDs
-		["ready:104316"]  = { 104316 },                  -- Call Dreadstalkers               → glow when ready
-		["ready:265187"]  = { 265187 },                  -- Summon Demonic Tyrant              → glow when ready
-        ["cdm:1276452"] = { 1276452 },                   -- Grimoire: Imp Lord     → always glow if present in CDM
-        ["cdm:1276467"] = { 1276467 },                   -- Grimoire: Fel Ravager  → always glow if present in CDM
-		-- Utility
-		["ready:119914"]  = { 119914 },                  -- Axe Toss            → glow when ready
-		["ready:119910"]  = { 119910 },                  -- Spell Lock            → glow when ready
+        -- CDs
+        ["ready:105174"] = { 105174 },                   -- Hand of Gul'dan     → glow when ready
+        ["ready:104316"] = { 104316 },                   -- Call Dreadstalkers     → glow when ready
+        ["ready:265187"] = { 265187 },                   -- Summon Demonic Tyrant  → glow when ready
+        ["cdm:1276452"]  = { 1276452 },                  -- Grimoire: Imp Lord     → always glow if present in CDM
+        ["cdm:1276467"]  = { 1276467 },                  -- Grimoire: Fel Ravager  → always glow if present in CDM
+        -- Utility
+        ["ready:119914"] = { 119914 },                   -- Axe Toss              → glow when ready
+        ["ready:119910"] = { 119910 },                   -- Spell Lock             → glow when ready
     },
     WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {},
     PRIEST = {
@@ -81,23 +82,23 @@ local PROC_CONFIG = {
     },
     SHAMAN = {},
     MONK = {
-		-- Procs
+        -- Procs
         [438443] = { 101546 },                           -- Dance of Chi-Ji            → Spinning Crane Kick
         [443112] = { 124682 },                           -- Strength of the Black Ox  → Enveloping Mist
         -- Vivacious Vivification id 392883 | Sheilun's Gift id 399491
     },
     DRUID = {},
     DEMONHUNTER = {
-		-- Procs
-        ["cdm:1225826"] = { 1225826 },                 -- Eradicate              → Eradicate		
-        ["cdm:1221150"]   = { 1221150 },                 -- Collapsing Star        → always glow if present in CDM
-		-- CDs
-		["ready:1217605"]  = { 1217605 },                  -- Void Metamorphosis               → glow when ready
-		["ready:191427"]  = { 191427 },                  -- Metamorphosis               → glow when ready
-		["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
-		-- Utility
-		["ready:183752"]  = { 183752 },                  -- Disrupt             → glow when ready
-		["ready:278326"]  = { 278326 },                  -- Consume Magic            → glow when ready
+        -- Procs
+        ["cdm:1225826"] = { 1225826 },                   -- Eradicate              → always glow if present in CDM
+        ["cdm:1221150"] = { 1221150 },                   -- Collapsing Star        → always glow if present in CDM
+        -- CDs
+        ["ready:1217605"] = { 1217605 },                 -- Void Metamorphosis     → glow when ready
+        ["ready:191427"]  = { 191427 },                  -- Metamorphosis          → glow when ready
+        ["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
+        -- Utility
+        ["ready:183752"] = { 183752 },                   -- Disrupt                → glow when ready
+        ["ready:278326"] = { 278326 },                   -- Consume Magic          → glow when ready
         -- Voidfall id 1256302 | Reap id 1226019 | Cull id 1245453
     },
     EVOKER = {},
@@ -112,6 +113,9 @@ local CDMGlow = {
     readySpells       = {},
     baseCost          = {},
     activeGlowFrames  = {},
+    -- Tracks last known CDM presence for "cdm:" keys so ForceReanchor rebuilds
+    -- don't flash the glow off during the brief moment frames are absent.
+    lastCDMPresence   = {},
     _pendingUpdate    = false,
     _overlayUpdateGen = 0,
     _reanchorHooked   = false,
@@ -157,7 +161,7 @@ local function IsSpellReady(spellID)
 end
 
 -- ---------------------------------------------------------------------------
--- Shared spell registration helper (used on login and spec change)
+-- Shared spell registration helper
 -- ---------------------------------------------------------------------------
 
 local function RegisterClassSpells(class)
@@ -235,6 +239,24 @@ local CDM_VIEWER_NAMES = {
     "BlizzardCooldownFrame",
 }
 
+-- Returns true if frame is a child of any CDM viewer.
+local function IsInCDMViewer(frame)
+    local f = frame
+    for i = 1, 10 do
+        if not IsSafeFrame(f) then break end
+        local name = f.GetName and f:GetName()
+        if name then
+            for _, vname in ipairs(CDM_VIEWER_NAMES) do
+                if name == vname then return true end
+            end
+        end
+        local ok, parent = pcall(function() return f:GetParent() end)
+        if not ok or not parent then break end
+        f = parent
+    end
+    return false
+end
+
 local function FindCurrentCDMFrames()
     local found = {}
     for auraID in pairs(CDMGlow.spellsByAura) do found[auraID] = {} end
@@ -300,6 +322,7 @@ local function ApplyGlowState(auraID, hasAura, currentFrames)
         end
     elseif hasAura and not hasNewFrames then
         -- Proc active but CDM has no frames yet (ForceReanchor in progress).
+        -- Keep existing glows alive — ScheduleRescan will find new frames shortly.
     elseif not hasAura then
         for frame, fAuraID in pairs(CDMGlow.activeGlowFrames) do
             if fAuraID == auraID then
@@ -325,7 +348,16 @@ function CDMGlow:UpdateGlows()
         local hasAura = false
 
         if type(auraID) == "string" and auraID:sub(1, 4) == "cdm:" then
-            hasAura = currentFrames[auraID] ~= nil and #currentFrames[auraID] > 0
+            local hasFrames = currentFrames[auraID] ~= nil and #currentFrames[auraID] > 0
+            if hasFrames then
+                -- Frame visible — update presence and glow.
+                self.lastCDMPresence[auraID] = true
+                hasAura = true
+            elseif self.lastCDMPresence[auraID] then
+                -- Frame temporarily absent (ForceReanchor in progress).
+                -- Keep glow alive — ScheduleRescan will clear it if frame truly gone.
+                hasAura = true
+            end
 
         elseif type(auraID) == "string" and auraID:sub(1, 8) == "overlay:" then
             hasAura = self.overlayProcSpells[auraID] == true
@@ -345,6 +377,14 @@ function CDMGlow:UpdateGlows()
         self.activeAuras[auraID] = hasAura
         ApplyGlowState(auraID, hasAura, currentFrames[auraID])
     end
+end
+
+-- UpdateGlows variant that clears lastCDMPresence first — used after a
+-- confirmed full rebuild (ScheduleRescan callback) so stale "cdm:" glows
+-- don't persist when a spell is truly removed from CDM.
+function CDMGlow:UpdateGlowsAfterRescan()
+    table.wipe(self.lastCDMPresence)
+    self:UpdateGlows()
 end
 
 -- ---------------------------------------------------------------------------
@@ -385,7 +425,8 @@ function CDMGlow:HasProcViaCost(auraID)
 end
 
 -- ---------------------------------------------------------------------------
--- Rescan scheduler
+-- Rescan scheduler — calls UpdateGlowsAfterRescan so lastCDMPresence is
+-- cleared and stale "cdm:" glows are properly removed after rebuilds.
 -- ---------------------------------------------------------------------------
 
 local rescanGen = 0
@@ -395,8 +436,27 @@ function CDMGlow:ScheduleRescan(delay)
     local gen = rescanGen
     C_Timer.After(delay or 0.2, function()
         if gen ~= rescanGen then return end
-        self:UpdateGlows()
+        self:UpdateGlowsAfterRescan()
     end)
+end
+
+-- ---------------------------------------------------------------------------
+-- Combat safeguard ticker — resets glow state every 10s in combat to recover
+-- from any stuck glows caused by rapid ForceReanchor rebuilds.
+-- ---------------------------------------------------------------------------
+
+local safeguardTicker = nil
+
+function CDMGlow:StartSafeguardTicker()
+    if safeguardTicker then return end
+    safeguardTicker = C_Timer.NewTicker(10, function()
+        table.wipe(CDMGlow.lastCDMPresence)
+        CDMGlow:ScheduleRescan(0.1)
+    end)
+end
+
+function CDMGlow:StopSafeguardTicker()
+    if safeguardTicker then safeguardTicker:Cancel(); safeguardTicker = nil end
 end
 
 -- ---------------------------------------------------------------------------
@@ -420,10 +480,14 @@ function CDMGlow:HookCDM()
             if not CXUI_DB.cdmGlowSuppressUntracked then return end
             if not IsSafeFrame(frame) then return end
 
+            -- Always suppress Blizzard's SpellActivationAlert.
             local alert = frame.SpellActivationAlert
             if alert then alert:SetAlpha(0); alert:Hide() end
 
-            if cdm and cdm.Glow then
+            -- Stop CDM's overlay glow only for frames inside CDM viewers.
+            -- This prevents interfering with overlays from DeathKnight.lua /
+            -- Mage.lua that sit on non-CDM frames (e.g. Festering Strike).
+            if cdm and cdm.Glow and IsInCDMViewer(frame) then
                 local spellID = GetButtonSpellID(frame)
                 if spellID then
                     pcall(function() cdm.Glow:StopGlow(frame) end)
@@ -486,6 +550,8 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
 
         self:RegisterEvent("UNIT_AURA")
         self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+        self:RegisterEvent("PLAYER_REGEN_DISABLED")
+        self:RegisterEvent("PLAYER_REGEN_ENABLED")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
         self:RegisterEvent("SPELL_UPDATE_COOLDOWN")
@@ -500,7 +566,6 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
         end)
 
     elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
-        -- Clear all active glows and state immediately.
         for frame in pairs(CDMGlow.activeGlowFrames) do
             RequestGlow(frame, false)
         end
@@ -512,13 +577,21 @@ procEventFrame:SetScript("OnEvent", function(self, event, ...)
         table.wipe(CDMGlow.overlayProcSpells)
         table.wipe(CDMGlow.readySpells)
         table.wipe(CDMGlow.baseCost)
-        -- Re-register after a short delay — spec/talent data isn't ready immediately.
+        table.wipe(CDMGlow.lastCDMPresence)
         C_Timer.After(0.5, function()
             local _, class = UnitClass("player")
             RegisterClassSpells(class)
             CDMGlow:UpdateBaselineCosts()
             CDMGlow:UpdateGlows()
         end)
+
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        CDMGlow:StartSafeguardTicker()
+
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        CDMGlow:StopSafeguardTicker()
+        table.wipe(CDMGlow.lastCDMPresence)
+        CDMGlow:ScheduleRescan(0.3)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         C_Timer.After(1.0, function()
