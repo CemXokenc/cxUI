@@ -47,7 +47,9 @@ end
 
 local function WantedQuestTrackerAlpha()
     if not CXUI_DB.hideQuests then return 1 end
-    local isHovered = questTrackerHoverFrame and questTrackerHoverFrame:IsMouseOver()
+    if not questTrackerHoverFrame then return 0 end
+    local ok, isHovered = pcall(function() return questTrackerHoverFrame:IsMouseOver() end)
+    if not ok or issecretvalue(isHovered) then return 0 end
     return isHovered and 1 or 0
 end
 
@@ -144,14 +146,18 @@ local function SetupQuestTrackerHover()
     -- BOTTOMRIGHT is anchored to tracker's TOPRIGHT and pushed down by 60% of
     -- the current height — so only the top 60% of the tracker acts as a hover zone.
     local function UpdateHoverBounds()
-        local h = tracker:GetHeight()
+        local ok, h = pcall(function() return tracker:GetHeight() end)
+        if not ok or not h or issecretvalue(h) or h == 0 then return end
         questTrackerHoverFrame:ClearAllPoints()
         questTrackerHoverFrame:SetPoint("TOPLEFT",     tracker, "TOPLEFT",  -15,  15)
         questTrackerHoverFrame:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT",  15, -(h * 0.6))
     end
 
     UpdateHoverBounds()
-    tracker:HookScript("OnSizeChanged", UpdateHoverBounds)
+    tracker:HookScript("OnSizeChanged", function()
+        -- OnSizeChanged can fire from secure context (Edit Mode), defer to next frame
+        C_Timer.After(0, UpdateHoverBounds)
+    end)
 
     tracker:SetAlpha(0)
 
