@@ -18,50 +18,58 @@ local alphaGuards = {}
 
 -- ---------------------------------------------------------------------------
 -- DESIRED ALPHA RESOLVERS
--- These functions return what the alpha *should* be right now for each group.
--- The hook and ApplyAllAlpha both call these — single source of truth.
 -- ---------------------------------------------------------------------------
 
 local function WantedActionBarsAlpha()
     if not CXUI_DB.hideBars then return 1 end
     if isInCombat then return 0 end
-    if spellFlyout and spellFlyout:IsShown() and spellFlyout:IsMouseOver() then return 1 end
-    for _, bar in ipairs(actionBarFrames) do
-        if bar and bar:IsMouseOver() then return 1 end
-        if bar and bar.actionButtons then
-            for _, btn in pairs(bar.actionButtons) do
-                if btn and btn:IsMouseOver() then return 1 end
+    local ok, result = pcall(function()
+        if spellFlyout and spellFlyout:IsShown() and spellFlyout:IsMouseOver() then return 1 end
+        for _, bar in ipairs(actionBarFrames) do
+            if bar and bar:IsMouseOver() then return 1 end
+            if bar and bar.actionButtons then
+                for _, btn in pairs(bar.actionButtons) do
+                    if btn and btn:IsMouseOver() then return 1 end
+                end
             end
         end
-    end
-    return 0
+        return 0
+    end)
+    return (ok and result) or 0
 end
 
 local function WantedUIGroupAlpha()
     if not CXUI_DB.hideMicro then return 1 end
-    for _, frame in ipairs(uiGroupFrames) do
-        if frame and frame:IsMouseOver() then return 1 end
-    end
-    return 0
+    local ok, result = pcall(function()
+        for _, frame in ipairs(uiGroupFrames) do
+            if frame and frame:IsMouseOver() then return 1 end
+        end
+        return 0
+    end)
+    return (ok and result) or 0
 end
 
 local function WantedQuestTrackerAlpha()
     if not CXUI_DB.hideQuests then return 1 end
     if not questTrackerHoverFrame then return 0 end
-    local ok, isHovered = pcall(function() return questTrackerHoverFrame:IsMouseOver() end)
+    local ok, isHovered = pcall(function()
+        return questTrackerHoverFrame:IsMouseOver()
+    end)
     if not ok or issecretvalue(isHovered) then return 0 end
     return isHovered and 1 or 0
 end
 
 -- ---------------------------------------------------------------------------
 -- ALPHA GUARD HOOK
--- Intercepts any SetAlpha call (from engine, other addons, cinematics, etc.)
--- and immediately restores the correct value if it doesn't match what we want.
+-- Only installed on non-managed frames (action bars, micro menu).
+-- ObjectiveTrackerFrame is intentionally excluded — it's a Blizzard managed
+-- frame and hooking SetAlpha on it causes taint that breaks the entire
+-- right UI container, tooltips, and bonus objectives (glows).
 -- ---------------------------------------------------------------------------
 
 local function GuardAlpha(frame, getWanted)
     hooksecurefunc(frame, "SetAlpha", function(self, alpha)
-        if alphaGuards[self] then return end  -- prevent recursion
+        if alphaGuards[self] then return end
         local wanted = getWanted()
         if alpha ~= wanted then
             alphaGuards[self] = true
@@ -78,22 +86,19 @@ local function InstallAlphaGuards()
     for _, frame in ipairs(uiGroupFrames) do
         if frame then GuardAlpha(frame, WantedUIGroupAlpha) end
     end
-    if ObjectiveTrackerFrame then
-        GuardAlpha(ObjectiveTrackerFrame, WantedQuestTrackerAlpha)
-    end
+    -- NOTE: ObjectiveTrackerFrame guard intentionally removed.
+    -- Hooking SetAlpha on a Blizzard managed frame taints it,
+    -- which cascades into MoneyFrame, MapCanvas, bonus objective glows, etc.
+    -- Alpha is applied via ApplyAllAlpha() on every OnUpdate tick instead.
 end
 
 -- ---------------------------------------------------------------------------
 -- APPLY CURRENT STATE
--- Pushes the correct alpha to every managed frame right now.
--- Called once on init; after that OnUpdate drives hover changes and
--- guards catch any engine-side resets.
 -- ---------------------------------------------------------------------------
 
 local function ApplyAllAlpha()
-    local barsAlpha    = WantedActionBarsAlpha()
-    local groupAlpha   = WantedUIGroupAlpha()
-    local trackerAlpha = WantedQuestTrackerAlpha()
+    local barsAlpha  = WantedActionBarsAlpha()
+    local groupAlpha = WantedUIGroupAlpha()
 
     for _, bar in ipairs(actionBarFrames) do
         if bar then bar:SetAlpha(barsAlpha) end
@@ -101,7 +106,11 @@ local function ApplyAllAlpha()
     for _, frame in ipairs(uiGroupFrames) do
         if frame then frame:SetAlpha(groupAlpha) end
     end
+
+    -- ObjectiveTrackerFrame: apply alpha only from OnUpdate (never from hooks
+    -- or event callbacks) to avoid tainting the Blizzard managed frame system.
     if ObjectiveTrackerFrame then
+        local trackerAlpha = WantedQuestTrackerAlpha()
         ObjectiveTrackerFrame:SetAlpha(trackerAlpha)
     end
 end
@@ -125,12 +134,10 @@ end
 
 -- ---------------------------------------------------------------------------
 -- QUEST TRACKER HOVER FRAME
--- An invisible frame covering the top 60% of the tracker (by height) used as
--- a hover sensor, since a fully transparent frame won't fire OnEnter/OnLeave
--- reliably. The bottom 40% is intentionally excluded so hovering over the
--- lower portion of the tracker (e.g. bottom-right corner) does nothing.
--- Anchored to the tracker so WoW's layout system keeps it in sync automatically.
--- OnSizeChanged recalculates bounds whenever the quest list grows or shrinks.
+-- An invisible frame covering the top 60% of the tracker used as a hover
+-- sensor. Alpha is driven ONLY by the OnUpdate tick — never by OnEnter/OnLeave
+-- scripts — because SetScript callbacks on frames anchored to managed Blizzard
+-- frames taint those frames when they call SetAlpha on them.
 -- ---------------------------------------------------------------------------
 
 local function SetupQuestTrackerHover()
@@ -142,34 +149,32 @@ local function SetupQuestTrackerHover()
     questTrackerHoverFrame:SetFrameStrata("LOW")
     questTrackerHoverFrame:EnableMouse(true)
 
-    -- Recalculates bounds whenever the tracker resizes (quest list grows/shrinks).
-    -- BOTTOMRIGHT is anchored to tracker's TOPRIGHT and pushed down by 60% of
-    -- the current height — so only the top 60% of the tracker acts as a hover zone.
     local function UpdateHoverBounds()
+        -- Defer if GetHeight returns a secret/tainted value (e.g. during Edit Mode)
         local ok, h = pcall(function() return tracker:GetHeight() end)
-        if not ok or not h or issecretvalue(h) or h == 0 then return end
+        if not ok or not h or issecretvalue(h) or h == 0 then
+            C_Timer.After(0, UpdateHoverBounds)
+            return
+        end
         questTrackerHoverFrame:ClearAllPoints()
         questTrackerHoverFrame:SetPoint("TOPLEFT",     tracker, "TOPLEFT",  -15,  15)
         questTrackerHoverFrame:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT",  15, -(h * 0.6))
     end
 
     UpdateHoverBounds()
+
+    -- Defer OnSizeChanged out of secure context to avoid taint
     tracker:HookScript("OnSizeChanged", function()
-        -- OnSizeChanged can fire from secure context (Edit Mode), defer to next frame
         C_Timer.After(0, UpdateHoverBounds)
     end)
 
+    -- NO OnEnter/OnLeave scripts here — they would taint ObjectiveTrackerFrame
+    -- when calling tracker:SetAlpha(). Alpha is handled purely by OnUpdate.
     tracker:SetAlpha(0)
-
-    -- OnEnter/OnLeave give instant visual feedback rather than waiting for the next tick
-    questTrackerHoverFrame:SetScript("OnEnter", function() tracker:SetAlpha(1) end)
-    questTrackerHoverFrame:SetScript("OnLeave", function() tracker:SetAlpha(0) end)
 end
 
 -- ---------------------------------------------------------------------------
--- TICK — hover detection only
--- Alpha corrections are handled by the guards; this only reacts to mouse
--- position changes, which have no event equivalent in WoW.
+-- TICK
 -- ---------------------------------------------------------------------------
 
 local function OnUpdate(self, elapsed)
@@ -186,9 +191,9 @@ end
 local transparencyCore = CreateFrame("Frame")
 
 transparencyCore:RegisterEvent("ADDON_LOADED")
-transparencyCore:RegisterEvent("PLAYER_REGEN_DISABLED")  -- entering combat
-transparencyCore:RegisterEvent("PLAYER_REGEN_ENABLED")   -- leaving combat
-transparencyCore:RegisterEvent("PLAYER_ENTERING_WORLD")  -- loading screen / instance transition
+transparencyCore:RegisterEvent("PLAYER_REGEN_DISABLED")
+transparencyCore:RegisterEvent("PLAYER_REGEN_ENABLED")
+transparencyCore:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 transparencyCore:SetScript("OnEvent", function(self, event, arg)
 
@@ -196,7 +201,6 @@ transparencyCore:SetScript("OnEvent", function(self, event, arg)
         InstallAlphaGuards()
         ApplyAllAlpha()
         SetButtonsMouseEnabled(true)
-        -- QueueStatusButton is set once here; it never needs resetting
         if QueueStatusButton then
             QueueStatusButton:SetAlpha(1)
             QueueStatusButton:SetIgnoreParentAlpha(true)
