@@ -8,7 +8,6 @@ local addonName, ns = ...
 local CF = ns.CF
 if not CF or CF.CLASS_ID ~= 6 then return end
 
-local LCG                  = CF.LCG
 local ScanFramesByTexture  = CF.ScanFramesByTexture
 local CreateOverlay        = CF.CreateOverlay
 local StartGlow            = CF.StartGlow
@@ -213,7 +212,7 @@ end
 
 local function ScanCDMOverlays()
     for _, ov in pairs(cdmFesteringOverlays) do
-        if ov._glowActive and LCG and LCG.ButtonGlow_Stop then LCG.ButtonGlow_Stop(ov) end
+        if ov._glowActive then StopGlow(ov) end
         ov:Hide()
     end
     wipe(cdmFesteringOverlays); festeringGlowActive = false

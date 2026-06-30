@@ -8,7 +8,8 @@ CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
 local LCG = LibStub and LibStub("LibCustomGlow-1.0", true)
-local GLOW_COLOR = { 0.85, 0.85, 0.95, 0.9 }
+-- nil = no color tint applied = renders Blizzard's native gold/yellow proc glow
+local GLOW_COLOR = nil
 
 -- ---------------------------------------------------------------------------
 -- PROC CONFIG

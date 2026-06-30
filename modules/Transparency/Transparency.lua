@@ -110,9 +110,13 @@ local function ApplyAllAlpha()
     -- ObjectiveTrackerFrame: apply alpha only from OnUpdate (never from hooks
     -- or event callbacks) to avoid tainting the Blizzard managed frame system.
     if ObjectiveTrackerFrame then
-        local trackerAlpha = WantedQuestTrackerAlpha()
-        ObjectiveTrackerFrame:SetAlpha(trackerAlpha)
-    end
+		-- Wrap in issecretvalue check + pcall to prevent taint cascade in arena
+		local ok, h = pcall(function() return ObjectiveTrackerFrame:GetHeight() end)
+		if ok and h and not issecretvalue(h) then
+			local trackerAlpha = WantedQuestTrackerAlpha()
+			ObjectiveTrackerFrame:SetAlpha(trackerAlpha)
+		end
+	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -165,7 +169,7 @@ local function SetupQuestTrackerHover()
 
     -- Defer OnSizeChanged out of secure context to avoid taint
     tracker:HookScript("OnSizeChanged", function()
-        C_Timer.After(0, UpdateHoverBounds)
+        C_Timer.After(0.1, UpdateHoverBounds)
     end)
 
     -- NO OnEnter/OnLeave scripts here — they would taint ObjectiveTrackerFrame
