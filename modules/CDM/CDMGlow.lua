@@ -94,7 +94,7 @@ local PROC_CONFIG = {
         -- CDs
         --["ready:1217605"] = { 1217605 },                 -- Void Metamorphosis     → glow when ready
         --["ready:191427"]  = { 191427 },                  -- Metamorphosis          → glow when ready
-        --["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
+        ["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
         -- Utility
         ["ready:183752"] = { 183752 },                   -- Disrupt                → glow when ready
         ["ready:278326"] = { 278326 },                   -- Consume Magic          → glow when ready

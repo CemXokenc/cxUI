@@ -144,7 +144,7 @@ CreateCheckbox("Quest Tracker Hover",  "hideQuests", "Quest tracker only visible
 CreateHeader("Module 2: CDM Glow", -105)
 CreateCheckbox("Enable CDM Proc Glow",          "cdmGlow",                 "Special highlights for class-specific procs.",                        -130, false, L)
 CreateCheckbox("Suppress Blizzard Glow on CDM", "cdmGlowSuppressUntracked","Hides all Blizzard proc glows on CDM frames. Action bars unaffected.", -130, false, R)
-CreateNote("|cffff2020* Frost Mage: Blizzard overlay always enabled regardless of this setting.|r", -152, L)
+CreateNote("|cffff2020* If you are using MiniCC, then in its options under the Misc tab set the glow-type option to anything other than proc glow.|r", -152, L)
 
 -- ---------------------------------------------------------------------------
 -- Module 3 — Small Tweaks

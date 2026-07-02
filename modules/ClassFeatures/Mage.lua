@@ -120,6 +120,13 @@ mageFrame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 -- ---------------------------------------------------------------------------
+-- Register with Shared.lua hook system
+-- ---------------------------------------------------------------------------
+
+CF.OnCDMReanchor(function() CreateFlurryCDMOverlays() end)
+CF.OnArenaReset(function() HideFlurryCross() end)
+
+-- ---------------------------------------------------------------------------
 -- Debug commands
 -- ---------------------------------------------------------------------------
 

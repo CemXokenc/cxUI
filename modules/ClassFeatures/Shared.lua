@@ -266,7 +266,7 @@ local CXUI_GlowParent = CreateFrame("Frame", "CXUI_GlowParent", UIParent)
 CXUI_GlowParent:SetAllPoints()
 CXUI_GlowParent:Hide() -- invisible container; children are shown individually
 
--- nil = no color tint applied = renders Blizzard's native gold/yellow proc glow
+-- nil = no tint → renders Blizzard's native gold/yellow proc glow
 local GLOW_COLOR = nil
 
 -- ---------------------------------------------------------------------------
@@ -525,6 +525,60 @@ local function HideXCross(overlay)
     if overlay._xl1 then overlay._xl1:Hide(); overlay._xl2:Hide() end
     overlay:Hide()
 end
+
+-- ===========================================================================
+-- CDM REANCHOR HOOK SYSTEM
+-- ---------------------------------------------------------------------------
+-- CDM (Ayije_CDM) calls ForceReanchor() whenever the user drags icons or the
+-- layout changes. Modules (DeathKnight.lua, Mage.lua) register a callback
+-- here so they are notified and can rescan after the reanchor settles.
+--
+-- Also provides CF.OnArenaReset — fires on PLAYER_REGEN_ENABLED so modules
+-- can hard-reset glow state left active across arena rounds.
+-- ===========================================================================
+
+local reanchorCallbacks   = {}
+local arenaResetCallbacks = {}
+local cdmHookInstalled    = false
+
+local function InstallCDMHook()
+    if cdmHookInstalled then return end
+    local cdm = _G["Ayije_CDM"]
+    if not cdm or not cdm.ForceReanchor then return end
+    hooksecurefunc(cdm, "ForceReanchor", function()
+        -- Delay so CDM finishes moving frames before we rescan
+        C_Timer.After(0.25, function()
+            for i = 1, #reanchorCallbacks do
+                pcall(reanchorCallbacks[i])
+            end
+        end)
+    end)
+    cdmHookInstalled = true
+end
+
+-- Module registration: rescan after user drags CDM icons
+function CF.OnCDMReanchor(fn)
+    reanchorCallbacks[#reanchorCallbacks + 1] = fn
+end
+
+-- Module registration: hard-reset glow state on combat end / arena round end
+function CF.OnArenaReset(fn)
+    arenaResetCallbacks[#arenaResetCallbacks + 1] = fn
+end
+
+local sharedHookFrame = CreateFrame("Frame")
+sharedHookFrame:RegisterEvent("PLAYER_LOGIN")
+sharedHookFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+sharedHookFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+sharedHookFrame:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+        C_Timer.After(1.5, InstallCDMHook)
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        for i = 1, #arenaResetCallbacks do
+            pcall(arenaResetCallbacks[i])
+        end
+    end
+end)
 
 -- ===========================================================================
 -- Export

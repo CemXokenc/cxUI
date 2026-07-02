@@ -258,6 +258,23 @@ local function StartRetryLoop()
 end
 
 -- ---------------------------------------------------------------------------
+-- Register with Shared.lua hook system
+-- ---------------------------------------------------------------------------
+
+-- After user drags CDM icons, rescan so glows/crosses land on the right frame
+CF.OnCDMReanchor(function() DKRescan() end)
+
+-- Hard-reset all DK glow state between arena rounds (PLAYER_REGEN_ENABLED).
+-- This fixes the bug where Festering glow stays broken after the first arena
+-- ends mid-proc: the timer is cancelled, the overlay is hidden, and the next
+-- proc starts cleanly from scratch.
+CF.OnArenaReset(function()
+    HideFesteringGlow()
+    StopPutrefyWarning()
+    StopReaperWarning()
+end)
+
+-- ---------------------------------------------------------------------------
 -- Event handler
 -- ---------------------------------------------------------------------------
 
@@ -268,6 +285,8 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         local _, _, cid = UnitClass("player")
         if cid ~= 6 then self:UnregisterAllEvents(); return end
+        -- PLAYER_REGEN_ENABLED is now handled by CF.OnArenaReset above;
+        -- we still register it here for StopPutrefy/Reaper as a safety net.
         self:RegisterEvent("PLAYER_REGEN_ENABLED")
         self:RegisterEvent("PLAYER_ENTERING_WORLD")
         self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
@@ -277,6 +296,8 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
         StartRetryLoop()
 
     elseif event == "PLAYER_REGEN_ENABLED" then
+        -- CF.OnArenaReset already calls HideFesteringGlow + StopPutrefy/Reaper,
+        -- but keep these here as an explicit safety net for non-arena scenarios.
         StopPutrefyWarning()
         StopReaperWarning()
 
