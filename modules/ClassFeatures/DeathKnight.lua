@@ -226,7 +226,8 @@ local function ScanCDMOverlays()
     ScanFramesByTexture(
         {TEX_FESTERING_SCYTHE, TEX_FESTERING_STRIKE, TEX_PUTREFY, TEX_REAPER},
         function(frame)
-            local tex = tostring(frame.Icon:GetTexture())
+            local ok, tex = pcall(function() return tostring(frame.Icon:GetTexture()) end)
+            if not ok then return end
             if tex == TEX_FESTERING_SCYTHE or tex == TEX_FESTERING_STRIKE then
                 if not cdmFesteringOverlays[frame] then
                     cdmFesteringOverlays[frame] = CreateOverlay(frame)

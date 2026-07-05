@@ -121,7 +121,7 @@ end)
 -- ===========================================================================
 
 local COUNTER_X         =  -120
-local COUNTER_Y         =  -150
+local COUNTER_Y         =  -100
 local COUNTER_FONT_SIZE =  20
 local COUNTER_R, COUNTER_G, COUNTER_B = 1, 1, 1
 
@@ -443,23 +443,77 @@ CF.LCG = nil  -- intentionally nil: we do NOT expose the shared LCG object
 -- EnumerateFrames scan
 -- ===========================================================================
 
-local function ScanFramesByTexture(texStrings, callback)
-    local frame = EnumerateFrames()
-    while frame do
-        if frame.Icon and type(frame.Icon) == "table" and frame.Icon.GetTexture then
-            local ok, matched = pcall(function()
-                local tex = frame.Icon:GetTexture()
-                if tex then
-                    local texStr = tostring(tex)
-                    for _, t in ipairs(texStrings) do
-                        if texStr == t then return true end
-                    end
+-- ===========================================================================
+-- CDM-scoped scan (was: EnumerateFrames() over the entire UI)
+-- ===========================================================================
+-- EnumerateFrames() walked every frame in the game, including nameplates and
+-- other addons' unit frames (Platynator, UnhaltedUnitFrames, etc). Reading
+-- .Icon on those frames taints our call with whatever addon owns them, and
+-- on some of them (enemy cast/aura icons) the texture is now a protected
+-- "secret value" — comparing its string form is silently blocked by the
+-- client, not a catchable Lua error, so pcall never sees it fail.
+-- On top of that, walking literally every frame in the game on every
+-- DKRescan() call is expensive enough on its own to matter.
+--
+-- We only ever care about our own Cooldown Manager icons, so we scan just
+-- those frame trees instead — same recursive, fully pcall-guarded pattern
+-- used for Death Coil scanning in CDMGlowLogic.lua.
+-- ===========================================================================
+
+local CDM_VIEWER_NAMES = {
+    "EssentialCooldownViewer",
+    "UtilityCooldownViewer",
+    "BuffIconCooldownViewer",
+    "CooldownViewer",
+    "BlizzardCooldownFrame",
+}
+
+local function IsSafeFrame(frame)
+    if not frame then return false end
+    local ok, forbidden = pcall(function()
+        return frame.IsForbidden and frame:IsForbidden()
+    end)
+    if not ok then return false end
+    if forbidden then return false end
+    return true
+end
+
+local function ScanCDMFrameTree(root, texStrings, callback, seen, depth)
+    if not root or seen[root] or depth > 20 then return end
+    if not IsSafeFrame(root) then return end
+    seen[root] = true
+
+    local ok, matched = pcall(function()
+        if root.Icon and type(root.Icon) == "table" and root.Icon.GetTexture then
+            local tex = root.Icon:GetTexture()
+            if tex then
+                local texStr = tostring(tex)
+                for _, t in ipairs(texStrings) do
+                    if texStr == t then return true end
                 end
-                return false
-            end)
-            if ok and matched then callback(frame) end
+            end
         end
-        frame = EnumerateFrames(frame)
+        return false
+    end)
+    if ok and matched then callback(root) end
+
+    local ok2, children = pcall(function()
+        return root.GetChildren and { root:GetChildren() }
+    end)
+    if ok2 and children then
+        for i = 1, #children do
+            ScanCDMFrameTree(children[i], texStrings, callback, seen, depth + 1)
+        end
+    end
+end
+
+local function ScanFramesByTexture(texStrings, callback)
+    local seen = {}
+    for _, name in ipairs(CDM_VIEWER_NAMES) do
+        local viewer = _G[name]
+        if viewer then
+            ScanCDMFrameTree(viewer, texStrings, callback, seen, 0)
+        end
     end
 end
 

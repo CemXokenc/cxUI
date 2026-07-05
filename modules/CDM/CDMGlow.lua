@@ -111,15 +111,16 @@ local SUPPRESS_EXEMPT_CLASSES = {
 }
 
 local CDMGlow = {
-    spellsByAura      = {},
-    trackedSpells     = {},
-    spellToAura       = {},
-    activeAuras       = {},
-    overlayProcSpells = {},
-    readySpells       = {},
-    baseCost          = {},
-    activeGlowFrames  = {},
-    lastCDMPresence   = {},
+    spellsByAura       = {},
+    trackedSpells      = {},
+    spellToAura        = {},
+    activeAuras        = {},
+    overlayProcSpells  = {},
+    readySpells        = {},
+    baseCost           = {},
+    activeGlowFrames   = {},
+    frameSpellID       = {}, -- frame -> spellID currently shown there (refreshed every scan)
+    lastCDMPresence    = {},
     _pendingUpdate    = false,
     _overlayUpdateGen = 0,
     _reanchorHooked   = false,
@@ -141,16 +142,36 @@ local function GetOrCreateCDMOverlay(frame)
     return ov
 end
 
-local function RequestGlow(frame, enabled, auraID)
+-- Both LCG calls are now pcall-guarded. LCG is third-party code we don't
+-- control; if it ever errors on a given frame/options combo, we don't want
+-- that to abort whatever loop called us (see ApplyGlowState/UpdateGlows).
+local function RequestGlow(frame, enabled, auraID, color)
     if not LCG then return end
     local overlay = GetOrCreateCDMOverlay(frame)
     if enabled then
-        LCG.ProcGlow_Start(overlay, { color = GLOW_COLOR, startAnim = false })
+        local ok, err = pcall(LCG.ProcGlow_Start, overlay, { color = color or GLOW_COLOR, startAnim = false })
+        if not ok then
+            -- print("|cffff0000CDMGlow ProcGlow_Start error:|r", err)
+        end
     else
-        LCG.ProcGlow_Stop(overlay)
+        pcall(LCG.ProcGlow_Stop, overlay)
     end
 end
 
+-- ---------------------------------------------------------------------------
+-- NOTE: resource-based glow color (white when not enough Runic Power) was
+-- attempted here and reverted. Confirmed via /console taintLog 1 that
+-- comparing UnitPower("player", RunicPower) against any threshold is
+-- UNCONDITIONALLY blocked as a "secret value" comparison — every single
+-- call, not just when execution happens to carry taint. There is no
+-- addon-visible number to compare against baseCost at all.
+-- C_Spell.IsSpellUsable() was considered as a sanctioned alternative, but
+-- it can't work either: the glow only shows while Sudden Doom is active,
+-- and Sudden Doom is exactly what discounts Death Coil/Necrotic Coil's
+-- cost (30 RP -> 15 RP) for that window, so IsSpellUsable would only ever
+-- reflect the discounted cost, not the real 30 RP baseline — the one
+-- case we'd want to flag as "actually low" always reads as "usable".
+-- ---------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------
 -- "ready:" spell check
 -- ---------------------------------------------------------------------------
@@ -189,6 +210,18 @@ end
 -- ---------------------------------------------------------------------------
 -- Frame scanning
 -- ---------------------------------------------------------------------------
+-- Every touch of a frame we don't own (IsForbidden, GetName, GetParent,
+-- GetObjectType, GetChildren, raw field reads like frame.spellID) is now
+-- wrapped in pcall. Forbidden/protected frames can throw on ANY field
+-- access in current WoW clients, including the very first "is this safe"
+-- check — so IsSafeFrame itself must be inside a pcall, not just the
+-- checks that come after it. This mirrors the pattern Shared.lua already
+-- uses for ScanFramesByTexture, which is why Festering/Flurry never had
+-- this problem while Death Coil did: more CDM icons active at once in a
+-- dungeon means ScanFrameTree walks more (and more varied) frames per
+-- pass, so the odds of hitting one bad node — and silently aborting the
+-- whole scan mid-recursion — go up a lot compared to a solo dummy.
+-- ---------------------------------------------------------------------------
 
 local function IsSecret(v)
     return type(_G.issecretvalue) == "function" and _G.issecretvalue(v) or false
@@ -196,18 +229,28 @@ end
 
 local function IsSafeFrame(frame)
     if not frame then return false end
-    if frame.IsForbidden and frame:IsForbidden() then return false end
+    local ok, forbidden = pcall(function()
+        return frame.IsForbidden and frame:IsForbidden()
+    end)
+    if not ok then return false end
+    if forbidden then return false end
     return true
 end
 
 local function GetButtonSpellID(frame)
     if not IsSafeFrame(frame) then return nil end
-    local sid = frame.spellID or frame.spellId or frame.spellid
-    if type(sid) == "number" and not IsSecret(sid) then return sid end
-    if frame.GetSpellID then
-        local ok, v = pcall(frame.GetSpellID, frame)
-        if ok and type(v) == "number" and not IsSecret(v) then return v end
-    end
+
+    local ok, sid = pcall(function()
+        return frame.spellID or frame.spellId or frame.spellid
+    end)
+    if ok and type(sid) == "number" and not IsSecret(sid) then return sid end
+
+    local ok2, v = pcall(function()
+        if frame.GetSpellID then return frame:GetSpellID() end
+        return nil
+    end)
+    if ok2 and type(v) == "number" and not IsSecret(v) then return v end
+
     return nil
 end
 
@@ -216,22 +259,22 @@ local function ScanFrameTree(root, results, seen, depth)
     if not IsSafeFrame(root) then return end
     seen[root] = true
 
-    if root.GetObjectType then
-        local ok, ot = pcall(root.GetObjectType, root)
-        if ok and (ot == "Button" or ot == "Frame") then
-            local spellID = GetButtonSpellID(root)
-            if spellID and CDMGlow.trackedSpells[spellID] then
-                results[#results + 1] = { frame = root, spellID = spellID }
-            end
+    local ok, ot = pcall(function()
+        return root.GetObjectType and root:GetObjectType()
+    end)
+    if ok and ot and (ot == "Button" or ot == "Frame") then
+        local spellID = GetButtonSpellID(root)
+        if spellID and CDMGlow.trackedSpells[spellID] then
+            results[#results + 1] = { frame = root, spellID = spellID }
         end
     end
 
-    if root.GetChildren then
-        local ok, children = pcall(function() return { root:GetChildren() } end)
-        if ok and children then
-            for i = 1, #children do
-                ScanFrameTree(children[i], results, seen, depth + 1)
-            end
+    local ok2, children = pcall(function()
+        return root.GetChildren and { root:GetChildren() }
+    end)
+    if ok2 and children then
+        for i = 1, #children do
+            ScanFrameTree(children[i], results, seen, depth + 1)
         end
     end
 end
@@ -248,14 +291,18 @@ local function IsInCDMViewer(frame)
     local f = frame
     for i = 1, 10 do
         if not IsSafeFrame(f) then break end
-        local name = f.GetName and f:GetName()
-        if name then
+
+        local ok, name = pcall(function()
+            return f.GetName and f:GetName()
+        end)
+        if ok and name then
             for _, vname in ipairs(CDM_VIEWER_NAMES) do
                 if name == vname then return true end
             end
         end
-        local ok, parent = pcall(function() return f:GetParent() end)
-        if not ok or not parent then break end
+
+        local ok2, parent = pcall(function() return f:GetParent() end)
+        if not ok2 or not parent then break end
         f = parent
     end
     return false
@@ -288,7 +335,9 @@ local function FindCurrentCDMFrames()
         deduped[#deduped + 1] = { frame = entry.frame, spellID = spellID }
     end
 
+    table.wipe(CDMGlow.frameSpellID)
     for _, entry in ipairs(deduped) do
+        CDMGlow.frameSpellID[entry.frame] = entry.spellID
         for auraID, spells in pairs(CDMGlow.spellsByAura) do
             for _, sid in ipairs(spells) do
                 if sid == entry.spellID then
@@ -475,6 +524,7 @@ local function FullReset()
         RequestGlow(frame, false, "reset")
     end
     table.wipe(CDMGlow.activeGlowFrames)
+    table.wipe(CDMGlow.frameSpellID)
     table.wipe(CDMGlow.spellsByAura)
     table.wipe(CDMGlow.trackedSpells)
     table.wipe(CDMGlow.spellToAura)
