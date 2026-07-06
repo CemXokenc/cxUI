@@ -448,16 +448,24 @@ CF.LCG = nil  -- intentionally nil: we do NOT expose the shared LCG object
 -- ===========================================================================
 -- EnumerateFrames() walked every frame in the game, including nameplates and
 -- other addons' unit frames (Platynator, UnhaltedUnitFrames, etc). Reading
--- .Icon on those frames taints our call with whatever addon owns them, and
--- on some of them (enemy cast/aura icons) the texture is now a protected
--- "secret value" — comparing its string form is silently blocked by the
--- client, not a catchable Lua error, so pcall never sees it fail.
+-- .Icon on those frames taints our call with whatever addon owns them.
 -- On top of that, walking literally every frame in the game on every
 -- DKRescan() call is expensive enough on its own to matter.
 --
 -- We only ever care about our own Cooldown Manager icons, so we scan just
--- those frame trees instead — same recursive, fully pcall-guarded pattern
--- used for Death Coil scanning in CDMGlowLogic.lua.
+-- those frame trees instead.
+--
+-- IMPORTANT: this used to identify frames by comparing Icon:GetTexture()
+-- against known texture strings. Confirmed via /console taintLog 1 that
+-- ANY comparison of a CDM icon's live texture — even our own, not just a
+-- foreign frame's — is now blocked as a "secret value" comparison,
+-- unconditionally, every single time. That's not a taint side-effect, it's
+-- a blanket protection on Cooldown Manager icon textures. Texture-string
+-- identification is a dead end and can't be worked around with pcall.
+--
+-- Identifying frames by frame.spellID instead (same safe pattern already
+-- used for Death Coil in CDMGlowLogic.lua) sidesteps this entirely — that
+-- field is never treated as a secret value in any of our testing.
 -- ===========================================================================
 
 local CDM_VIEWER_NAMES = {
@@ -478,41 +486,52 @@ local function IsSafeFrame(frame)
     return true
 end
 
-local function ScanCDMFrameTree(root, texStrings, callback, seen, depth)
+local function GetButtonSpellID(frame)
+    if not IsSafeFrame(frame) then return nil end
+
+    local ok, sid = pcall(function()
+        return frame.spellID or frame.spellId or frame.spellid
+    end)
+    if ok and type(sid) == "number" then return sid end
+
+    local ok2, v = pcall(function()
+        if frame.GetSpellID then return frame:GetSpellID() end
+        return nil
+    end)
+    if ok2 and type(v) == "number" then return v end
+
+    return nil
+end
+
+local function ScanCDMFrameTree(root, spellIDSet, callback, seen, depth)
     if not root or seen[root] or depth > 20 then return end
     if not IsSafeFrame(root) then return end
     seen[root] = true
 
-    local ok, matched = pcall(function()
-        if root.Icon and type(root.Icon) == "table" and root.Icon.GetTexture then
-            local tex = root.Icon:GetTexture()
-            if tex then
-                local texStr = tostring(tex)
-                for _, t in ipairs(texStrings) do
-                    if texStr == t then return true end
-                end
-            end
-        end
-        return false
-    end)
-    if ok and matched then callback(root) end
+    local sid = GetButtonSpellID(root)
+    if sid and spellIDSet[sid] then
+        callback(root, sid)
+    end
 
     local ok2, children = pcall(function()
         return root.GetChildren and { root:GetChildren() }
     end)
     if ok2 and children then
         for i = 1, #children do
-            ScanCDMFrameTree(children[i], texStrings, callback, seen, depth + 1)
+            ScanCDMFrameTree(children[i], spellIDSet, callback, seen, depth + 1)
         end
     end
 end
 
-local function ScanFramesByTexture(texStrings, callback)
+-- callback(frame, spellID) — called once per matching frame found.
+local function ScanFramesBySpellID(spellIDs, callback)
+    local spellIDSet = {}
+    for _, sid in ipairs(spellIDs) do spellIDSet[sid] = true end
     local seen = {}
     for _, name in ipairs(CDM_VIEWER_NAMES) do
         local viewer = _G[name]
         if viewer then
-            ScanCDMFrameTree(viewer, texStrings, callback, seen, 0)
+            ScanCDMFrameTree(viewer, spellIDSet, callback, seen, 0)
         end
     end
 end
@@ -628,8 +647,15 @@ sharedHookFrame:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         C_Timer.After(1.5, InstallCDMHook)
     elseif event == "PLAYER_REGEN_ENABLED" then
-        for i = 1, #arenaResetCallbacks do
-            pcall(arenaResetCallbacks[i])
+        -- Only reset on actual arena rounds ending — this used to fire on
+        -- ANY combat exit (dungeon pulls, world combat, everything), which
+        -- wiped Festering/Putrefy/Reaper state it should never have touched
+        -- outside of arena.
+        local ok, inArena = pcall(IsActiveBattlefieldArena)
+        if ok and inArena then
+            for i = 1, #arenaResetCallbacks do
+                pcall(arenaResetCallbacks[i])
+            end
         end
     end
 end)
@@ -638,7 +664,7 @@ end)
 -- Export
 -- ===========================================================================
 
-CF.ScanFramesByTexture = ScanFramesByTexture
+CF.ScanFramesBySpellID = ScanFramesBySpellID
 CF.CreateOverlay       = CreateOverlay
 CF.StartGlow           = StartGlow
 CF.StopGlow            = StopGlow

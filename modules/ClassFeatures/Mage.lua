@@ -9,7 +9,7 @@ local addonName, ns = ...
 local CF = ns.CF
 if not CF or CF.CLASS_ID ~= 8 then return end
 
-local ScanFramesByTexture = CF.ScanFramesByTexture
+local ScanFramesBySpellID = CF.ScanFramesBySpellID
 local CreateOverlay       = CF.CreateOverlay
 local AttachXCross        = CF.AttachXCross
 local ShowXCross          = CF.ShowXCross
@@ -31,14 +31,6 @@ local DB_FLURRY = "cdmFlurryCross"
 -- Auto-hides after CROSS_DURATION seconds or when Ice Lance is cast.
 -- ---------------------------------------------------------------------------
 
-local flurryTexStr = nil
-local function GetFlurryTexStr()
-    if flurryTexStr then return flurryTexStr end
-    local t = C_Spell.GetSpellTexture(SPELL_FLURRY)
-    if t then flurryTexStr = tostring(t) end
-    return flurryTexStr
-end
-
 local cdmFlurryOverlays = {}
 local flurryCrossActive = false
 local flurryTimer       = nil
@@ -47,9 +39,7 @@ local function CreateFlurryCDMOverlays()
     for _, ov in pairs(cdmFlurryOverlays) do ov:Hide() end
     wipe(cdmFlurryOverlays)
     flurryCrossActive = false
-    local texStr = GetFlurryTexStr()
-    if not texStr then return end
-    ScanFramesByTexture({texStr}, function(frame)
+    ScanFramesBySpellID({SPELL_FLURRY}, function(frame)
         if not cdmFlurryOverlays[frame] then
             local ov = CreateOverlay(frame)
             AttachXCross(ov)

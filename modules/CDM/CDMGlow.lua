@@ -216,7 +216,7 @@ end
 -- access in current WoW clients, including the very first "is this safe"
 -- check — so IsSafeFrame itself must be inside a pcall, not just the
 -- checks that come after it. This mirrors the pattern Shared.lua already
--- uses for ScanFramesByTexture, which is why Festering/Flurry never had
+-- uses for its CDM scanning (Shared.lua now identifies frames by spellID
 -- this problem while Death Coil did: more CDM icons active at once in a
 -- dungeon means ScanFrameTree walks more (and more varied) frames per
 -- pass, so the odds of hitting one bad node — and silently aborting the

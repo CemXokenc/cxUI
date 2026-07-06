@@ -8,7 +8,7 @@ local addonName, ns = ...
 local CF = ns.CF
 if not CF or CF.CLASS_ID ~= 6 then return end
 
-local ScanFramesByTexture  = CF.ScanFramesByTexture
+local ScanFramesBySpellID = CF.ScanFramesBySpellID
 local CreateOverlay        = CF.CreateOverlay
 local StartGlow            = CF.StartGlow
 local StopGlow             = CF.StopGlow
@@ -20,12 +20,15 @@ local HideXCross           = CF.HideXCross
 -- Constants
 -- ---------------------------------------------------------------------------
 
-local TEX_FESTERING_SCYTHE = "3997563"
-local TEX_FESTERING_STRIKE = "879926"
-local TEX_PUTREFY          = "7439191"
-local TEX_REAPER           = "636333"
+-- NOTE: identification switched from icon-texture comparison to spellID
+-- (see Shared.lua) — comparing a CDM icon's live texture is now
+-- unconditionally blocked as a secret-value comparison, confirmed via
+-- /console taintLog 1, even for our own frames.
+local SPELL_FESTERING_STRIKE = 85948
+local SPELL_FESTERING_SCYTHE = 458128
+local SPELL_PUTREFY          = 1247378
+local SPELL_REAPER           = 343294 -- Soul Reaper
 
-local SPELL_FESTERING_SCYTHE    = 458128
 local SPELL_DARK_TRANSFORMATION = 1233448
 local SPELL_OBLITERATE          = 49020
 local SPELL_FROSTSCYTHE         = 207230
@@ -153,17 +156,21 @@ local DB_FROST_SWAP = "cdmFrostBarSwap"
 local oblFrames     = {}
 local frostHooked   = {}
 
+local settingFrostTexture = {}
+
 local function HookOblFrame(frame)
     if frostHooked[frame] or not frame.Icon then return end
     frostHooked[frame] = true
-    hooksecurefunc(frame.Icon, "SetTexture", function(self, tex)
+    hooksecurefunc(frame.Icon, "SetTexture", function(self)
+        if settingFrostTexture[self] then return end
         if not CXUI_DB[DB_FROST_SWAP] then return end
         if GetSpecialization() ~= 2    then return end
         if GetActionBarPage() ~= 2     then return end
-        local oblTex = C_Spell.GetSpellTexture(SPELL_OBLITERATE)
-        if tex == oblTex or tex == tostring(oblTex) then
-            local scyTex = C_Spell.GetSpellTexture(SPELL_FROSTSCYTHE)
-            if scyTex then self:SetTexture(scyTex) end
+        local scyTex = C_Spell.GetSpellTexture(SPELL_FROSTSCYTHE)
+        if scyTex then
+            settingFrostTexture[self] = true
+            self:SetTexture(scyTex)
+            settingFrostTexture[self] = false
         end
     end)
 end
@@ -178,8 +185,7 @@ local function BuildFrostSwapFrames()
         end
     end
     wipe(oblFrames)
-    if not oblTex then return end
-    ScanFramesByTexture({tostring(oblTex)}, function(frame)
+    ScanFramesBySpellID({SPELL_OBLITERATE}, function(frame)
         if frame.Icon then
             table.insert(oblFrames, frame)
             HookOblFrame(frame)
@@ -211,6 +217,14 @@ end
 -- ---------------------------------------------------------------------------
 
 local function ScanCDMOverlays()
+    -- Remember what was actually showing before we tear down and rebuild the
+    -- overlay frames (e.g. on CDM reanchor) — rebuilding is bookkeeping, not
+    -- a reason to hide anything. Only the hard conditions (Festering Scythe
+    -- cast, Putrefy/Reaper duration elapsing or being stopped) should do that.
+    local wasFesteringActive = festeringGlowActive
+    local wasPutrefyActive   = putrefyWarningActive
+    local wasReaperActive    = reaperWarningActive
+
     for _, ov in pairs(cdmFesteringOverlays) do
         if ov._glowActive then StopGlow(ov) end
         ov:Hide()
@@ -223,21 +237,19 @@ local function ScanCDMOverlays()
     for _, ov in pairs(cdmReaperOverlays) do ov:Hide() end
     wipe(cdmReaperOverlays); reaperWarningActive = false
 
-    ScanFramesByTexture(
-        {TEX_FESTERING_SCYTHE, TEX_FESTERING_STRIKE, TEX_PUTREFY, TEX_REAPER},
-        function(frame)
-            local ok, tex = pcall(function() return tostring(frame.Icon:GetTexture()) end)
-            if not ok then return end
-            if tex == TEX_FESTERING_SCYTHE or tex == TEX_FESTERING_STRIKE then
+    ScanFramesBySpellID(
+        {SPELL_FESTERING_STRIKE, SPELL_PUTREFY, SPELL_REAPER},
+        function(frame, spellID)
+            if spellID == SPELL_FESTERING_STRIKE then
                 if not cdmFesteringOverlays[frame] then
                     cdmFesteringOverlays[frame] = CreateOverlay(frame)
                 end
-            elseif tex == TEX_PUTREFY then
+            elseif spellID == SPELL_PUTREFY then
                 if not cdmPutrefyOverlays[frame] then
                     local ov = CreateOverlay(frame); AttachXCross(ov)
                     cdmPutrefyOverlays[frame] = ov
                 end
-            elseif tex == TEX_REAPER then
+            elseif spellID == SPELL_REAPER then
                 if not cdmReaperOverlays[frame] then
                     local ov = CreateOverlay(frame); AttachXCross(ov)
                     cdmReaperOverlays[frame] = ov
@@ -245,6 +257,27 @@ local function ScanCDMOverlays()
             end
         end
     )
+
+    -- Restore visual state on the freshly created overlays. This does NOT
+    -- touch/restart festeringTimer, putrefyDurationTimer, etc. — those keep
+    -- counting through the rebuild untouched; we're only re-applying the
+    -- glow/cross to whichever new overlay objects now exist.
+    if wasFesteringActive and CXUI_DB[DB_FESTERING] and GetSpecialization() == 3 then
+        festeringGlowActive = true
+        if next(cdmFesteringOverlays) then
+            for _, ov in pairs(cdmFesteringOverlays) do StartGlow(ov) end
+        elseif CXUI_DB.cxaoeDebugFestering then
+            print("|cffff8800cxUI:|r festering was active but no CDM frame matched on this rescan")
+        end
+    end
+    if wasPutrefyActive and CXUI_DB[DB_PUTREFY] then
+        putrefyWarningActive = true
+        for _, ov in pairs(cdmPutrefyOverlays) do ShowXCross(ov) end
+    end
+    if wasReaperActive and CXUI_DB[DB_REAPER] then
+        reaperWarningActive = true
+        for _, ov in pairs(cdmReaperOverlays) do ShowXCross(ov) end
+    end
 end
 
 local function DKRescan()
@@ -265,12 +298,13 @@ end
 -- After user drags CDM icons, rescan so glows/crosses land on the right frame
 CF.OnCDMReanchor(function() DKRescan() end)
 
--- Hard-reset all DK glow state between arena rounds (PLAYER_REGEN_ENABLED).
--- This fixes the bug where Festering glow stays broken after the first arena
--- ends mid-proc: the timer is cancelled, the overlay is hidden, and the next
--- proc starts cleanly from scratch.
+-- Hard-reset Putrefy/Reaper warning state between arena rounds — CDM frames
+-- get recreated across rounds and can otherwise leave a stale timer/overlay
+-- association behind.
+-- Festering glow is intentionally NOT touched here anymore: it should only
+-- ever hide because of the hard condition (casting Festering Scythe, see
+-- StartFesteringTimer), never because of combat/arena state.
 CF.OnArenaReset(function()
-    HideFesteringGlow()
     StopPutrefyWarning()
     StopReaperWarning()
 end)
