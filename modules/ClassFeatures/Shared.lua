@@ -33,7 +33,7 @@ local MOVEMENT_ABILITIES = {
     ROGUE       = {36554, 195457},           -- shadowstep, grappling hook
     SHAMAN      = {192063},                  -- gust of wind
     WARLOCK     = {48020},                   -- demonic circle teleport
-    WARRIOR     = {6544},                    -- heroic leap
+    WARRIOR     = {100, 6544},               -- heroic leap, charge
 }
 
 local NAME_OVERRIDES = {
@@ -41,7 +41,7 @@ local NAME_OVERRIDES = {
     [252216] = "dash",     [102401] = "charge",  [115008] = "torpedo",
     [190784] = "steed",    [121536] = "feather", [36554]  = "step",
     [195457] = "grapple",  [192063] = "gust",    [48020]  = "circle",
-    [6544]   = "leap",
+    [6544]   = "leap"
 }
 
 local MOVEMENT_SPELL_ID   = nil

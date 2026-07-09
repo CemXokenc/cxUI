@@ -29,8 +29,8 @@ local PROC_CONFIG = {
         --["overlay:49184"] = { 49184 },                   -- Rime                   → Howling Blast
         ["cdm:1228433"]   = { 1228433 },                 -- Frostbane              → always glow if present in CDM
         -- CDs
-        --["ready:42650"]   = { 42650 },                   -- Army of the Dead       → glow when ready
-        --["ready:1249658"] = { 1249658 },                 -- Breath of Sindragosa   → glow when ready
+        ["ready:42650"]   = { 42650 },                   -- Army of the Dead       → glow when ready
+        ["ready:1249658"] = { 1249658 },                 -- Breath of Sindragosa   → glow when ready
         -- Utility
         ["ready:47528"] = { 47528 },                     -- Mind Freeze            → glow when ready
         ["ready:49576"] = { 49576 },                     -- Death Grip             → glow when ready
@@ -42,7 +42,7 @@ local PROC_CONFIG = {
         --[270232] = { 190356 },                           -- Freezing Rain          → Blizzard
         --["cdm:199786"] = { 199786 },                     -- Glacial Spike          → always glow if present in CDM
         -- CDs
-        --["ready:84714"] = { 84714 },                     -- Frozen Orb             → glow when ready
+        ["ready:84714"] = { 84714 },                     -- Frozen Orb             → glow when ready
         -- Utility
         ["ready:2139"] = { 2139 },                       -- Counterspell           → glow when ready
         ["ready:475"]  = { 475 },                        -- Remove Curse           → glow when ready
@@ -54,25 +54,32 @@ local PROC_CONFIG = {
         --["cdm:434506"]  = { 434506 },                    -- Infernal Bolt          → always glow if present in CDM
         -- CDs
         ["ready:105174"] = { 105174 },                   -- Hand of Gul'dan        → glow when ready
-        --["ready:104316"] = { 104316 },                   -- Call Dreadstalkers     → glow when ready
-        --["ready:265187"] = { 265187 },                   -- Summon Demonic Tyrant  → glow when ready
+        ["ready:104316"] = { 104316 },                   -- Call Dreadstalkers     → glow when ready
+        ["ready:265187"] = { 265187 },                   -- Summon Demonic Tyrant  → glow when ready
         ["cdm:1276452"]  = { 1276452 },                  -- Grimoire: Imp Lord     → always glow if present in CDM
         ["cdm:1276467"]  = { 1276467 },                  -- Grimoire: Fel Ravager  → always glow if present in CDM
         -- Utility
         ["ready:119914"] = { 119914 },                   -- Axe Toss              → glow when ready
         ["ready:119910"] = { 119910 },                   -- Spell Lock             → glow when ready
     },
-    WARRIOR = {}, PALADIN = {}, HUNTER = {}, ROGUE = {},
+    WARRIOR = {
+		-- Procs
+		--[29725] = { 281000 },                     -- Sudden Death        → Execute
+		-- CDs
+		["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
+		-- Utility
+		["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
+	}, PALADIN = {}, HUNTER = {}, ROGUE = {},
     PRIEST = {
         -- Procs
         --[375981] = { 8092, 450983 },                     -- Shadowy Insight        → Mind Blast, Void Blast
         --[373204] = { 335467 },                           -- Mind Devourer          → Shadow Word: Madness
         -- CDs
-        --["ready:228260"]  = { 228260 },                  -- Voidform               → glow when ready
-        --["ready:1242173"] = { 1242173 },                 -- Void Volley            → glow when ready
-        --["ready:120644"]  = { 120644 },                  -- Halo                   → glow when ready
-        --["ready:120517"]  = { 120517 },                  -- Halo (Holy)            → glow when ready
-        --["ready:263165"]  = { 263165 },                  -- Void Torrent           → glow when ready
+        ["ready:228260"]  = { 228260 },                  -- Voidform               → glow when ready
+        ["ready:1242173"] = { 1242173 },                 -- Void Volley            → glow when ready
+        ["ready:120644"]  = { 120644 },                  -- Halo                   → glow when ready
+        ["ready:120517"]  = { 120517 },                  -- Halo (Holy)            → glow when ready
+        ["ready:263165"]  = { 263165 },                  -- Void Torrent           → glow when ready
         ["ready:450983"]  = { 450983 },                  -- Void Blast             → glow when ready
         -- Utility
         ["ready:15487"]  = { 15487 },                    -- Silence                → glow when ready
@@ -86,14 +93,21 @@ local PROC_CONFIG = {
         --[438443] = { 101546 },                           -- Dance of Chi-Ji            → Spinning Crane Kick
         --[443112] = { 124682 },                           -- Strength of the Black Ox  → Enveloping Mist
     },
-    DRUID = {},
+    DRUID = {
+		-- Procs        
+        -- CDs        
+        -- Utility
+		["ready:106839"]  = { 106839 },                    -- Skull Bash                → glow when ready
+		["ready:2908"]  = { 2908 },   		               -- Soothe        	        → glow when ready
+		["ready:2782"]  = { 2782 },   		               -- Remove Corruption	        → glow when ready
+	},
     DEMONHUNTER = {
         -- Procs
         --["cdm:1225826"] = { 1225826 },                   -- Eradicate              → always glow if present in CDM
         --["cdm:1221150"] = { 1221150 },                   -- Collapsing Star        → always glow if present in CDM
         -- CDs
-        --["ready:1217605"] = { 1217605 },                 -- Void Metamorphosis     → glow when ready
-        --["ready:191427"]  = { 191427 },                  -- Metamorphosis          → glow when ready
+        ["ready:1217605"] = { 1217605 },                 -- Void Metamorphosis     → glow when ready
+        ["ready:191427"]  = { 191427 },                  -- Metamorphosis          → glow when ready
         ["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
         -- Utility
         ["ready:183752"] = { 183752 },                   -- Disrupt                → glow when ready

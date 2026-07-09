@@ -52,6 +52,10 @@ local function HideFesteringGlow()
     if festeringTimer then festeringTimer:Cancel(); festeringTimer = nil end
     festeringGlowActive = false
     for _, ov in pairs(cdmFesteringOverlays) do StopGlow(ov) end
+    if CXUI_DB.cxaoeDebugFestering then
+        print("|cffff8800cxUI:|r HideFesteringGlow() called — caller stack:")
+        print(debugstack(2, 8, 0))
+    end
 end
 
 local function ShowFesteringGlow()
@@ -225,6 +229,10 @@ local function ScanCDMOverlays()
     local wasPutrefyActive   = putrefyWarningActive
     local wasReaperActive    = reaperWarningActive
 
+    if CXUI_DB.cxaoeDebugFestering then
+        print(string.format("|cff00ff00cxUI:|r ScanCDMOverlays() rebuild — wasFestering=%s", tostring(wasFesteringActive)))
+    end
+
     for _, ov in pairs(cdmFesteringOverlays) do
         if ov._glowActive then StopGlow(ov) end
         ov:Hide()
@@ -265,7 +273,14 @@ local function ScanCDMOverlays()
     if wasFesteringActive and CXUI_DB[DB_FESTERING] and GetSpecialization() == 3 then
         festeringGlowActive = true
         if next(cdmFesteringOverlays) then
-            for _, ov in pairs(cdmFesteringOverlays) do StartGlow(ov) end
+            for frame, ov in pairs(cdmFesteringOverlays) do
+                StartGlow(ov)
+                if CXUI_DB.cxaoeDebugFestering then
+                    print(string.format(
+                        "|cff00ff00cxUI:|r festering restored — frame:IsShown()=%s frame:IsVisible()=%s ov:IsShown()=%s",
+                        tostring(frame:IsShown()), tostring(frame:IsVisible()), tostring(ov:IsShown())))
+                end
+            end
         elseif CXUI_DB.cxaoeDebugFestering then
             print("|cffff8800cxUI:|r festering was active but no CDM frame matched on this rescan")
         end
@@ -289,6 +304,33 @@ local function StartRetryLoop()
     for _, delay in ipairs({3, 6, 10, 15}) do
         C_Timer.After(delay, function() DKRescan() end)
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- Debug watchdog — only runs while CXUI_DB.cxaoeDebugFestering is true.
+-- Catches cases where the glow visually vanishes WITHOUT any of our own
+-- code running at all (e.g. Blizzard itself hiding/fading the underlying
+-- CDM icon per its own Edit Mode display rules) — nothing else would ever
+-- surface that, since no error/taint/rescan happens in that case.
+-- ---------------------------------------------------------------------------
+
+local festeringWatchdog = nil
+local function EnsureFesteringWatchdog()
+    if festeringWatchdog then return end
+    festeringWatchdog = C_Timer.NewTicker(2, function()
+        if not CXUI_DB.cxaoeDebugFestering then return end
+        if not festeringGlowActive then return end
+        for frame, ov in pairs(cdmFesteringOverlays) do
+            local frameShown   = frame:IsShown()
+            local frameVisible = frame:IsVisible()
+            local ovShown      = ov:IsShown()
+            if not frameShown or not frameVisible or not ovShown then
+                print(string.format(
+                    "|cffff0000cxUI WATCHDOG:|r festeringGlowActive=true but frame:IsShown()=%s frame:IsVisible()=%s ov:IsShown()=%s — nothing in our code touched it, likely Blizzard/CDM itself hid the icon",
+                    tostring(frameShown), tostring(frameVisible), tostring(ovShown)))
+            end
+        end
+    end)
 end
 
 -- ---------------------------------------------------------------------------
@@ -329,10 +371,11 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
         self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
         C_Timer.After(1, function() DKRescan() end)
         StartRetryLoop()
+        EnsureFesteringWatchdog()
 
     elseif event == "PLAYER_REGEN_ENABLED" then
-        -- CF.OnArenaReset already calls HideFesteringGlow + StopPutrefy/Reaper,
-        -- but keep these here as an explicit safety net for non-arena scenarios.
+        -- CF.OnArenaReset handles StopPutrefy/Reaper on actual arena rounds;
+        -- keep these here as an explicit safety net for non-arena scenarios.
         StopPutrefyWarning()
         StopReaperWarning()
 
@@ -381,7 +424,15 @@ SlashCmdList["CXAOEDEBUG"] = function(msg)
             .. "  putrefy=" .. tostring(putrefyWarningActive)
             .. "  reaper=" .. tostring(reaperWarningActive)
             .. "  barpage=" .. tostring(GetActionBarPage()))
+        for frame, ov in pairs(cdmFesteringOverlays) do
+            print(string.format(
+                "  festering frame: IsShown=%s IsVisible=%s ov.IsShown=%s",
+                tostring(frame:IsShown()), tostring(frame:IsVisible()), tostring(ov:IsShown())))
+        end
+    elseif cmd == "debug" then
+        CXUI_DB.cxaoeDebugFestering = not CXUI_DB.cxaoeDebugFestering
+        print("|cff0070ddcxUI:|r festering debug logging " .. (CXUI_DB.cxaoeDebugFestering and "ON" or "OFF"))
     else
-        print("|cff0070ddcxUI:|r /cxaoe [scan|status]")
+        print("|cff0070ddcxUI:|r /cxaoe [scan|status|debug]")
     end
 end

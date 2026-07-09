@@ -12,7 +12,6 @@ local UPDATE_INTERVAL     = 0.1
 local timeSinceLastUpdate = 0
 local isInCombat          = false
 local questTrackerHoverFrame = nil
-local lastTrackerHeight = nil
 
 -- Guards prevent recursion when our hook calls SetAlpha again
 local alphaGuards = {}
@@ -110,16 +109,14 @@ local function ApplyAllAlpha()
 
     -- ObjectiveTrackerFrame: apply alpha only from OnUpdate (never from hooks
     -- or event callbacks) to avoid tainting the Blizzard managed frame system.
-    -- NOTE: deliberately no GetHeight()/GetSize() read here — reading tracker
-    -- geometry is itself what marks the value/execution as tainted ("secret
-    -- number"), not just an unsafe check to guard against. SetAlpha alone,
-    -- called only from this plain OnUpdate tick (never from a hook or an
-    -- event fired inside Edit Mode's own callback chain), is the lowest-risk
-    -- touch point we have left.
     if ObjectiveTrackerFrame then
-        local trackerAlpha = WantedQuestTrackerAlpha()
-        ObjectiveTrackerFrame:SetAlpha(trackerAlpha)
-    end
+		-- Wrap in issecretvalue check + pcall to prevent taint cascade in arena
+		local ok, h = pcall(function() return ObjectiveTrackerFrame:GetHeight() end)
+		if ok and h and not issecretvalue(h) then
+			local trackerAlpha = WantedQuestTrackerAlpha()
+			ObjectiveTrackerFrame:SetAlpha(trackerAlpha)
+		end
+	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -141,36 +138,11 @@ end
 
 -- ---------------------------------------------------------------------------
 -- QUEST TRACKER HOVER FRAME
--- An invisible frame covering the top 60% of the tracker, used as a hover
--- sensor. The tricky part: the tracker's height CAN be read safely, but only
--- from a plain, decoupled OnUpdate tick — never from inside a hook/callback
--- that Blizzard's own protected code calls into (e.g. HookScript on the real
--- frame's OnSizeChanged runs synchronously inside EditModeManager's
--- InvokeOnAnyEditModeSystemAnchorChanged chain, and THAT is what turned the
--- read into a "secret number" / taint cascade last time). Polling from our
--- own independent ticker avoids that entirely. Alpha itself is still driven
--- ONLY by the OnUpdate tick — never by OnEnter/OnLeave scripts — because
--- SetScript callbacks tied to managed Blizzard frames taint them when they
--- call SetAlpha on them.
+-- An invisible frame covering the top 60% of the tracker used as a hover
+-- sensor. Alpha is driven ONLY by the OnUpdate tick — never by OnEnter/OnLeave
+-- scripts — because SetScript callbacks on frames anchored to managed Blizzard
+-- frames taint those frames when they call SetAlpha on them.
 -- ---------------------------------------------------------------------------
-
-local function UpdateHoverBounds()
-    if not questTrackerHoverFrame then return end
-    local tracker = ObjectiveTrackerFrame
-    if not tracker then return end
-
-    -- Safe here: this runs from our own decoupled OnUpdate tick, NOT from a
-    -- hook/callback inside Blizzard's protected Edit Mode chain. Still guarded
-    -- defensively in case a "secret" value ever leaks through anyway.
-    local ok, h = pcall(function() return tracker:GetHeight() end)
-    if not ok or not h or issecretvalue(h) or h <= 0 then return end
-    if h == lastTrackerHeight then return end -- nothing changed, skip re-anchoring
-    lastTrackerHeight = h
-
-    questTrackerHoverFrame:ClearAllPoints()
-    questTrackerHoverFrame:SetPoint("TOPLEFT",     tracker, "TOPLEFT",  -15,  15)
-    questTrackerHoverFrame:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT",  15, -(h * 0.6))
-end
 
 local function SetupQuestTrackerHover()
     if questTrackerHoverFrame or not CXUI_DB.hideQuests then return end
@@ -181,13 +153,28 @@ local function SetupQuestTrackerHover()
     questTrackerHoverFrame:SetFrameStrata("LOW")
     questTrackerHoverFrame:EnableMouse(true)
 
-    -- No HookScript("OnSizeChanged") here — that's what previously injected
-    -- our code into Blizzard's own protected callback chain. Bounds are kept
-    -- in sync purely by polling from OnUpdate (see UpdateHoverBounds above).
+    local function UpdateHoverBounds()
+        -- Defer if GetHeight returns a secret/tainted value (e.g. during Edit Mode)
+        local ok, h = pcall(function() return tracker:GetHeight() end)
+        if not ok or not h or issecretvalue(h) or h == 0 then
+            C_Timer.After(0, UpdateHoverBounds)
+            return
+        end
+        questTrackerHoverFrame:ClearAllPoints()
+        questTrackerHoverFrame:SetPoint("TOPLEFT",     tracker, "TOPLEFT",  -15,  15)
+        questTrackerHoverFrame:SetPoint("BOTTOMRIGHT", tracker, "TOPRIGHT",  15, -(h * 0.6))
+    end
+
     UpdateHoverBounds()
+
+    -- Defer OnSizeChanged out of secure context to avoid taint
+    tracker:HookScript("OnSizeChanged", function()
+        C_Timer.After(0.1, UpdateHoverBounds)
+    end)
 
     -- NO OnEnter/OnLeave scripts here — they would taint ObjectiveTrackerFrame
     -- when calling tracker:SetAlpha(). Alpha is handled purely by OnUpdate.
+    tracker:SetAlpha(0)
 end
 
 -- ---------------------------------------------------------------------------
@@ -199,7 +186,6 @@ local function OnUpdate(self, elapsed)
     if timeSinceLastUpdate < UPDATE_INTERVAL then return end
     timeSinceLastUpdate = 0
     ApplyAllAlpha()
-    UpdateHoverBounds()
 end
 
 -- ---------------------------------------------------------------------------
