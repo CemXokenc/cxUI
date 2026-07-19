@@ -109,7 +109,10 @@ local function ApplyAllAlpha()
 
     -- ObjectiveTrackerFrame: apply alpha only from OnUpdate (never from hooks
     -- or event callbacks) to avoid tainting the Blizzard managed frame system.
-    if ObjectiveTrackerFrame then
+    -- IMPORTANT: only touch this frame at all when hideQuests is enabled.
+    -- Otherwise we'd keep calling SetAlpha(1) on it every 0.1s forever,
+    -- fighting with ElvUI (or any other addon) that also manages this frame.
+    if CXUI_DB.hideQuests and ObjectiveTrackerFrame then
 		-- Wrap in issecretvalue check + pcall to prevent taint cascade in arena
 		local ok, h = pcall(function() return ObjectiveTrackerFrame:GetHeight() end)
 		if ok and h and not issecretvalue(h) then

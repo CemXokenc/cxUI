@@ -486,19 +486,32 @@ local function IsSafeFrame(frame)
     return true
 end
 
+-- Blizzard's Secret Values system (Midnight/12.0) can return numbers that
+-- LOOK like normal Lua numbers (type(sid) == "number") but cannot legally be
+-- used as table keys, compared, or otherwise operated on by addons. Using one
+-- as a table key throws "attempted to index a table that cannot be indexed
+-- with secret keys". issecretvalue() is the supported way to detect this.
+local function IsSecretValue(v)
+    if issecretvalue then
+        local ok, secret = pcall(issecretvalue, v)
+        return ok and secret
+    end
+    return false
+end
+
 local function GetButtonSpellID(frame)
     if not IsSafeFrame(frame) then return nil end
 
     local ok, sid = pcall(function()
         return frame.spellID or frame.spellId or frame.spellid
     end)
-    if ok and type(sid) == "number" then return sid end
+    if ok and type(sid) == "number" and not IsSecretValue(sid) then return sid end
 
     local ok2, v = pcall(function()
         if frame.GetSpellID then return frame:GetSpellID() end
         return nil
     end)
-    if ok2 and type(v) == "number" then return v end
+    if ok2 and type(v) == "number" and not IsSecretValue(v) then return v end
 
     return nil
 end
@@ -509,7 +522,7 @@ local function ScanCDMFrameTree(root, spellIDSet, callback, seen, depth)
     seen[root] = true
 
     local sid = GetButtonSpellID(root)
-    if sid and spellIDSet[sid] then
+    if sid and not IsSecretValue(sid) and spellIDSet[sid] then
         callback(root, sid)
     end
 
