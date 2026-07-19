@@ -21,7 +21,9 @@ local alphaGuards = {}
 -- ---------------------------------------------------------------------------
 
 local function WantedActionBarsAlpha()
-    if not CXUI_DB.hideBars then return 1 end
+    -- nil = feature disabled, don't touch this frame's alpha at all
+    -- (lets other addons manage it without us fighting them)
+    if not CXUI_DB.hideBars then return nil end
     if isInCombat then return 0 end
     local ok, result = pcall(function()
         if spellFlyout and spellFlyout:IsShown() and spellFlyout:IsMouseOver() then return 1 end
@@ -39,7 +41,9 @@ local function WantedActionBarsAlpha()
 end
 
 local function WantedUIGroupAlpha()
-    if not CXUI_DB.hideMicro then return 1 end
+    -- nil = feature disabled, don't touch this frame's alpha at all
+    -- (lets other addons manage the micro menu without us fighting them)
+    if not CXUI_DB.hideMicro then return nil end
     local ok, result = pcall(function()
         for _, frame in ipairs(uiGroupFrames) do
             if frame and frame:IsMouseOver() then return 1 end
@@ -71,6 +75,10 @@ local function GuardAlpha(frame, getWanted)
     hooksecurefunc(frame, "SetAlpha", function(self, alpha)
         if alphaGuards[self] then return end
         local wanted = getWanted()
+        -- nil = feature is toggled off, so don't enforce anything here;
+        -- otherwise we'd override alpha set by other addons (e.g. ElvUI,
+        -- micro menu addons) that also manage this frame.
+        if wanted == nil then return end
         if alpha ~= wanted then
             alphaGuards[self] = true
             self:SetAlpha(wanted)
@@ -100,11 +108,17 @@ local function ApplyAllAlpha()
     local barsAlpha  = WantedActionBarsAlpha()
     local groupAlpha = WantedUIGroupAlpha()
 
-    for _, bar in ipairs(actionBarFrames) do
-        if bar then bar:SetAlpha(barsAlpha) end
+    -- nil = feature disabled; skip SetAlpha entirely so we don't keep
+    -- stomping on alpha values set by other addons every 0.1s.
+    if barsAlpha ~= nil then
+        for _, bar in ipairs(actionBarFrames) do
+            if bar then bar:SetAlpha(barsAlpha) end
+        end
     end
-    for _, frame in ipairs(uiGroupFrames) do
-        if frame then frame:SetAlpha(groupAlpha) end
+    if groupAlpha ~= nil then
+        for _, frame in ipairs(uiGroupFrames) do
+            if frame then frame:SetAlpha(groupAlpha) end
+        end
     end
 
     -- ObjectiveTrackerFrame: apply alpha only from OnUpdate (never from hooks
