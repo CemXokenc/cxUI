@@ -26,6 +26,9 @@ modules\SmallTweaks\MacroOverride.lua
 modules\SmallTweaks\Sounds.lua
 modules\SmallTweaks\RCM.lua
 modules\SmallTweaks\MogMountFlyingInGround.lua
+modules\SmallTweaks\Death.lua
+modules\SmallTweaks\LFG.lua
+modules\SmallTweaks\Mail.lua
 
 # Module: Class Features (Shared must load first)
 modules\ClassFeatures\Shared.lua

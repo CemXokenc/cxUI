@@ -43,11 +43,15 @@ cxUI/
     │   └── Absorb.lua
     ├── CDM/                        # Module 3 — CDM proc glow
     │   └── CDMGlow.lua
-    ├── SmallTweaks/                # Module 4 — one file per tweak
+    ├── SmallTweaks/                # Modules 4 & 6 — one file per tweak
     │   ├── Alerts.lua              #   suppress talent notifications
     │   ├── MacroOverride.lua       #   redirect Macros → Mega Macro
     │   ├── Sounds.lua              #   ready check / invite / pull timer / low health
-    │   └── RCM.lua                 #   block right-click targeting in combat
+    │   ├── RCM.lua                 #   block right-click targeting in combat
+    │   ├── MogMountFlyingInGround.lua #   flying mount in MogMount's ground slot
+    │   ├── Death.lua               #   auto-accept resurrection / auto-release in PvP
+    │   ├── LFG.lua                 #   Dungeon Finder advanced filters / reset button position
+    │   └── Mail.lua                #   remember last mail recipient
     └── ClassFeatures/              # Module 5 — class-specific overlays
         ├── Shared.lua              #   frame scan & overlay helpers (loads first)
         ├── DeathKnight.lua         #   enemy counter, festering glow, putrefy cross, frost swap
@@ -165,6 +169,22 @@ Contextual combat overlays for specific class mechanics. Only the file matching 
 
 ---
 
+### 💀 Module 6: Death, LFG & Mail — `modules/SmallTweaks/`
+
+Small quality-of-life features ported from EnhanceQoL, kept as lightweight standalone tweaks so the full addon doesn't need to run.
+
+| File | Feature | What it does |
+|---|---|---|
+| `Death.lua` | Auto-Accept Resurrection | Automatically accepts resurrection requests, but not while the resurrecting unit is in combat |
+| `Death.lua` | Auto-Release in PvP | Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect |
+| `LFG.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res, and same-spec filters to the Dungeon Finder search list |
+| `LFG.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's "Reset Filter" button to the left side to avoid overlap |
+| `Mail.lua` | Remember Last Recipient | Keeps the last recipient in the mailbox "To" field after sending, until the mailbox is closed |
+
+All five are **off by default** — enable only what you need.
+
+---
+
 ## ⚙️ Settings
 
 ```
@@ -193,6 +213,11 @@ Options marked **`(Requires Reload)*`** need `/reload` to take effect.
 | Class Features | Putrefy Cross — Unholy DK | ❌ |
 | Class Features | Flurry Cross — Frost Mage | ❌ |
 | Class Features | Swap ST/AOE — Frost DK | ❌ |
+| Death, LFG & Mail | Auto-Accept Resurrection | ❌ |
+| Death, LFG & Mail | Auto-Release in PvP | ❌ |
+| Death, LFG & Mail | Dungeon Finder: Advanced Filters | ✅ |
+| Death, LFG & Mail | Move 'Reset Filter' Button | ✅ |
+| Death, LFG & Mail | Mail: Remember Last Recipient | ❌ |
 
 ---
 

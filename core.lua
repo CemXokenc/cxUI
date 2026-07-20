@@ -37,6 +37,12 @@ local function EnsureDBDefaults()
         cdmFesteringGlow          = true,
         burningRushReminder       = true,
 		---------------------------------
+        autoAcceptResurrection    = false,
+        autoReleasePvP            = false,
+        dungeonFilter             = false,
+        moveResetButton           = false,
+        mailRememberRecipient     = false,
+		---------------------------------
     }
     for k, v in pairs(defaults) do
         if CXUI_DB[k] == nil then CXUI_DB[k] = v end
@@ -78,7 +84,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 980)
+content:SetSize(560, 1080)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -172,6 +178,16 @@ CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x
 CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -445, false, R)
 CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -475, false, L)
 CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -475, false, R)
+
+-- ---------------------------------------------------------------------------
+-- Module 6 — Death, LFG & Mail
+-- ---------------------------------------------------------------------------
+CreateHeader("Module 6: Death, LFG & Mail", -505)
+CreateCheckbox("Auto-Accept Resurrection", "autoAcceptResurrection", "Automatically accepts resurrection requests, but not while the resurrecting unit is in combat.", -530, false, L)
+CreateCheckbox("Auto-Release in PvP",      "autoReleasePvP",         "Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect.", -530, false, R)
+CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",  "Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list.", -560, true, L)
+CreateCheckbox("Move 'Reset Filter' Button",       "moveResetButton","Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap.",         -560, true, R)
+CreateCheckbox("Mail: Remember Last Recipient",    "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -590, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
