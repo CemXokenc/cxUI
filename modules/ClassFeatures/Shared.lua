@@ -47,6 +47,27 @@ local NAME_OVERRIDES = {
 local MOVEMENT_SPELL_ID   = nil
 local MOVEMENT_SPELL_NAME = nil
 
+-- Time Spiral (Evoker) grants everyone nearby a free use of their movement
+-- ability, even on cooldown. The game signals this itself by glowing the
+-- ability's own action button (SPELL_ACTIVATION_OVERLAY_GLOW_SHOW/HIDE) --
+-- same detection MovementAlertDisplay.lua uses (IsValidTimeSpiralProc), just
+-- matched against our single MOVEMENT_SPELL_ID instead of a spec list. Not
+-- restricted to the evoker's own class in any way -- this fires on whichever
+-- class receives the glow, i.e. whoever Time Spiral just affected.
+local FREE_MOVEMENT_DURATION = 10
+local freeMovementUntil = nil
+local glowProcDebounce = 0
+
+local function IsFreeMovementGlow(spellId)
+    if not spellId or not MOVEMENT_SPELL_ID then return false end
+    if spellId == MOVEMENT_SPELL_ID then return true end
+    if C_Spell.GetOverrideSpell then
+        local ok, overrideId = pcall(C_Spell.GetOverrideSpell, MOVEMENT_SPELL_ID)
+        if ok and overrideId and overrideId == spellId then return true end
+    end
+    return false
+end
+
 local movementText = UIParent:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 do
     local fontName = movementText:GetFont()
@@ -57,6 +78,17 @@ movementText:SetShadowColor(0, 0, 0, 0)
 movementText:SetPoint("CENTER", UIParent, "CENTER", TRACKER_X, TRACKER_Y)
 movementText:SetJustifyH("CENTER")
 movementText:Hide()
+
+local freeMovementText = UIParent:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+do
+    local fontName = freeMovementText:GetFont()
+    freeMovementText:SetFont(fontName, TRACKER_FONT_SIZE, "OUTLINE")
+end
+freeMovementText:SetTextColor(1, 0.82, 0, 1) -- gold, to stand out from the "No X" line
+freeMovementText:SetShadowColor(0, 0, 0, 0)
+freeMovementText:SetPoint("BOTTOM", movementText, "TOP", 0, 4)
+freeMovementText:SetJustifyH("CENTER")
+freeMovementText:Hide()
 
 local function CacheMovementSpell()
     MOVEMENT_SPELL_ID   = nil
@@ -80,6 +112,7 @@ end
 local function UpdateMovementAlert()
     if not CXUI_DB or not CXUI_DB.noMovement or not MOVEMENT_SPELL_ID then
         movementText:Hide()
+        freeMovementText:Hide()
         return
     end
     local cdInfo = C_Spell.GetSpellCooldown(MOVEMENT_SPELL_ID)
@@ -90,6 +123,19 @@ local function UpdateMovementAlert()
         movementText:Show()
     else
         movementText:Hide()
+    end
+
+    if freeMovementUntil then
+        local remaining = freeMovementUntil - GetTime()
+        if remaining > 0 then
+            freeMovementText:SetText(string.format("FREE MOVEMENT %.1f", remaining))
+            freeMovementText:Show()
+        else
+            freeMovementUntil = nil
+            freeMovementText:Hide()
+        end
+    else
+        freeMovementText:Hide()
     end
 end
 
@@ -106,9 +152,27 @@ movementFrame:RegisterEvent("PLAYER_LOGIN")
 movementFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 movementFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 movementFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
-movementFrame:SetScript("OnEvent", function(self, event)
+movementFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
+movementFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
+movementFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         CacheMovementSpell()
+    elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW" then
+        local spellId = ...
+        if IsFreeMovementGlow(spellId) then
+            local now = GetTime()
+            if (now - glowProcDebounce) >= 0.12 then
+                glowProcDebounce = now
+                freeMovementUntil = now + FREE_MOVEMENT_DURATION
+                UpdateMovementAlert()
+            end
+        end
+    elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE" then
+        local spellId = ...
+        if IsFreeMovementGlow(spellId) then
+            freeMovementUntil = nil
+            UpdateMovementAlert()
+        end
     else
         C_Timer.After(0.5, CacheMovementSpell)
     end

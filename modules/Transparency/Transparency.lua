@@ -221,8 +221,13 @@ transparencyCore:SetScript("OnEvent", function(self, event, arg)
     if event == "ADDON_LOADED" and arg == addonName then
         InstallAlphaGuards()
         ApplyAllAlpha()
-        SetButtonsMouseEnabled(true)
-        if QueueStatusButton then
+        -- Only touch button mouse state if hideBars is actually enabled —
+        -- otherwise we'd stomp on mouse-enabled state managed by other addons.
+        if CXUI_DB.hideBars then SetButtonsMouseEnabled(true) end
+        -- QueueStatusButton is part of the micro menu group — only manage its
+        -- alpha/ignore-parent-alpha when hideMicro is enabled, otherwise leave
+        -- it fully alone so other addons can manage it without conflict.
+        if CXUI_DB.hideMicro and QueueStatusButton then
             QueueStatusButton:SetAlpha(1)
             QueueStatusButton:SetIgnoreParentAlpha(true)
         end
@@ -235,7 +240,9 @@ transparencyCore:SetScript("OnEvent", function(self, event, arg)
 
     elseif event == "PLAYER_REGEN_ENABLED" then
         isInCombat = false
-        SetButtonsMouseEnabled(true)
+        -- Only re-enable mouse if hideBars is on (we're the ones who disabled
+        -- it going into combat). If it's off, we never touched it — leave it be.
+        if CXUI_DB.hideBars then SetButtonsMouseEnabled(true) end
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         C_Timer.After(0.5, SetupQuestTrackerHover)
