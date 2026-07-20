@@ -7,9 +7,174 @@ local addonName, ns = ...
 CDMProcGlowDB = CDMProcGlowDB or { enabled = true }
 local DB = CDMProcGlowDB
 
-local LCG = LibStub and LibStub("LibCustomGlow-1.0", true)
 -- nil = no color tint applied = renders Blizzard's native gold/yellow proc glow
 local GLOW_COLOR = nil
+
+-- ---------------------------------------------------------------------------
+-- ISOLATED PROC GLOW ENGINE
+-- ---------------------------------------------------------------------------
+-- We intentionally do NOT use LibStub("LibCustomGlow-1.0") here.
+--
+-- LibCustomGlow stores its glow frames in shared pools (ProcGlowPool,
+-- GlowFramePool) that live on the LibStub-registered lib object. ElvUI
+-- embeds its own copy of LibCustomGlow-1.0 — when it loads, LibStub swaps
+-- the pool references on that SAME shared object our LCG local would point
+-- to. Frames we already acquired from the old pool become unknown to the
+-- new pool, and ProcGlow_Stop then either silently no-ops (glow gets stuck
+-- showing) or throws "object doesn't belong to this pool" — which is
+-- exactly what causes our CDM proc glows (Frostbane, ready-CDs, etc.) to
+-- randomly vanish or spam errors once ElvUI is loaded.
+--
+-- Solution: a private, self-contained pool, same design already used in
+-- Shared.lua for the DK/Mage overlay glows. Duplicated here (rather than
+-- reused from Shared.lua) because CDMGlow.lua covers every class, not just
+-- DK/Mage, and Shared.lua only exports its glow helpers for CLASS_ID 6/8.
+-- 100% isolated from LibStub — can never be invalidated by another addon.
+-- ---------------------------------------------------------------------------
+
+local CXUI_CDMGlowParent = CreateFrame("Frame", "CXUI_CDMGlowParent", UIParent)
+CXUI_CDMGlowParent:SetAllPoints()
+CXUI_CDMGlowParent:Hide() -- invisible container; children are shown individually
+
+local function CDMGlowPoolResetter(_, f)
+    f:ClearAllPoints()
+    f:SetParent(CXUI_CDMGlowParent)
+    if f.ProcStartAnim and f.ProcStartAnim:IsPlaying() then f.ProcStartAnim:Stop() end
+    if f.ProcLoopAnim and f.ProcLoopAnim:IsPlaying() then f.ProcLoopAnim:Stop() end
+    if f.ProcStart then f.ProcStart:Hide() end
+    if f.ProcLoop  then f.ProcLoop:Hide()  end
+    f:Hide()
+end
+
+local CXUI_CDMGlowPool = CreateFramePool("Frame", CXUI_CDMGlowParent, nil, CDMGlowPoolResetter)
+
+local function InitCDMGlowFrame(f)
+    f.ProcStart = f:CreateTexture(nil, "ARTWORK")
+    f.ProcStart:SetBlendMode("ADD")
+    f.ProcStart:SetAtlas("UI-HUD-ActionBar-Proc-Start-Flipbook")
+    f.ProcStart:SetAlpha(1)
+    f.ProcStart:SetSize(150, 150)
+    f.ProcStart:SetPoint("CENTER")
+    f.ProcStart:Hide()
+
+    f.ProcLoop = f:CreateTexture(nil, "ARTWORK")
+    f.ProcLoop:SetAtlas("UI-HUD-ActionBar-Proc-Loop-Flipbook")
+    f.ProcLoop:SetAlpha(0)
+    f.ProcLoop:SetAllPoints()
+    f.ProcLoop:Hide()
+
+    f.ProcLoopAnim = f:CreateAnimationGroup()
+    f.ProcLoopAnim:SetLooping("REPEAT")
+    f.ProcLoopAnim:SetToFinalAlpha(true)
+
+    local alphaRepeat = f.ProcLoopAnim:CreateAnimation("Alpha")
+    alphaRepeat:SetChildKey("ProcLoop")
+    alphaRepeat:SetFromAlpha(1)
+    alphaRepeat:SetToAlpha(1)
+    alphaRepeat:SetDuration(0.001)
+    alphaRepeat:SetOrder(0)
+
+    local flipbookRepeat = f.ProcLoopAnim:CreateAnimation("FlipBook")
+    flipbookRepeat:SetChildKey("ProcLoop")
+    flipbookRepeat:SetDuration(1)
+    flipbookRepeat:SetOrder(0)
+    flipbookRepeat:SetFlipBookRows(6)
+    flipbookRepeat:SetFlipBookColumns(5)
+    flipbookRepeat:SetFlipBookFrames(30)
+    flipbookRepeat:SetFlipBookFrameWidth(0)
+    flipbookRepeat:SetFlipBookFrameHeight(0)
+
+    f.ProcStartAnim = f:CreateAnimationGroup()
+    f.ProcStartAnim:SetToFinalAlpha(true)
+
+    local alphaIn = f.ProcStartAnim:CreateAnimation("Alpha")
+    alphaIn:SetChildKey("ProcStart")
+    alphaIn:SetDuration(0.001)
+    alphaIn:SetOrder(0)
+    alphaIn:SetFromAlpha(1)
+    alphaIn:SetToAlpha(1)
+
+    local flipbookStart = f.ProcStartAnim:CreateAnimation("FlipBook")
+    flipbookStart:SetChildKey("ProcStart")
+    flipbookStart:SetDuration(0.7)
+    flipbookStart:SetOrder(1)
+    flipbookStart:SetFlipBookRows(6)
+    flipbookStart:SetFlipBookColumns(5)
+    flipbookStart:SetFlipBookFrames(30)
+    flipbookStart:SetFlipBookFrameWidth(0)
+    flipbookStart:SetFlipBookFrameHeight(0)
+
+    local alphaOut = f.ProcStartAnim:CreateAnimation("Alpha")
+    alphaOut:SetChildKey("ProcStart")
+    alphaOut:SetDuration(0.001)
+    alphaOut:SetOrder(2)
+    alphaOut:SetFromAlpha(1)
+    alphaOut:SetToAlpha(0)
+
+    f.ProcStartAnim:SetScript("OnFinished", function(self)
+        local parent = self:GetParent()
+        parent.ProcLoop:Show()
+        parent.ProcLoopAnim:Play()
+    end)
+
+    f:SetScript("OnHide", function(self)
+        if self.ProcStartAnim:IsPlaying() then self.ProcStartAnim:Stop() end
+        if self.ProcLoopAnim:IsPlaying()  then self.ProcLoopAnim:Stop()  end
+    end)
+end
+
+local function ApplyCDMGlowColor(f, color)
+    if color then
+        f.ProcStart:SetDesaturated(1)
+        f.ProcStart:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
+        f.ProcLoop:SetDesaturated(1)
+        f.ProcLoop:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
+    else
+        f.ProcStart:SetDesaturated(nil)
+        f.ProcStart:SetVertexColor(1, 1, 1, 1)
+        f.ProcLoop:SetDesaturated(nil)
+        f.ProcLoop:SetVertexColor(1, 1, 1, 1)
+    end
+end
+
+local function CXUI_CDMGlow_Start(parent, color)
+    if parent._CXUI_CDMGlow then
+        ApplyCDMGlowColor(parent._CXUI_CDMGlow, color)
+        return
+    end
+
+    local f, isNew = CXUI_CDMGlowPool:Acquire()
+    if isNew then InitCDMGlowFrame(f) end
+
+    parent._CXUI_CDMGlow = f
+    f:SetParent(parent)
+    f:SetFrameLevel(parent:GetFrameLevel() + 8)
+
+    local w, h = parent:GetSize()
+    local xOff = w * 0.2
+    local yOff = h * 0.2
+    f:SetPoint("TOPLEFT",     parent, "TOPLEFT",     -xOff,  yOff)
+    f:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT",  xOff, -yOff)
+
+    ApplyCDMGlowColor(f, color)
+
+    -- Skip start animation (startAnim = false, same as cxUI default)
+    f.ProcStart:Hide()
+    f.ProcLoop:Show()
+    if not f.ProcLoopAnim:IsPlaying() then
+        f.ProcLoopAnim:Play()
+    end
+
+    f:Show()
+end
+
+local function CXUI_CDMGlow_Stop(parent)
+    local f = parent._CXUI_CDMGlow
+    if not f then return end
+    parent._CXUI_CDMGlow = nil
+    -- CDMGlowPoolResetter handles Hide + animation stop
+    CXUI_CDMGlowPool:Release(f)
+end
 
 -- ---------------------------------------------------------------------------
 -- PROC CONFIG
@@ -24,7 +189,7 @@ local GLOW_COLOR = nil
 local PROC_CONFIG = {
     DEATHKNIGHT = {
         -- Procs
-        [81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
+        --[81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
         --[51124] = { 49020, 207230 },                     -- Killing Machine        → Obliterate, Frostscythe
         --["overlay:49184"] = { 49184 },                   -- Rime                   → Howling Blast
         ["cdm:1228433"]   = { 1228433 },                 -- Frostbane              → always glow if present in CDM
@@ -142,7 +307,7 @@ local CDMGlow = {
 }
 
 -- ---------------------------------------------------------------------------
--- LCG overlay helpers
+-- Overlay frame helpers (per-CDM-icon container for the glow texture)
 -- ---------------------------------------------------------------------------
 
 local cdmOverlays = {}
@@ -156,19 +321,18 @@ local function GetOrCreateCDMOverlay(frame)
     return ov
 end
 
--- Both LCG calls are now pcall-guarded. LCG is third-party code we don't
--- control; if it ever errors on a given frame/options combo, we don't want
--- that to abort whatever loop called us (see ApplyGlowState/UpdateGlows).
+-- Both calls are pcall-guarded defensively (frame sizing edge cases, etc.)
+-- even though this engine is now fully self-contained and no longer
+-- third-party code we don't control.
 local function RequestGlow(frame, enabled, auraID, color)
-    if not LCG then return end
     local overlay = GetOrCreateCDMOverlay(frame)
     if enabled then
-        local ok, err = pcall(LCG.ProcGlow_Start, overlay, { color = color or GLOW_COLOR, startAnim = false })
+        local ok, err = pcall(CXUI_CDMGlow_Start, overlay, color or GLOW_COLOR)
         if not ok then
             -- print("|cffff0000CDMGlow ProcGlow_Start error:|r", err)
         end
     else
-        pcall(LCG.ProcGlow_Stop, overlay)
+        pcall(CXUI_CDMGlow_Stop, overlay)
     end
 end
 
