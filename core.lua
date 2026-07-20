@@ -17,6 +17,7 @@ local function EnsureDBDefaults()
 		---------------------------------
         cdmGlow                   = true,
         cdmGlowSuppressUntracked  = false,
+        cdmGlowStyle              = "proc", -- "proc" (Blizzard-style flipbook) or "pixel" (marching ants border)
 		---------------------------------
         hideAlerts                = true,
         showAbsorb                = true,
@@ -37,11 +38,11 @@ local function EnsureDBDefaults()
         cdmFesteringGlow          = true,
         burningRushReminder       = true,
 		---------------------------------
-        autoAcceptResurrection    = false,
-        autoReleasePvP            = false,
-        dungeonFilter             = false,
-        moveResetButton           = false,
-        mailRememberRecipient     = false,
+        autoAcceptResurrection    = true,
+        autoReleasePvP            = true,
+        dungeonFilter             = true,
+        moveResetButton           = true,
+        mailRememberRecipient     = true,
 		---------------------------------
     }
     for k, v in pairs(defaults) do
@@ -84,7 +85,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 1080)
+content:SetSize(560, 640)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -133,6 +134,47 @@ local function CreateNote(text, yOffset, xOffset)
     return note
 end
 
+-- Mutually-exclusive option within a named group. `dbKey` holds the string
+-- value of whichever option is currently selected in the group.
+local radioGroups = {}
+local function CreateRadioOption(label, dbKey, value, tooltipText, yOffset, xOffset, onChange)
+    local group = radioGroups[dbKey]
+    if not group then
+        group = {}
+        radioGroups[dbKey] = group
+    end
+
+    local check = CreateFrame("CheckButton", nil, content, "InterfaceOptionsCheckButtonTemplate")
+    check:SetPoint("TOPLEFT", xOffset or 16, yOffset)
+    check.Text:SetText(label)
+
+    check:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(label, 1, 1, 1)
+        GameTooltip:AddLine(tooltipText, nil, nil, nil, true)
+        GameTooltip:Show()
+    end)
+    check:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    check:SetScript("OnClick", function(self)
+        if CXUI_DB[dbKey] == value then
+            -- Radio options can't be unchecked by clicking the active one again.
+            self:SetChecked(true)
+            return
+        end
+        CXUI_DB[dbKey] = value
+        for _, entry in ipairs(group) do
+            entry.frame:SetChecked(entry.value == value)
+        end
+        if onChange then onChange(value) end
+    end)
+
+    table.insert(group, { frame = check, value = value })
+    allCheckboxes[#allCheckboxes + 1] = { frame = check, key = dbKey, radioValue = value }
+
+    return check
+end
+
 local L = 16   -- left column x
 local R = 285  -- right column x
 
@@ -150,44 +192,42 @@ CreateCheckbox("Quest Tracker Hover",  "hideQuests", "Quest tracker only visible
 CreateHeader("Module 2: CDM Glow", -105)
 CreateCheckbox("Enable CDM Proc Glow",          "cdmGlow",                 "Special highlights for class-specific procs.",                        -130, false, L)
 CreateCheckbox("Suppress Blizzard Glow on CDM", "cdmGlowSuppressUntracked","Hides all Blizzard proc glows on CDM frames. Action bars unaffected.", -130, false, R)
-CreateNote("|cffff2020* If you are using MiniCC, then in its options under the Misc tab set the glow-type option to anything other than proc glow.|r", -152, L)
+CreateNote("Glow Style:", -160, L)
+CreateRadioOption("Proc Glow (Blizzard style)",   "cdmGlowStyle", "proc",  "The default gold flipbook glow, same as Blizzard's native proc glow.", -178, L, function() if ns.CDMGlow_RefreshStyle then ns.CDMGlow_RefreshStyle() end end)
+CreateRadioOption("Pixel Glow (marching ants)",   "cdmGlowStyle", "pixel", "A ring of small pixels travelling around the frame border.",           -178, R, function() if ns.CDMGlow_RefreshStyle then ns.CDMGlow_RefreshStyle() end end)
+CreateNote("|cffff2020* If you are using MiniCC, then in its options under the Misc tab set the glow-type option to anything other than proc glow.|r", -208, L)
 
 -- ---------------------------------------------------------------------------
 -- Module 3 — Small Tweaks
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 3: Small Tweaks", -175)
-CreateCheckbox("Hide Talent Alerts",          "hideAlerts",         "Hides annoying talent-related notifications.",                            -200, true,  L)
-CreateCheckbox("Enable Absorb Display",       "showAbsorb",         "Shows total shield amount in screen center.",                              -200, true,  R)
-CreateCheckbox("Ready Check Alert",           "altTabAlerts",       "Plays ready check sound through Master channel. Audible when alt-tabbed.", -230, false, L)
-CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents accidental right-click targeting in dungeons and raids.",         -230, false, R)
-CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -260, false, L)
-CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -260, false, R)
-CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -290, false, L)
-CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -290, false, R)
-CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -320, false, L)
+CreateHeader("Module 3: Small Tweaks", -225)
+CreateCheckbox("Hide Talent Alerts",          "hideAlerts",         "Hides annoying talent-related notifications.",                            -250, true,  L)
+CreateCheckbox("Enable Absorb Display",       "showAbsorb",         "Shows total shield amount in screen center.",                              -250, true,  R)
+CreateCheckbox("Ready Check Alert",           "altTabAlerts",       "Plays ready check sound through Master channel. Audible when alt-tabbed.", -280, false, L)
+CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents accidental right-click targeting in dungeons and raids.",         -280, false, R)
+CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -310, false, L)
+CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -310, false, R)
+CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -340, false, L)
+CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -340, false, R)
+CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -370, false, L)
+CreateCheckbox("Auto-Accept Resurrection",    "autoAcceptResurrection", "Automatically accepts resurrection requests, but not while the resurrecting unit is in combat.", -370, false, R)
+CreateCheckbox("Auto-Release in PvP",         "autoReleasePvP",         "Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect.", -400, false, L)
+CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",     "Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list.", -400, true, R)
+CreateCheckbox("Move 'Reset Filter' Button",  "moveResetButton",    "Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap.",         -430, true,  L)
+CreateCheckbox("Mail: Remember Last Recipient", "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -430, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Module 4 — Class Features
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 4: Class Features", -360)
-CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -385, false, L)
-CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -385, false, R)
-CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -415, false, L)
-CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -415, false, R)
-CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -445, false, L)
-CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -445, false, R)
-CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -475, false, L)
-CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -475, false, R)
-
--- ---------------------------------------------------------------------------
--- Module 6 — Death, LFG & Mail
--- ---------------------------------------------------------------------------
-CreateHeader("Module 6: Death, LFG & Mail", -505)
-CreateCheckbox("Auto-Accept Resurrection", "autoAcceptResurrection", "Automatically accepts resurrection requests, but not while the resurrecting unit is in combat.", -530, false, L)
-CreateCheckbox("Auto-Release in PvP",      "autoReleasePvP",         "Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect.", -530, false, R)
-CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",  "Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list.", -560, true, L)
-CreateCheckbox("Move 'Reset Filter' Button",       "moveResetButton","Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap.",         -560, true, R)
-CreateCheckbox("Mail: Remember Last Recipient",    "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -590, false, L)
+CreateHeader("Module 4: Class Features", -470)
+CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -495, false, L)
+CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -495, false, R)
+CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -525, false, L)
+CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -525, false, R)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -555, false, L)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -555, false, R)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -585, false, L)
+CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -585, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
@@ -197,7 +237,11 @@ CreateCheckbox("Mail: Remember Last Recipient",    "mailRememberRecipient", "Kee
 optionsPanel:HookScript("OnShow", function()
     EnsureDBDefaults()
     for _, cb in ipairs(allCheckboxes) do
-        cb.frame:SetChecked(CXUI_DB[cb.key])
+        if cb.radioValue ~= nil then
+            cb.frame:SetChecked(CXUI_DB[cb.key] == cb.radioValue)
+        else
+            cb.frame:SetChecked(CXUI_DB[cb.key])
+        end
     end
 end)
 

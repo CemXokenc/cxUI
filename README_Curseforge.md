@@ -21,6 +21,7 @@
 - Automatically scans your action bars
 - Works with Blizzard Cooldown Viewer and custom bars
 - Easy to configure for any class/spec
+- **Choose your glow style**: Proc Glow (Blizzard's native gold flipbook) or Pixel Glow (marching-ants border) — switch anytime, no reload needed
 - **Pre-configured for Death Knights** (Sudden Doom → Death Coil)
 
 ### ❤️ Low Health Alerts
@@ -41,6 +42,12 @@
 - **Group Invite Sound**: plays the dungeon finder alarm through Master on any group invite
 - **Pull Timer Countdown**: audio at 10, 5, 4, 3, 2, 1 seconds + "Go" at zero — works with `/pull`, BigWigs, DBM, and BG/arena timers. Requires SharedMedia_Causese
 - Block Right-Click Targeting in Combat (Dungeons & Raids)
+- MogMount: allow a flying mount in the Ground slot
+- **Auto-Accept Resurrection**: accepts automatically, but never while the resurrecting unit is in combat
+- **Auto-Release in PvP**: releases your spirit in battlegrounds and world PvP zones, unless you can self-resurrect
+- **Dungeon Finder: Advanced Filters**: party-fit, Bloodlust/Battle Res, and same-spec filters added to the group finder search list
+- Shift the Dungeon Browser's "Reset Filter" button to avoid overlap
+- **Mail: Remember Last Recipient**: keeps the last recipient filled in until you close the mailbox
 
 ## ⚙️ Easy Configuration
 
@@ -52,7 +59,7 @@ All modules can be toggled independently. Some features require `/reload` — cl
 
 Want to highlight your class procs? It's simple:
 
-1. Open `Module_CDMGlow.lua`
+1. Open `modules/CDM/CDMGlow.lua`
 2. Add your spells to the `PROC_CONFIG` table:
 ```lua
 PALADIN = { [59578] = { 879 } },  -- Art of War → Exorcism
@@ -75,11 +82,9 @@ WARRIOR = { [85739] = { 100 } },  -- Slam proc → Mortal Strike
 
 ## 📦 What's Included
 - **Module 1**: Transparency & Auto-Hide
-- **Module 2**: Absorb Display
-- **Module 3**: CDM Glow (Proc Highlighting)
-- **Module 4**: Small Tweaks (UI Cleanup)
-- **Module 5**: Health Safety (Low Health Alert)
-- **Module 6**: Class Features (Unholy DK Enemy Counter)
+- **Module 2**: CDM Glow (Proc / Pixel Highlighting)
+- **Module 3**: Small Tweaks (Absorb Display, sounds, QoL, resurrection/PvP/LFG/mail tweaks — one file per feature)
+- **Module 4**: Class Features (Unholy DK Enemy Counter and more)
 
 ## 🔗 Compatibility
 - **Game Version**: Retail (11.0.7+)

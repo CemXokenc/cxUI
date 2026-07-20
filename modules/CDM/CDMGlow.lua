@@ -177,6 +177,120 @@ local function CXUI_CDMGlow_Stop(parent)
 end
 
 -- ---------------------------------------------------------------------------
+-- ISOLATED PIXEL GLOW ENGINE
+-- ---------------------------------------------------------------------------
+-- Same rationale as the proc-glow engine above: fully self-contained, never
+-- touches LibStub-shared pools, so it can never be invalidated by ElvUI or
+-- any other addon embedding its own LibCustomGlow-1.0. A ring of small
+-- "marching ants" pixels travels around the frame border.
+-- ---------------------------------------------------------------------------
+
+local PIXEL_COUNT  = 8
+local PIXEL_SIZE   = 2
+local PIXEL_PERIOD = 1.5 -- seconds per full revolution around the border
+
+local CXUI_PixelGlowActive = {} -- [f] = true while animating, for the shared OnUpdate driver
+
+local function PixelGlowPoolResetter(_, f)
+    f:ClearAllPoints()
+    f:SetParent(CXUI_CDMGlowParent)
+    CXUI_PixelGlowActive[f] = nil
+    f:Hide()
+end
+
+local CXUI_PixelGlowPool = CreateFramePool("Frame", CXUI_CDMGlowParent, nil, PixelGlowPoolResetter)
+
+local function InitPixelGlowFrame(f)
+    f.pixels = {}
+    for i = 1, PIXEL_COUNT do
+        local tex = f:CreateTexture(nil, "OVERLAY")
+        tex:SetTexture("Interface\\Buttons\\WHITE8X8")
+        tex:SetSize(PIXEL_SIZE, PIXEL_SIZE)
+        f.pixels[i] = tex
+    end
+end
+
+-- Returns (dx, dy) offset from center for fraction t (0-1) walking clockwise
+-- around a w x h rectangle border, starting at the middle of the top edge.
+local function PerimeterOffset(t, w, h)
+    local perim = 2 * (w + h)
+    if perim <= 0 then return 0, 0 end
+    local d = (t % 1) * perim
+    if d < w then
+        return -w / 2 + d, h / 2
+    elseif d < w + h then
+        return w / 2, h / 2 - (d - w)
+    elseif d < 2 * w + h then
+        return w / 2 - (d - w - h), -h / 2
+    else
+        return -w / 2, -h / 2 + (d - 2 * w - h)
+    end
+end
+
+local function ApplyPixelGlowColor(f, color)
+    local r, g, b, a = 1, 0.85, 0.1, 1 -- gold, matches native proc glow tone
+    if color then r, g, b, a = color[1], color[2], color[3], color[4] or 1 end
+    for _, tex in ipairs(f.pixels) do
+        tex:SetVertexColor(r, g, b, a)
+    end
+end
+
+local function UpdatePixelGlowPositions(f, elapsed)
+    local w, h = f:GetSize()
+    if not w or not h or w <= 0 or h <= 0 then return end
+    f.phase = (f.phase or 0) + elapsed / PIXEL_PERIOD
+    for i, tex in ipairs(f.pixels) do
+        local t = f.phase + (i - 1) / PIXEL_COUNT
+        local dx, dy = PerimeterOffset(t, w, h)
+        tex:ClearAllPoints()
+        tex:SetPoint("CENTER", f, "CENTER", dx, dy)
+    end
+end
+
+local pixelGlowDriver = CreateFrame("Frame")
+pixelGlowDriver:Hide()
+pixelGlowDriver:SetScript("OnUpdate", function(self, elapsed)
+    local any = false
+    for f in pairs(CXUI_PixelGlowActive) do
+        any = true
+        UpdatePixelGlowPositions(f, elapsed)
+    end
+    if not any then self:Hide() end
+end)
+
+local function CXUI_PixelGlow_Start(parent, color)
+    if parent._CXUI_PixelGlow then
+        ApplyPixelGlowColor(parent._CXUI_PixelGlow, color)
+        return
+    end
+
+    local f, isNew = CXUI_PixelGlowPool:Acquire()
+    if isNew then InitPixelGlowFrame(f) end
+
+    parent._CXUI_PixelGlow = f
+    f:SetParent(parent)
+    f:SetFrameLevel(parent:GetFrameLevel() + 8)
+    f:SetAllPoints(parent)
+    f.phase = 0
+
+    ApplyPixelGlowColor(f, color)
+    for _, tex in ipairs(f.pixels) do tex:Show() end
+
+    f:Show()
+    CXUI_PixelGlowActive[f] = true
+    pixelGlowDriver:Show()
+end
+
+local function CXUI_PixelGlow_Stop(parent)
+    local f = parent._CXUI_PixelGlow
+    if not f then return end
+    parent._CXUI_PixelGlow = nil
+    CXUI_PixelGlowActive[f] = nil
+    -- PixelGlowPoolResetter handles Hide + active-set cleanup
+    CXUI_PixelGlowPool:Release(f)
+end
+
+-- ---------------------------------------------------------------------------
 -- PROC CONFIG
 -- ---------------------------------------------------------------------------
 -- Key types:
@@ -326,15 +440,31 @@ end
 -- third-party code we don't control.
 local function RequestGlow(frame, enabled, auraID, color)
     local overlay = GetOrCreateCDMOverlay(frame)
+    local usePixel = CXUI_DB.cdmGlowStyle == "pixel"
+
     if enabled then
-        local ok, err = pcall(CXUI_CDMGlow_Start, overlay, color or GLOW_COLOR)
-        if not ok then
-            -- print("|cffff0000CDMGlow ProcGlow_Start error:|r", err)
+        if usePixel then
+            pcall(CXUI_CDMGlow_Stop, overlay)
+            local ok, err = pcall(CXUI_PixelGlow_Start, overlay, color or GLOW_COLOR)
+            if not ok then
+                -- print("|cffff0000CDMGlow PixelGlow_Start error:|r", err)
+            end
+        else
+            pcall(CXUI_PixelGlow_Stop, overlay)
+            local ok, err = pcall(CXUI_CDMGlow_Start, overlay, color or GLOW_COLOR)
+            if not ok then
+                -- print("|cffff0000CDMGlow ProcGlow_Start error:|r", err)
+            end
         end
     else
         pcall(CXUI_CDMGlow_Stop, overlay)
+        pcall(CXUI_PixelGlow_Stop, overlay)
     end
 end
+
+-- Called when the glow-style selector changes so already-active glows switch
+-- engine immediately instead of waiting for their next aura state change.
+-- (Attached to the CDMGlow table further below, once it exists.)
 
 -- ---------------------------------------------------------------------------
 -- NOTE: resource-based glow color (white when not enough Runic Power) was
@@ -618,6 +748,15 @@ function CDMGlow:UpdateGlows()
         ApplyGlowState(auraID, hasAura, currentFrames[auraID])
     end
 end
+
+-- Called when the glow-style selector changes so already-active glows switch
+-- engine immediately instead of waiting for their next aura state change.
+function CDMGlow:RefreshGlowStyle()
+    for frame, auraID in pairs(self.activeGlowFrames) do
+        RequestGlow(frame, true, auraID)
+    end
+end
+ns.CDMGlow_RefreshStyle = function() if CDMGlow.RefreshGlowStyle then CDMGlow:RefreshGlowStyle() end end
 
 function CDMGlow:UpdateGlowsAfterRescan()
     self:UpdateGlows()

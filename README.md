@@ -39,11 +39,10 @@ cxUI/
 └── modules/
     ├── Transparency/               # Module 1 — auto-hide bars & tracker
     │   └── Transparency.lua
-    ├── Absorb/                     # Module 2 — absorb display
-    │   └── Absorb.lua
-    ├── CDM/                        # Module 3 — CDM proc glow
+    ├── CDM/                        # Module 2 — CDM proc/pixel glow
     │   └── CDMGlow.lua
-    ├── SmallTweaks/                # Modules 4 & 6 — one file per tweak
+    ├── SmallTweaks/                # Module 3 — one file per tweak
+    │   ├── Absorb.lua              #   absorb display
     │   ├── Alerts.lua              #   suppress talent notifications
     │   ├── MacroOverride.lua       #   redirect Macros → Mega Macro
     │   ├── Sounds.lua              #   ready check / invite / pull timer / low health
@@ -52,7 +51,7 @@ cxUI/
     │   ├── Death.lua               #   auto-accept resurrection / auto-release in PvP
     │   ├── LFG.lua                 #   Dungeon Finder advanced filters / reset button position
     │   └── Mail.lua                #   remember last mail recipient
-    └── ClassFeatures/              # Module 5 — class-specific overlays
+    └── ClassFeatures/              # Module 4 — class-specific overlays
         ├── Shared.lua              #   frame scan & overlay helpers (loads first)
         ├── DeathKnight.lua         #   enemy counter, festering glow, putrefy cross, frost swap
         └── Mage.lua                #   flurry cross
@@ -78,21 +77,32 @@ Intelligently fades UI elements based on context and mouse position.
 
 ---
 
-### 🛡️ Module 2: Absorb Display — `Module_Absorb.lua`
+### 🛡️ Absorb Display
 
-Displays total shield amount in the center of the screen during combat. Auto-scales numbers (1.2K, 450K, …) and hides when out of combat.
+Displays total shield amount in the center of the screen during combat. Auto-scales numbers (1.2K, 450K, …) and hides when out of combat. Lives in `modules/SmallTweaks/Absorb.lua`, toggled as part of Module 3 below.
 
 ---
 
-### ✨ Module 3: CDM Glow — `Module_CDMGlow.lua`
+### ✨ Module 2: CDM Glow — `modules/CDM/CDMGlow.lua`
 
 Custom glow effects when class procs activate. Scans action bars automatically and works with Blizzard Cooldown Viewer and custom bar addons.
 
 **Default:** Death Knight — Sudden Doom → Death Coil glow.
 
+#### Glow Style
+
+Pick which visual style is used for every proc glow, via **ESC → Options → AddOns → cxUI**:
+
+| Style | Description |
+|---|---|
+| **Proc Glow** (default) | Blizzard's native gold flipbook glow — same animation as the standard action bar proc glow |
+| **Pixel Glow** | A ring of small pixels ("marching ants") travelling around the frame border, à la WeakAuras pixel glow |
+
+Both engines are fully self-contained (isolated frame pools, no `LibStub`), so switching styles — or having ElvUI loaded — can never break or desync the glow. Switching takes effect immediately on any currently-active glow, no reload needed.
+
 #### Adding your own spells
 
-Open `Module_CDMGlow.lua` and edit the `PROC_CONFIG` table:
+Open `CDMGlow.lua` and edit the `PROC_CONFIG` table:
 
 ```lua
 local PROC_CONFIG = {
@@ -116,12 +126,13 @@ Spell IDs are in Wowhead URLs or via `/dump GetSpellInfo("Name")` in-game.
 
 ---
 
-### 🔧 Module 4: Small Tweaks — `modules/SmallTweaks/`
+### 🔧 Module 3: Small Tweaks — `modules/SmallTweaks/`
 
-Quality-of-life improvements, one file per feature.
+Quality-of-life improvements, one file per feature. Everything here is independent — enable only what you need.
 
 | File | Feature | What it does |
 |---|---|---|
+| `Absorb.lua` | Enable Absorb Display | Shows total shield amount in screen center during combat |
 | `Alerts.lua` | Hide Help Tips | Suppresses "You have unspent talent points" and similar notifications |
 | `MacroOverride.lua` | Mega Macro Override | Redirects the default Macros button to Mega Macro (if installed) |
 | `Sounds.lua` | Ready Check Alert | Plays ready check sound through Master — audible when alt-tabbed |
@@ -129,12 +140,18 @@ Quality-of-life improvements, one file per feature.
 | `Sounds.lua` | Pull Timer Countdown | Audio at 10, 5, 4, 3, 2, 1 s for `/pull`, BigWigs, DBM, BG/arena timers. Requires `SharedMedia_Causese` |
 | `Sounds.lua` | Low Health Alert | Plays a custom sound when your health drops critically low |
 | `RCM.lua` | Block Right-Click Targeting | Prevents accidental right-click targeting in Dungeons & Raids during combat |
+| `MogMountFlyingInGround.lua` | MogMount: Flying in Ground | Allows picking a flying mount in MogMount's ground slot. Requires MogMount addon |
+| `Death.lua` | Auto-Accept Resurrection | Automatically accepts resurrection requests, but not while the resurrecting unit is in combat |
+| `Death.lua` | Auto-Release in PvP | Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect |
+| `LFG.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res, and same-spec filters to the Dungeon Finder search list |
+| `LFG.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's "Reset Filter" button to the left side to avoid overlap |
+| `Mail.lua` | Remember Last Recipient | Keeps the last recipient in the mailbox "To" field after sending, until the mailbox is closed |
 
 To disable a single tweak without a reload, you can comment out its line in `cxUI.toc`.
 
 ---
 
-### ⚔️ Module 5: Class Features — `modules/ClassFeatures/`
+### ⚔️ Module 4: Class Features — `modules/ClassFeatures/`
 
 Contextual combat overlays for specific class mechanics. Only the file matching your class runs; the others return immediately.
 
@@ -169,22 +186,6 @@ Contextual combat overlays for specific class mechanics. Only the file matching 
 
 ---
 
-### 💀 Module 6: Death, LFG & Mail — `modules/SmallTweaks/`
-
-Small quality-of-life features ported from EnhanceQoL, kept as lightweight standalone tweaks so the full addon doesn't need to run.
-
-| File | Feature | What it does |
-|---|---|---|
-| `Death.lua` | Auto-Accept Resurrection | Automatically accepts resurrection requests, but not while the resurrecting unit is in combat |
-| `Death.lua` | Auto-Release in PvP | Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect |
-| `LFG.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res, and same-spec filters to the Dungeon Finder search list |
-| `LFG.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's "Reset Filter" button to the left side to avoid overlap |
-| `Mail.lua` | Remember Last Recipient | Keeps the last recipient in the mailbox "To" field after sending, until the mailbox is closed |
-
-All five are **off by default** — enable only what you need.
-
----
-
 ## ⚙️ Settings
 
 ```
@@ -198,9 +199,10 @@ Options marked **`(Requires Reload)*`** need `/reload` to take effect.
 | Transparency | Action Bar Auto-hide | ❌ |
 | Transparency | Micro Menu Auto-hide | ❌ |
 | Transparency | Quest Tracker Hover | ✅ |
-| Absorb | Enable Absorb Display | ✅ |
 | CDM Glow | Enable Proc Glow | ❌ |
 | CDM Glow | Suppress Untracked Glows | ❌ |
+| CDM Glow | Glow Style (Proc / Pixel) | ❌ |
+| Small Tweaks | Enable Absorb Display | ✅ |
 | Small Tweaks | Hide Talent Alerts | ✅ |
 | Small Tweaks | Mega Macro Override | ❌ |
 | Small Tweaks | Ready Check Alert | ❌ |
@@ -208,16 +210,17 @@ Options marked **`(Requires Reload)*`** need `/reload` to take effect.
 | Small Tweaks | Pull Timer Countdown Sound | ❌ |
 | Small Tweaks | Low Health Sound Alert | ❌ |
 | Small Tweaks | Block Right-Click Targeting | ❌ |
+| Small Tweaks | MogMount: Flying in Ground | ❌ |
+| Small Tweaks | Auto-Accept Resurrection | ❌ |
+| Small Tweaks | Auto-Release in PvP | ❌ |
+| Small Tweaks | Dungeon Finder: Advanced Filters | ✅ |
+| Small Tweaks | Move 'Reset Filter' Button | ✅ |
+| Small Tweaks | Mail: Remember Last Recipient | ❌ |
 | Class Features | Enemy Counter — Unholy DK | ❌ |
 | Class Features | Festering Strike Glow — Unholy DK | ❌ |
 | Class Features | Putrefy Cross — Unholy DK | ❌ |
 | Class Features | Flurry Cross — Frost Mage | ❌ |
 | Class Features | Swap ST/AOE — Frost DK | ❌ |
-| Death, LFG & Mail | Auto-Accept Resurrection | ❌ |
-| Death, LFG & Mail | Auto-Release in PvP | ❌ |
-| Death, LFG & Mail | Dungeon Finder: Advanced Filters | ✅ |
-| Death, LFG & Mail | Move 'Reset Filter' Button | ✅ |
-| Death, LFG & Mail | Mail: Remember Last Recipient | ❌ |
 
 ---
 
