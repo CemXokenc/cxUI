@@ -303,201 +303,30 @@ end)
 if CLASS_ID ~= 6 and CLASS_ID ~= 8 then return end
 
 -- ===========================================================================
--- ISOLATED PROC GLOW ENGINE
+-- GLOW ENGINE — delegates to CDMGlow.lua's unified engine
 -- ---------------------------------------------------------------------------
--- Why we don't use LibStub("LibCustomGlow-1.0") here:
+-- CDMGlow.lua (loaded earlier, see cxUI.toc) builds and exports the single
+-- canonical glow engine for the whole addon as ns.CXUI_Glow_Start /
+-- ns.CXUI_Glow_Stop. It picks Proc Glow vs Pixel Glow per CXUI_DB.cdmGlowStyle
+-- automatically.
 --
---   LibCustomGlow stores glow frames in pools (ProcGlowPool, GlowFramePool)
---   that live on the shared lib table. If any other addon (e.g. MiniCC)
---   embeds a higher-version copy, LibStub replaces those pool references on
---   the *same* object that our local `LCG` variable already points to.
---   Frames we acquired from the old pool are then unknown to the new pool;
---   ProcGlow_Stop tries to Release() them back into the wrong pool and either
---   silently hides them or throws "object doesn't belong to this pool".
---   That is what causes our festering/coil glows to vanish mid-arena.
---
---   Solution: build a minimal, self-contained ProcGlow engine that owns its
---   own private FramePool. It is 100% isolated from LibStub and can never be
---   invalidated by another addon loading a newer version of LCG.
---
---   The visual output is identical to LCG ProcGlow (same atlases, same
---   flipbook animations, same sizing math) because we copied the relevant
---   logic from LibCustomGlow-1.0 r24.
+-- This file used to keep its own separate copy of an older ProcGlow-only
+-- engine. That duplication is exactly how it drifted out of sync with the
+-- fixes made to CDMGlow.lua (still had the pre-fix version, no Pixel Glow
+-- support at all, and ignored the style selector entirely) — so every glow
+-- in the addon, CDM icons and class-feature overlays alike, now goes
+-- through the exact same code instead.
 -- ===========================================================================
-
--- Private parent for all our glow frames (keeps them off UIParent's children list)
-local CXUI_GlowParent = CreateFrame("Frame", "CXUI_GlowParent", UIParent)
-CXUI_GlowParent:SetAllPoints()
-CXUI_GlowParent:Hide() -- invisible container; children are shown individually
 
 -- nil = no tint → renders Blizzard's native gold/yellow proc glow
 local GLOW_COLOR = nil
 
--- ---------------------------------------------------------------------------
--- Private pool resetter — mirrors LCG's ProcGlowResetter
--- ---------------------------------------------------------------------------
-local function GlowPoolResetter(_, f)
-    f:ClearAllPoints()
-    f:SetParent(CXUI_GlowParent)
-    if f.ProcStartAnim and f.ProcStartAnim:IsPlaying() then
-        f.ProcStartAnim:Stop()
-    end
-    if f.ProcLoopAnim and f.ProcLoopAnim:IsPlaying() then
-        f.ProcLoopAnim:Stop()
-    end
-    if f.ProcStart then f.ProcStart:Hide() end
-    if f.ProcLoop  then f.ProcLoop:Hide()  end
-    f:Hide()
-end
-
-local CXUI_ProcGlowPool = CreateFramePool("Frame", CXUI_GlowParent, nil, GlowPoolResetter)
-
--- ---------------------------------------------------------------------------
--- Build the flipbook textures + animations on a fresh pool frame.
--- Mirrors LCG's InitProcGlow exactly so the visual is identical.
--- ---------------------------------------------------------------------------
-local function InitGlowFrame(f)
-    -- Start flash (plays once on Show when startAnim=true)
-    f.ProcStart = f:CreateTexture(nil, "ARTWORK")
-    f.ProcStart:SetBlendMode("ADD")
-    f.ProcStart:SetAtlas("UI-HUD-ActionBar-Proc-Start-Flipbook")
-    f.ProcStart:SetAlpha(1)
-    f.ProcStart:SetSize(150, 150)
-    f.ProcStart:SetPoint("CENTER")
-    f.ProcStart:Hide()
-
-    -- Loop glow (runs continuously after start)
-    f.ProcLoop = f:CreateTexture(nil, "ARTWORK")
-    f.ProcLoop:SetAtlas("UI-HUD-ActionBar-Proc-Loop-Flipbook")
-    f.ProcLoop:SetAlpha(0)
-    f.ProcLoop:SetAllPoints()
-    f.ProcLoop:Hide()
-
-    -- Loop animation group
-    f.ProcLoopAnim = f:CreateAnimationGroup()
-    f.ProcLoopAnim:SetLooping("REPEAT")
-    f.ProcLoopAnim:SetToFinalAlpha(true)
-
-    local alphaRepeat = f.ProcLoopAnim:CreateAnimation("Alpha")
-    alphaRepeat:SetChildKey("ProcLoop")
-    alphaRepeat:SetFromAlpha(1)
-    alphaRepeat:SetToAlpha(1)
-    alphaRepeat:SetDuration(0.001)
-    alphaRepeat:SetOrder(0)
-
-    local flipbookRepeat = f.ProcLoopAnim:CreateAnimation("FlipBook")
-    flipbookRepeat:SetChildKey("ProcLoop")
-    flipbookRepeat:SetDuration(1)
-    flipbookRepeat:SetOrder(0)
-    flipbookRepeat:SetFlipBookRows(6)
-    flipbookRepeat:SetFlipBookColumns(5)
-    flipbookRepeat:SetFlipBookFrames(30)
-    flipbookRepeat:SetFlipBookFrameWidth(0)
-    flipbookRepeat:SetFlipBookFrameHeight(0)
-    f.ProcLoopAnim.flipbookRepeat = flipbookRepeat
-
-    -- Start animation group (plays ProcStart flipbook, then hands off to loop)
-    f.ProcStartAnim = f:CreateAnimationGroup()
-    f.ProcStartAnim:SetToFinalAlpha(true)
-
-    local alphaIn = f.ProcStartAnim:CreateAnimation("Alpha")
-    alphaIn:SetChildKey("ProcStart")
-    alphaIn:SetDuration(0.001)
-    alphaIn:SetOrder(0)
-    alphaIn:SetFromAlpha(1)
-    alphaIn:SetToAlpha(1)
-
-    local flipbookStart = f.ProcStartAnim:CreateAnimation("FlipBook")
-    flipbookStart:SetChildKey("ProcStart")
-    flipbookStart:SetDuration(0.7)
-    flipbookStart:SetOrder(1)
-    flipbookStart:SetFlipBookRows(6)
-    flipbookStart:SetFlipBookColumns(5)
-    flipbookStart:SetFlipBookFrames(30)
-    flipbookStart:SetFlipBookFrameWidth(0)
-    flipbookStart:SetFlipBookFrameHeight(0)
-
-    local alphaOut = f.ProcStartAnim:CreateAnimation("Alpha")
-    alphaOut:SetChildKey("ProcStart")
-    alphaOut:SetDuration(0.001)
-    alphaOut:SetOrder(2)
-    alphaOut:SetFromAlpha(1)
-    alphaOut:SetToAlpha(0)
-
-    f.ProcStartAnim:SetScript("OnFinished", function(self)
-        local parent = self:GetParent()
-        parent.ProcLoop:Show()
-        parent.ProcLoopAnim:Play()
-    end)
-
-    -- Hide anims when frame is hidden (e.g. pool reset)
-    f:SetScript("OnHide", function(self)
-        if self.ProcStartAnim:IsPlaying() then self.ProcStartAnim:Stop() end
-        if self.ProcLoopAnim:IsPlaying()  then self.ProcLoopAnim:Stop()  end
-    end)
-end
-
--- ---------------------------------------------------------------------------
--- Apply color tint to an already-initialised glow frame
--- ---------------------------------------------------------------------------
-local function ApplyGlowColor(f, color)
-    if color then
-        f.ProcStart:SetDesaturated(1)
-        f.ProcStart:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
-        f.ProcLoop:SetDesaturated(1)
-        f.ProcLoop:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
-    else
-        f.ProcStart:SetDesaturated(nil)
-        f.ProcStart:SetVertexColor(1, 1, 1, 1)
-        f.ProcLoop:SetDesaturated(nil)
-        f.ProcLoop:SetVertexColor(1, 1, 1, 1)
-    end
-end
-
--- ---------------------------------------------------------------------------
--- Public: start glow on `parent`, storing the frame as parent._CXUI_ProcGlow
--- ---------------------------------------------------------------------------
 local function CXUI_ProcGlow_Start(parent, color)
-    if parent._CXUI_ProcGlow then
-        -- Already glowing — just refresh color in case it changed
-        ApplyGlowColor(parent._CXUI_ProcGlow, color)
-        return
-    end
-
-    local f, isNew = CXUI_ProcGlowPool:Acquire()
-    if isNew then InitGlowFrame(f) end
-
-    parent._CXUI_ProcGlow = f
-    f:SetParent(parent)
-    f:SetFrameLevel(parent:GetFrameLevel() + 8)
-
-    local w, h = parent:GetSize()
-    local xOff = w * 0.2
-    local yOff = h * 0.2
-    f:SetPoint("TOPLEFT",     parent, "TOPLEFT",     -xOff,  yOff)
-    f:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT",  xOff, -yOff)
-
-    ApplyGlowColor(f, color)
-
-    -- Skip start animation (startAnim = false, same as cxUI default)
-    f.ProcStart:Hide()
-    f.ProcLoop:Show()
-    if not f.ProcLoopAnim:IsPlaying() then
-        f.ProcLoopAnim:Play()
-    end
-
-    f:Show()
+    if ns.CXUI_Glow_Start then ns.CXUI_Glow_Start(parent, color) end
 end
 
--- ---------------------------------------------------------------------------
--- Public: stop glow on `parent` and return frame to pool
--- ---------------------------------------------------------------------------
 local function CXUI_ProcGlow_Stop(parent)
-    local f = parent._CXUI_ProcGlow
-    if not f then return end
-    parent._CXUI_ProcGlow = nil
-    -- GlowPoolResetter handles Hide + animation stop
-    CXUI_ProcGlowPool:Release(f)
+    if ns.CXUI_Glow_Stop then ns.CXUI_Glow_Stop(parent) end
 end
 
 -- Export so DeathKnight.lua / Mage.lua can reference for debug if needed

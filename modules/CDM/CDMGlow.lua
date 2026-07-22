@@ -11,7 +11,7 @@ local DB = CDMProcGlowDB
 local GLOW_COLOR = nil
 
 -- ---------------------------------------------------------------------------
--- ISOLATED PROC GLOW ENGINE
+-- UNIFIED GLOW ENGINE (Proc Glow + Pixel Glow)
 -- ---------------------------------------------------------------------------
 -- We intentionally do NOT use LibStub("LibCustomGlow-1.0") here.
 --
@@ -25,116 +25,90 @@ local GLOW_COLOR = nil
 -- exactly what causes our CDM proc glows (Frostbane, ready-CDs, etc.) to
 -- randomly vanish or spam errors once ElvUI is loaded.
 --
--- Solution: a private, self-contained pool, same design already used in
--- Shared.lua for the DK/Mage overlay glows. Duplicated here (rather than
--- reused from Shared.lua) because CDMGlow.lua covers every class, not just
--- DK/Mage, and Shared.lua only exports its glow helpers for CLASS_ID 6/8.
--- 100% isolated from LibStub — can never be invalidated by another addon.
+-- Solution: a private, self-contained pool. 100% isolated from LibStub —
+-- can never be invalidated by another addon.
+--
+-- This is the SINGLE canonical glow engine for the whole addon. CDM icon
+-- glows (this file) and class-feature overlay glows (Shared.lua, used by
+-- DeathKnight.lua's Festering Strike glow etc.) both call into the exact
+-- same CXUI_Glow_Start/CXUI_Glow_Stop exported below via `ns`, so every
+-- glow in cxUI is guaranteed to look identical and respect the same
+-- CXUI_DB.cdmGlowStyle selector. Shared.lua used to keep its own separate
+-- copy of an older, unfixed version of this engine — that duplication is
+-- exactly how it drifted out of sync and is why it's gone now.
+--
+-- Both engines below are ported from EllesmereUI's real glow rendering
+-- (EllesmereUI_Glows.lua): the Proc Glow is its "Modern WoW Glow" style
+-- (a single continuously-looping FlipBook, no separate start-burst phase —
+-- the burst+loop handoff was what caused ours to visually freeze), and the
+-- Pixel Glow is its "Procedural Ants" style (4 static edge textures using
+-- a tileable dash texture, animated purely via SetTexCoord scrolling —
+-- much cheaper and smoother than moving individual segments with SetPoint).
 -- ---------------------------------------------------------------------------
 
 local CXUI_CDMGlowParent = CreateFrame("Frame", "CXUI_CDMGlowParent", UIParent)
 CXUI_CDMGlowParent:SetAllPoints()
 CXUI_CDMGlowParent:Hide() -- invisible container; children are shown individually
 
+-- =============================================================================
+-- PROC GLOW ("Modern WoW Glow" — continuous flipbook loop + shimmer overlay)
+-- =============================================================================
+
+local PROC_TEX_PADDING = 1.4 -- matches EllesmereUI's texPadding for this atlas
+
 local function CDMGlowPoolResetter(_, f)
     f:ClearAllPoints()
     f:SetParent(CXUI_CDMGlowParent)
-    if f.ProcStartAnim and f.ProcStartAnim:IsPlaying() then f.ProcStartAnim:Stop() end
-    if f.ProcLoopAnim and f.ProcLoopAnim:IsPlaying() then f.ProcLoopAnim:Stop() end
-    if f.ProcStart then f.ProcStart:Hide() end
-    if f.ProcLoop  then f.ProcLoop:Hide()  end
+    if f.ag and f.ag:IsPlaying() then f.ag:Stop() end
+    if f.antsAg and f.antsAg:IsPlaying() then f.antsAg:Stop() end
     f:Hide()
 end
 
 local CXUI_CDMGlowPool = CreateFramePool("Frame", CXUI_CDMGlowParent, nil, CDMGlowPoolResetter)
 
 local function InitCDMGlowFrame(f)
-    f.ProcStart = f:CreateTexture(nil, "ARTWORK")
-    f.ProcStart:SetBlendMode("ADD")
-    f.ProcStart:SetAtlas("UI-HUD-ActionBar-Proc-Start-Flipbook")
-    f.ProcStart:SetAlpha(1)
-    f.ProcStart:SetSize(150, 150)
-    f.ProcStart:SetPoint("CENTER")
-    f.ProcStart:Hide()
+    -- Main tinted layer
+    f.tex = f:CreateTexture(nil, "OVERLAY", nil, 7)
+    f.tex:SetAtlas("UI-HUD-ActionBar-Proc-Loop-Flipbook")
+    f.tex:SetPoint("CENTER")
 
-    f.ProcLoop = f:CreateTexture(nil, "ARTWORK")
-    f.ProcLoop:SetAtlas("UI-HUD-ActionBar-Proc-Loop-Flipbook")
-    f.ProcLoop:SetAlpha(0)
-    f.ProcLoop:SetAllPoints()
-    f.ProcLoop:Hide()
+    f.ag = f.tex:CreateAnimationGroup()
+    f.ag:SetLooping("REPEAT")
+    f.anim = f.ag:CreateAnimation("FlipBook")
+    -- NOTE: FlipBook rows/columns/frames/frameWidth/frameHeight are configured
+    -- in CXUI_CDMGlow_Start (every time, AFTER SetSize), not here. frameWidth/
+    -- frameHeight of 0 means "auto-compute from the texture's current size" —
+    -- and at Init time the texture is still 0x0 (SetSize hasn't happened yet),
+    -- so configuring "auto" here bakes in a permanent 0x0 sub-frame and the
+    -- animation just sits frozen on its first (degenerate) frame forever,
+    -- no matter what we resize the texture to afterwards. This exact ordering
+    -- bug was the "frozen" glow.
 
-    f.ProcLoopAnim = f:CreateAnimationGroup()
-    f.ProcLoopAnim:SetLooping("REPEAT")
-    f.ProcLoopAnim:SetToFinalAlpha(true)
+    -- Shimmer accent: same animation, additive, low alpha, never desaturated —
+    -- this second layer is what gives the modern glow its "alive" look.
+    f.ants = f:CreateTexture(nil, "OVERLAY", nil, 7)
+    f.ants:SetAtlas("UI-HUD-ActionBar-Proc-Loop-Flipbook")
+    f.ants:SetPoint("CENTER")
+    f.ants:SetBlendMode("ADD")
 
-    local alphaRepeat = f.ProcLoopAnim:CreateAnimation("Alpha")
-    alphaRepeat:SetChildKey("ProcLoop")
-    alphaRepeat:SetFromAlpha(1)
-    alphaRepeat:SetToAlpha(1)
-    alphaRepeat:SetDuration(0.001)
-    alphaRepeat:SetOrder(0)
-
-    local flipbookRepeat = f.ProcLoopAnim:CreateAnimation("FlipBook")
-    flipbookRepeat:SetChildKey("ProcLoop")
-    flipbookRepeat:SetDuration(1)
-    flipbookRepeat:SetOrder(0)
-    flipbookRepeat:SetFlipBookRows(6)
-    flipbookRepeat:SetFlipBookColumns(5)
-    flipbookRepeat:SetFlipBookFrames(30)
-    flipbookRepeat:SetFlipBookFrameWidth(0)
-    flipbookRepeat:SetFlipBookFrameHeight(0)
-
-    f.ProcStartAnim = f:CreateAnimationGroup()
-    f.ProcStartAnim:SetToFinalAlpha(true)
-
-    local alphaIn = f.ProcStartAnim:CreateAnimation("Alpha")
-    alphaIn:SetChildKey("ProcStart")
-    alphaIn:SetDuration(0.001)
-    alphaIn:SetOrder(0)
-    alphaIn:SetFromAlpha(1)
-    alphaIn:SetToAlpha(1)
-
-    local flipbookStart = f.ProcStartAnim:CreateAnimation("FlipBook")
-    flipbookStart:SetChildKey("ProcStart")
-    flipbookStart:SetDuration(0.7)
-    flipbookStart:SetOrder(1)
-    flipbookStart:SetFlipBookRows(6)
-    flipbookStart:SetFlipBookColumns(5)
-    flipbookStart:SetFlipBookFrames(30)
-    flipbookStart:SetFlipBookFrameWidth(0)
-    flipbookStart:SetFlipBookFrameHeight(0)
-
-    local alphaOut = f.ProcStartAnim:CreateAnimation("Alpha")
-    alphaOut:SetChildKey("ProcStart")
-    alphaOut:SetDuration(0.001)
-    alphaOut:SetOrder(2)
-    alphaOut:SetFromAlpha(1)
-    alphaOut:SetToAlpha(0)
-
-    f.ProcStartAnim:SetScript("OnFinished", function(self)
-        local parent = self:GetParent()
-        parent.ProcLoop:Show()
-        parent.ProcLoopAnim:Play()
-    end)
-
-    f:SetScript("OnHide", function(self)
-        if self.ProcStartAnim:IsPlaying() then self.ProcStartAnim:Stop() end
-        if self.ProcLoopAnim:IsPlaying()  then self.ProcLoopAnim:Stop()  end
-    end)
+    f.antsAg = f.ants:CreateAnimationGroup()
+    f.antsAg:SetLooping("REPEAT")
+    f.antsAnim = f.antsAg:CreateAnimation("FlipBook")
 end
 
+-- nil color = no tint = renders Blizzard's native gold/yellow proc glow.
+-- The shimmer layer is always neutral white at low alpha regardless of tint.
 local function ApplyCDMGlowColor(f, color)
     if color then
-        f.ProcStart:SetDesaturated(1)
-        f.ProcStart:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
-        f.ProcLoop:SetDesaturated(1)
-        f.ProcLoop:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
+        f.tex:SetDesaturated(1)
+        f.tex:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
     else
-        f.ProcStart:SetDesaturated(nil)
-        f.ProcStart:SetVertexColor(1, 1, 1, 1)
-        f.ProcLoop:SetDesaturated(nil)
-        f.ProcLoop:SetVertexColor(1, 1, 1, 1)
+        f.tex:SetDesaturated(nil)
+        f.tex:SetVertexColor(1, 1, 1, 1)
     end
+    f.ants:SetDesaturated(nil)
+    f.ants:SetVertexColor(1, 1, 1, 1)
+    f.ants:SetAlpha(0.35)
 end
 
 local function CXUI_CDMGlow_Start(parent, color)
@@ -149,21 +123,42 @@ local function CXUI_CDMGlow_Start(parent, color)
     parent._CXUI_CDMGlow = f
     f:SetParent(parent)
     f:SetFrameLevel(parent:GetFrameLevel() + 8)
+    f:SetAllPoints(parent)
 
+    -- FlipBook frames have transparent padding baked in — scale the texture
+    -- itself up rather than expanding the wrapper's anchors. Textures aren't
+    -- clipped by their parent frame, so this overflows the icon naturally.
     local w, h = parent:GetSize()
-    local xOff = w * 0.2
-    local yOff = h * 0.2
-    f:SetPoint("TOPLEFT",     parent, "TOPLEFT",     -xOff,  yOff)
-    f:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT",  xOff, -yOff)
+    if not w or w <= 0 then w = 36 end
+    if not h or h <= 0 then h = 36 end
+    local texW, texH = w * PROC_TEX_PADDING, h * PROC_TEX_PADDING
+    f.tex:SetSize(texW, texH)
+    f.ants:SetSize(texW, texH)
+
+    -- Configure FlipBook geometry AFTER sizing, every single Start call —
+    -- frameWidth/Height = 0 ("auto") is computed from the texture's size at
+    -- the moment these are set, so this must happen post-SetSize or the
+    -- animation locks onto a degenerate 0x0 sub-frame (see note in Init).
+    f.anim:SetFlipBookRows(6)
+    f.anim:SetFlipBookColumns(5)
+    f.anim:SetFlipBookFrames(30)
+    f.anim:SetDuration(1.0)
+    f.anim:SetFlipBookFrameWidth(0)
+    f.anim:SetFlipBookFrameHeight(0)
+
+    f.antsAnim:SetFlipBookRows(6)
+    f.antsAnim:SetFlipBookColumns(5)
+    f.antsAnim:SetFlipBookFrames(30)
+    f.antsAnim:SetDuration(1.0)
+    f.antsAnim:SetFlipBookFrameWidth(0)
+    f.antsAnim:SetFlipBookFrameHeight(0)
 
     ApplyCDMGlowColor(f, color)
 
-    -- Skip start animation (startAnim = false, same as cxUI default)
-    f.ProcStart:Hide()
-    f.ProcLoop:Show()
-    if not f.ProcLoopAnim:IsPlaying() then
-        f.ProcLoopAnim:Play()
-    end
+    if f.ag:IsPlaying() then f.ag:Stop() end
+    f.ag:Play()
+    if f.antsAg:IsPlaying() then f.antsAg:Stop() end
+    f.antsAg:Play()
 
     f:Show()
 end
@@ -176,87 +171,137 @@ local function CXUI_CDMGlow_Stop(parent)
     CXUI_CDMGlowPool:Release(f)
 end
 
--- ---------------------------------------------------------------------------
--- ISOLATED PIXEL GLOW ENGINE
--- ---------------------------------------------------------------------------
--- Same rationale as the proc-glow engine above: fully self-contained, never
--- touches LibStub-shared pools, so it can never be invalidated by ElvUI or
--- any other addon embedding its own LibCustomGlow-1.0. A ring of small
--- "marching ants" pixels travels around the frame border.
--- ---------------------------------------------------------------------------
+-- =============================================================================
+-- PIXEL GLOW ("Procedural Ants" — scrolling dash texture along 4 static edges)
+-- =============================================================================
 
-local PIXEL_COUNT  = 8
-local PIXEL_SIZE   = 2
-local PIXEL_PERIOD = 1.5 -- seconds per full revolution around the border
-
-local CXUI_PixelGlowActive = {} -- [f] = true while animating, for the shared OnUpdate driver
+-- Shipped alongside this addon: cxUI/media/glow-dash-h.tga (64x8) and
+-- glow-dash-v.tga (8x64) — a single dash spanning 50% of the tile with a
+-- soft 1px anti-aliased fade at each end, tiled with REPEAT.
+local floor = math.floor
+local PIXELGLOW_TEX_H = [[Interface\AddOns\cxUI\media\glow-dash-h.tga]]
+local PIXELGLOW_TEX_V = [[Interface\AddOns\cxUI\media\glow-dash-v.tga]]
+local PIXELGLOW_N      = 8 -- number of dashes around the full perimeter
+local PIXELGLOW_TH     = 2 -- border thickness in pixels
+local PIXELGLOW_PERIOD = 4 -- seconds per full revolution
 
 local function PixelGlowPoolResetter(_, f)
+    f:SetScript("OnUpdate", nil)
     f:ClearAllPoints()
     f:SetParent(CXUI_CDMGlowParent)
-    CXUI_PixelGlowActive[f] = nil
+    -- NOTE: the pool's resetterFunc runs on Acquire() as well as Release()
+    -- (per FramePoolMixin docs: "all three functions apply the pool's
+    -- resetterFunc to affected widgets during each operation"). On a brand
+    -- new frame's very first Acquire, top/bottom/left/right don't exist yet
+    -- (InitPixelGlowFrame hasn't run), so these must be nil-guarded or the
+    -- pool throws here and CXUI_PixelGlow_Start aborts before ever creating
+    -- the textures — this was the exact cause of the pixel glow never
+    -- rendering.
+    if f.top then f.top:Hide() end
+    if f.bottom then f.bottom:Hide() end
+    if f.left then f.left:Hide() end
+    if f.right then f.right:Hide() end
     f:Hide()
 end
 
 local CXUI_PixelGlowPool = CreateFramePool("Frame", CXUI_CDMGlowParent, nil, PixelGlowPoolResetter)
 
 local function InitPixelGlowFrame(f)
-    f.pixels = {}
-    for i = 1, PIXEL_COUNT do
-        local tex = f:CreateTexture(nil, "OVERLAY")
-        tex:SetTexture("Interface\\Buttons\\WHITE8X8")
-        tex:SetSize(PIXEL_SIZE, PIXEL_SIZE)
-        f.pixels[i] = tex
+    local function mk(p1, p2)
+        local t = f:CreateTexture(nil, "OVERLAY", nil, 7)
+        t:SetPoint(p1, f, p1)
+        t:SetPoint(p2, f, p2)
+        return t
     end
-end
+    f.top    = mk("TOPLEFT", "TOPRIGHT")
+    f.bottom = mk("BOTTOMLEFT", "BOTTOMRIGHT")
+    f.left   = mk("TOPLEFT", "BOTTOMLEFT")
+    f.right  = mk("TOPRIGHT", "BOTTOMRIGHT")
 
--- Returns (dx, dy) offset from center for fraction t (0-1) walking clockwise
--- around a w x h rectangle border, starting at the middle of the top edge.
-local function PerimeterOffset(t, w, h)
-    local perim = 2 * (w + h)
-    if perim <= 0 then return 0, 0 end
-    local d = (t % 1) * perim
-    if d < w then
-        return -w / 2 + d, h / 2
-    elseif d < w + h then
-        return w / 2, h / 2 - (d - w)
-    elseif d < 2 * w + h then
-        return w / 2 - (d - w - h), -h / 2
-    else
-        return -w / 2, -h / 2 + (d - 2 * w - h)
-    end
+    -- true,true = tile horizontally/vertically. Using the classic boolean
+    -- form here rather than string wrap-mode constants ("REPEAT") since the
+    -- latter's acceptance varies across client API revisions — if SetTexture
+    -- silently rejects it, the texture never gets applied and nothing renders.
+    f.top:SetTexture(PIXELGLOW_TEX_H, true, true)
+    f.bottom:SetTexture(PIXELGLOW_TEX_H, true, true)
+    f.left:SetTexture(PIXELGLOW_TEX_V, true, true)
+    f.right:SetTexture(PIXELGLOW_TEX_V, true, true)
+
+    f.timer = 0
+    f.w, f.h = 0, 0
+    f._rawW, f._rawH = 0, 0
 end
 
 local function ApplyPixelGlowColor(f, color)
-    local r, g, b, a = 1, 0.85, 0.1, 1 -- gold, matches native proc glow tone
+    local r, g, b, a = 1, 0.82, 0, 1 -- native-ish gold default (our own convention)
     if color then r, g, b, a = color[1], color[2], color[3], color[4] or 1 end
-    for _, tex in ipairs(f.pixels) do
-        tex:SetVertexColor(r, g, b, a)
-    end
+    f.top:SetVertexColor(r, g, b, a)
+    f.bottom:SetVertexColor(r, g, b, a)
+    f.left:SetVertexColor(r, g, b, a)
+    f.right:SetVertexColor(r, g, b, a)
 end
 
-local function UpdatePixelGlowPositions(f, elapsed)
-    local w, h = f:GetSize()
+-- One physical screen pixel, expressed in the given frame's LOCAL coordinate
+-- units. Same math as EllesmereUI's PP.perfect / PP.SnapForES (768 divided by
+-- the physical screen height gives "1 UI-unit == 1 pixel" at UIParent scale 1;
+-- dividing further by the frame's own effective scale gives the size of one
+-- physical pixel in THIS frame's local units). Self-contained so it works with
+-- or without EllesmereUI loaded.
+local function CXUI_OnePixel(frame)
+    local _, screenH = GetPhysicalScreenSize()
+    if not screenH or screenH <= 0 then screenH = 768 end
+    local perfect = 768 / screenH
+    local es = frame:GetEffectiveScale()
+    if not es or es <= 0 then es = 1 end
+    return perfect / es
+end
+
+-- Snaps w/h AND border thickness to a whole number of physical pixels at the
+-- frame's current effective scale. Without this, SetHeight(2)/SetWidth(2) on
+-- 4 independently-anchored edge textures round to different physical-pixel
+-- counts whenever the effective scale isn't an exact integer (near-universal
+-- for CDM icons, which are almost never at scale 1.0) — some edges rasterize
+-- 1px thicker than others. This is exactly the fix EllesmereUI's own
+-- _AntsResolveSize applies (PP.perfect / GetEffectiveScale, floor+0.5 round),
+-- ported here without depending on EllesmereUI being loaded.
+local function PixelGlow_ResolveSize(self)
+    local w, h = self:GetSize()
+    if not w or not h or w <= 0 or h <= 0 then return false end
+    local onePixel = CXUI_OnePixel(self)
+    w = floor(w / onePixel + 0.5) * onePixel
+    h = floor(h / onePixel + 0.5) * onePixel
+    local th = floor(PIXELGLOW_TH / onePixel + 0.5) * onePixel
+    if th < onePixel then th = onePixel end
+    self.top:SetHeight(th); self.bottom:SetHeight(th)
+    self.left:SetWidth(th); self.right:SetWidth(th)
+    self.w, self.h = w, h
+    local k = PIXELGLOW_N / (2 * (w + h))
+    self.wk   = w * k
+    self.whk  = (w + h) * k
+    self.wwhk = (2 * w + h) * k
+    return true
+end
+
+-- Scrolls the 4 edge textures' TexCoords so the dash pattern marches
+-- clockwise around the border, staying continuous through every corner.
+local function PixelGlow_OnUpdate(self, elapsed)
+    self.timer = self.timer + elapsed
+    if self.timer >= PIXELGLOW_PERIOD then self.timer = self.timer % PIXELGLOW_PERIOD end
+
+    local w, h = self:GetSize()
     if not w or not h or w <= 0 or h <= 0 then return end
-    f.phase = (f.phase or 0) + elapsed / PIXEL_PERIOD
-    for i, tex in ipairs(f.pixels) do
-        local t = f.phase + (i - 1) / PIXEL_COUNT
-        local dx, dy = PerimeterOffset(t, w, h)
-        tex:ClearAllPoints()
-        tex:SetPoint("CENTER", f, "CENTER", dx, dy)
+    if w ~= self._rawW or h ~= self._rawH then
+        self._rawW, self._rawH = w, h
+        if not PixelGlow_ResolveSize(self) then return end
     end
-end
 
-local pixelGlowDriver = CreateFrame("Frame")
-pixelGlowDriver:Hide()
-pixelGlowDriver:SetScript("OnUpdate", function(self, elapsed)
-    local any = false
-    for f in pairs(CXUI_PixelGlowActive) do
-        any = true
-        UpdatePixelGlowPositions(f, elapsed)
-    end
-    if not any then self:Hide() end
-end)
+    local o = (self.timer / PIXELGLOW_PERIOD) * PIXELGLOW_N
+    local wk, whk, wwhk = self.wk, self.whk, self.wwhk
+    self.top:SetTexCoord(-o, wk - o, 0, 1)
+    self.right:SetTexCoord(0, 1, wk - o, whk - o)
+    self.bottom:SetTexCoord(wwhk - o, whk - o, 0, 1)
+    self.left:SetTexCoord(0, 1, PIXELGLOW_N - o, wwhk - o)
+end
 
 local function CXUI_PixelGlow_Start(parent, color)
     if parent._CXUI_PixelGlow then
@@ -271,24 +316,51 @@ local function CXUI_PixelGlow_Start(parent, color)
     f:SetParent(parent)
     f:SetFrameLevel(parent:GetFrameLevel() + 8)
     f:SetAllPoints(parent)
-    f.phase = 0
 
     ApplyPixelGlowColor(f, color)
-    for _, tex in ipairs(f.pixels) do tex:Show() end
+    f.top:Show(); f.bottom:Show(); f.left:Show(); f.right:Show()
 
+    f.timer = 0
+    f.w, f.h = 0, 0       -- force perimeter recompute on first tick
+    f._rawW, f._rawH = 0, 0 -- force pixel-snap recompute on first tick
+    PixelGlow_OnUpdate(f, 0)
+    f:SetScript("OnUpdate", PixelGlow_OnUpdate)
     f:Show()
-    CXUI_PixelGlowActive[f] = true
-    pixelGlowDriver:Show()
 end
 
 local function CXUI_PixelGlow_Stop(parent)
     local f = parent._CXUI_PixelGlow
     if not f then return end
     parent._CXUI_PixelGlow = nil
-    CXUI_PixelGlowActive[f] = nil
-    -- PixelGlowPoolResetter handles Hide + active-set cleanup
+    -- PixelGlowPoolResetter handles Hide + OnUpdate teardown
     CXUI_PixelGlowPool:Release(f)
 end
+
+-- =============================================================================
+-- Dispatcher — picks proc vs pixel per CXUI_DB.cdmGlowStyle, and is exported
+-- on `ns` so Shared.lua (DK/Mage class-feature glows) uses this exact same
+-- engine instead of keeping its own separate copy.
+-- =============================================================================
+
+local function CXUI_Glow_Start(parent, color)
+    if CXUI_DB.cdmGlowStyle == "pixel" then
+        pcall(CXUI_CDMGlow_Stop, parent)
+        pcall(CXUI_PixelGlow_Start, parent, color)
+    else
+        pcall(CXUI_PixelGlow_Stop, parent)
+        pcall(CXUI_CDMGlow_Start, parent, color)
+    end
+end
+
+local function CXUI_Glow_Stop(parent)
+    pcall(CXUI_CDMGlow_Stop, parent)
+    pcall(CXUI_PixelGlow_Stop, parent)
+end
+
+ns.CXUI_Glow_Start = CXUI_Glow_Start
+ns.CXUI_Glow_Stop  = CXUI_Glow_Stop
+
+
 
 -- ---------------------------------------------------------------------------
 -- PROC CONFIG
@@ -435,30 +507,14 @@ local function GetOrCreateCDMOverlay(frame)
     return ov
 end
 
--- Both calls are pcall-guarded defensively (frame sizing edge cases, etc.)
--- even though this engine is now fully self-contained and no longer
--- third-party code we don't control.
+-- Delegates to the shared dispatcher (same one Shared.lua uses) so CDM icon
+-- glows and class-feature overlay glows can never drift out of sync again.
 local function RequestGlow(frame, enabled, auraID, color)
     local overlay = GetOrCreateCDMOverlay(frame)
-    local usePixel = CXUI_DB.cdmGlowStyle == "pixel"
-
     if enabled then
-        if usePixel then
-            pcall(CXUI_CDMGlow_Stop, overlay)
-            local ok, err = pcall(CXUI_PixelGlow_Start, overlay, color or GLOW_COLOR)
-            if not ok then
-                -- print("|cffff0000CDMGlow PixelGlow_Start error:|r", err)
-            end
-        else
-            pcall(CXUI_PixelGlow_Stop, overlay)
-            local ok, err = pcall(CXUI_CDMGlow_Start, overlay, color or GLOW_COLOR)
-            if not ok then
-                -- print("|cffff0000CDMGlow ProcGlow_Start error:|r", err)
-            end
-        end
+        CXUI_Glow_Start(overlay, color or GLOW_COLOR)
     else
-        pcall(CXUI_CDMGlow_Stop, overlay)
-        pcall(CXUI_PixelGlow_Stop, overlay)
+        CXUI_Glow_Stop(overlay)
     end
 end
 
@@ -893,6 +949,27 @@ end
 -- ---------------------------------------------------------------------------
 
 SLASH_CDMGLOWDEBUG1 = "/cdmglow"
+-- Standalone test frame — not tied to any real CDM icon, so you can verify
+-- both glow styles instantly without waiting for a real proc.
+local cxuiGlowTestFrame
+
+local function GetOrCreateGlowTestFrame()
+    if cxuiGlowTestFrame then return cxuiGlowTestFrame end
+    local f = CreateFrame("Frame", "CXUI_GlowTestFrame", UIParent)
+    f:SetSize(48, 48)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("HIGH")
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.6)
+    local label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("TOP", f, "BOTTOM", 0, -4)
+    label:SetText("cxUI glow test")
+    f.label = label
+    cxuiGlowTestFrame = f
+    return f
+end
+
 SlashCmdList["CDMGLOWDEBUG"] = function(msg)
     local cmd = (msg:match("^(%S+)") or msg):lower()
 
@@ -924,8 +1001,39 @@ SlashCmdList["CDMGLOWDEBUG"] = function(msg)
             end
         end
         if count == 0 then print("|cff0070ddcxUI:|r no CDM frames found") end
+
+    elseif cmd == "test" then
+        local f = GetOrCreateGlowTestFrame()
+        f:Show()
+        -- Bypass the pcall-wrapped dispatcher here on purpose: if something
+        -- actually errors during setup, we want to SEE it, not have it
+        -- silently swallowed like it would be in normal gameplay use.
+        if CXUI_DB.cdmGlowStyle == "pixel" then
+            pcall(CXUI_CDMGlow_Stop, f)
+            local ok, err = pcall(CXUI_PixelGlow_Start, f, nil)
+            if not ok then print("|cffff2020cxUI pixel glow error:|r " .. tostring(err)) end
+        else
+            pcall(CXUI_PixelGlow_Stop, f)
+            local ok, err = pcall(CXUI_CDMGlow_Start, f, nil)
+            if not ok then print("|cffff2020cxUI proc glow error:|r " .. tostring(err)) end
+        end
+        print(("|cff0070ddcxUI:|r test glow shown at screen center, style = %s"):format(tostring(CXUI_DB.cdmGlowStyle)))
+        print("|cff0070ddcxUI:|r pixel glow expects these files to exist:")
+        print("  " .. PIXELGLOW_TEX_H)
+        print("  " .. PIXELGLOW_TEX_V)
+        print("|cff0070ddcxUI:|r /cdmglow testoff to hide it")
+
+    elseif cmd == "testoff" then
+        if cxuiGlowTestFrame then
+            CXUI_Glow_Stop(cxuiGlowTestFrame)
+            cxuiGlowTestFrame:Hide()
+        end
+        print("|cff0070ddcxUI:|r test glow hidden")
+
     else
-        print("|cff0070ddcxUI:|r /cdmglow debug  — CDM frames in viewers")
+        print("|cff0070ddcxUI:|r /cdmglow debug     — CDM frames in viewers")
+        print("|cff0070ddcxUI:|r /cdmglow test      — show a test glow at screen center (current style)")
+        print("|cff0070ddcxUI:|r /cdmglow testoff   — hide the test glow")
     end
 end
 
