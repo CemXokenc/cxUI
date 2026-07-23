@@ -27,6 +27,7 @@ local function EnsureDBDefaults()
         pullTimerSound            = true,
         queuePopSound             = true,
         hideExtraActionDecor      = true,
+        externalAlertSound        = true,
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
         mogMountFlyingInGround    = true,
@@ -87,7 +88,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 670)
+content:SetSize(560, 710)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -232,6 +233,12 @@ CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x
 CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -585, false, R)
 CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -615, false, L)
 CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -615, false, R)
+
+-- ---------------------------------------------------------------------------
+-- Module 5 — Mythic+
+-- ---------------------------------------------------------------------------
+CreateHeader("Module 5: Mythic+", -655)
+CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -680, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
