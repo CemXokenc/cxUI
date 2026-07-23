@@ -26,6 +26,7 @@ local function EnsureDBDefaults()
         inviteSound               = true,
         pullTimerSound            = true,
         queuePopSound             = true,
+        hideExtraActionDecor      = true,
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
         mogMountFlyingInGround    = true,
@@ -209,6 +210,7 @@ CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents ac
 CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -310, false, L)
 CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -310, false, R)
 CreateCheckbox("Queue Pop Sound",             "queuePopSound",      "Plays a sound the moment a dungeon/raid, battleground, or arena queue pops.", -340, false, L)
+CreateCheckbox("Hide Extra Action Button Decor", "hideExtraActionDecor", "Removes the decorative ring texture from ExtraActionButton1 and ZoneAbilityFrame.", -340, true, R)
 CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -370, false, L)
 CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -370, false, R)
 CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -400, false, L)
