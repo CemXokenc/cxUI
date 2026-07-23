@@ -446,10 +446,26 @@ end
 -- Overlay helpers
 -- ===========================================================================
 
+-- Delegates to CDMGlow.lua's GetOrCreateCDMOverlay (exported as
+-- ns.CXUI_GetOrCreateCDMOverlay) instead of building the overlay frame here
+-- directly. This used to be a separate copy that only ever set SetAllPoints
+-- + SetFrameLevel ONCE at creation and never touched frame strata at all —
+-- exactly the kind of duplication that let this overlay drift out of sync
+-- with the level-refresh and strata-bump fixes made to the CDM icon overlay
+-- (Festering Wound glow kept rendering behind EllesmereUI's CDM icons while
+-- the regular CDM icon glows, going through GetOrCreateCDMOverlay directly,
+-- were already fixed).
 local function CreateOverlay(cdmFrame)
-    local ov = CreateFrame("Frame", nil, cdmFrame)
-    ov:SetAllPoints(cdmFrame)
-    ov:SetFrameLevel(cdmFrame:GetFrameLevel() + 2)
+    local ov
+    if ns.CXUI_GetOrCreateCDMOverlay then
+        ov = ns.CXUI_GetOrCreateCDMOverlay(cdmFrame)
+    else
+        -- Fallback only if CDMGlow.lua somehow isn't loaded yet — should not
+        -- happen given load order in cxUI.toc, but avoids a hard error.
+        ov = CreateFrame("Frame", nil, cdmFrame)
+        ov:SetAllPoints(cdmFrame)
+        ov:SetFrameLevel(cdmFrame:GetFrameLevel() + 2)
+    end
     ov._targetFrame = cdmFrame
     ov._glowActive  = false
     ov:Hide()

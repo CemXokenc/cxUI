@@ -59,6 +59,8 @@ local PROC_TEX_PADDING = 1.4 -- matches EllesmereUI's texPadding for this atlas
 local function CDMGlowPoolResetter(_, f)
     f:ClearAllPoints()
     f:SetParent(CXUI_CDMGlowParent)
+    f:SetScript("OnUpdate", nil)
+    f._rawW, f._rawH = nil, nil
     if f.ag and f.ag:IsPlaying() then f.ag:Stop() end
     if f.antsAg and f.antsAg:IsPlaying() then f.antsAg:Stop() end
     f:Hide()
@@ -111,8 +113,41 @@ local function ApplyCDMGlowColor(f, color)
     f.ants:SetAlpha(0.35)
 end
 
+-- Self-healing: keeps the wrapper anchored and the flipbook textures sized
+-- to the parent's CURRENT size, every frame, instead of computing this once
+-- at creation. Needed because the parent (CDM icon) can still be 0x0 at the
+-- exact moment CXUI_CDMGlow_Start first runs — e.g. under EllesmereUI's CDM
+-- module, icons get resized/repositioned by its own reflow pass sometime
+-- after Blizzard creates them, and if our glow attaches before that reflow
+-- finishes, a one-time size snapshot bakes in 0x0 (or the 36x36 fallback)
+-- forever. Cheap: two GetSize comparisons per frame, no allocation.
+local function CDMGlow_OnUpdate(self, elapsed)
+    local parent = self:GetParent()
+    if not parent then return end
+    self:SetAllPoints(parent)
+    self:SetFrameStrata(parent:GetFrameStrata())
+
+    local w, h = parent:GetSize()
+    if not w or not h or w <= 0 or h <= 0 then return end
+    if w == self._rawW and h == self._rawH then return end
+    self._rawW, self._rawH = w, h
+
+    local texW, texH = w * PROC_TEX_PADDING, h * PROC_TEX_PADDING
+    self.tex:SetSize(texW, texH)
+    self.ants:SetSize(texW, texH)
+    -- Re-derive FlipBook geometry from the new texture size — "auto" (0)
+    -- snapshots the CURRENT texture size when set, so it must be re-set
+    -- every time the texture is resized, not just once at Init.
+    self.anim:SetFlipBookFrameWidth(0)
+    self.anim:SetFlipBookFrameHeight(0)
+    self.antsAnim:SetFlipBookFrameWidth(0)
+    self.antsAnim:SetFlipBookFrameHeight(0)
+end
+
 local function CXUI_CDMGlow_Start(parent, color)
     if parent._CXUI_CDMGlow then
+        parent._CXUI_CDMGlow:SetFrameStrata(parent:GetFrameStrata())
+        parent._CXUI_CDMGlow:SetFrameLevel(parent:GetFrameLevel() + 8)
         ApplyCDMGlowColor(parent._CXUI_CDMGlow, color)
         return
     end
@@ -122,6 +157,7 @@ local function CXUI_CDMGlow_Start(parent, color)
 
     parent._CXUI_CDMGlow = f
     f:SetParent(parent)
+    f:SetFrameStrata(parent:GetFrameStrata())
     f:SetFrameLevel(parent:GetFrameLevel() + 8)
     f:SetAllPoints(parent)
 
@@ -134,6 +170,7 @@ local function CXUI_CDMGlow_Start(parent, color)
     local texW, texH = w * PROC_TEX_PADDING, h * PROC_TEX_PADDING
     f.tex:SetSize(texW, texH)
     f.ants:SetSize(texW, texH)
+    f._rawW, f._rawH = w, h
 
     -- Configure FlipBook geometry AFTER sizing, every single Start call —
     -- frameWidth/Height = 0 ("auto") is computed from the texture's size at
@@ -160,6 +197,7 @@ local function CXUI_CDMGlow_Start(parent, color)
     if f.antsAg:IsPlaying() then f.antsAg:Stop() end
     f.antsAg:Play()
 
+    f:SetScript("OnUpdate", CDMGlow_OnUpdate)
     f:Show()
 end
 
@@ -271,7 +309,13 @@ local function PixelGlow_ResolveSize(self)
     w = floor(w / onePixel + 0.5) * onePixel
     h = floor(h / onePixel + 0.5) * onePixel
     local th = floor(PIXELGLOW_TH / onePixel + 0.5) * onePixel
-    if th < onePixel then th = onePixel end
+    -- Never let the border round down to a single physical pixel — at small
+    -- effective scales (e.g. EllesmereUI's global UI scale of 0.65 vs ~1.0
+    -- without it) PIXELGLOW_TH=2 can legitimately round down to 1 physical
+    -- pixel, making the glow measurably (confirmed: exactly half) thinner
+    -- than under stock Blizzard UI scale. Enforce a 2-physical-pixel floor
+    -- so thickness stays visually consistent across UI scales.
+    if th < 2 * onePixel then th = 2 * onePixel end
     self.top:SetHeight(th); self.bottom:SetHeight(th)
     self.left:SetWidth(th); self.right:SetWidth(th)
     self.w, self.h = w, h
@@ -285,6 +329,12 @@ end
 -- Scrolls the 4 edge textures' TexCoords so the dash pattern marches
 -- clockwise around the border, staying continuous through every corner.
 local function PixelGlow_OnUpdate(self, elapsed)
+    local parent = self:GetParent()
+    if parent then
+        self:SetAllPoints(parent)
+        self:SetFrameStrata(parent:GetFrameStrata())
+    end
+
     self.timer = self.timer + elapsed
     if self.timer >= PIXELGLOW_PERIOD then self.timer = self.timer % PIXELGLOW_PERIOD end
 
@@ -305,6 +355,8 @@ end
 
 local function CXUI_PixelGlow_Start(parent, color)
     if parent._CXUI_PixelGlow then
+        parent._CXUI_PixelGlow:SetFrameStrata(parent:GetFrameStrata())
+        parent._CXUI_PixelGlow:SetFrameLevel(parent:GetFrameLevel() + 8)
         ApplyPixelGlowColor(parent._CXUI_PixelGlow, color)
         return
     end
@@ -314,6 +366,7 @@ local function CXUI_PixelGlow_Start(parent, color)
 
     parent._CXUI_PixelGlow = f
     f:SetParent(parent)
+    f:SetFrameStrata(parent:GetFrameStrata())
     f:SetFrameLevel(parent:GetFrameLevel() + 8)
     f:SetAllPoints(parent)
 
@@ -498,14 +551,39 @@ local CDMGlow = {
 
 local cdmOverlays = {}
 
+local STRATA_NAMES = { "BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP" }
+local STRATA_ORDER = { BACKGROUND=1, LOW=2, MEDIUM=3, HIGH=4, DIALOG=5, FULLSCREEN=6, FULLSCREEN_DIALOG=7, TOOLTIP=8 }
+
 local function GetOrCreateCDMOverlay(frame)
-    if cdmOverlays[frame] then return cdmOverlays[frame] end
-    local ov = CreateFrame("Frame", nil, frame)
+    local ov = cdmOverlays[frame]
+    if not ov then
+        ov = CreateFrame("Frame", nil, frame)
+        cdmOverlays[frame] = ov
+    end
+    -- Re-sync every call, not just on creation: some CDM implementations
+    -- (e.g. EllesmereUI's cooldown manager module) reassign icon:SetFrameLevel()
+    -- dynamically as icons change position within the active-cooldown rotation.
+    -- A level cached only at first creation goes stale the moment the icon's
+    -- level changes afterward. No-op cost on stock Blizzard CDM, where icon
+    -- levels never change after creation.
     ov:SetAllPoints(frame)
     ov:SetFrameLevel(frame:GetFrameLevel() + 2)
-    cdmOverlays[frame] = ov
+    -- Strata trumps level entirely (a HIGH-strata frame always draws over
+    -- every MEDIUM-strata frame regardless of level numbers). Jumping a
+    -- strata tier above whatever the icon currently uses is what actually
+    -- guarantees we render on top, regardless of what else EllesmereUI (or
+    -- anything else) puts in the icon's own strata.
+    local idx = (STRATA_ORDER[frame:GetFrameStrata() or "MEDIUM"] or 3) + 1
+    ov:SetFrameStrata(STRATA_NAMES[math.min(idx, #STRATA_NAMES)])
     return ov
 end
+
+-- Exported so Shared.lua's class-feature overlays (Festering Wound glow,
+-- Putrefy cross, etc.) use this exact function instead of keeping their own
+-- copy — that duplication is exactly how the CDM-icon overlay drifted out
+-- of sync with the strata/level fixes made here (see ScanCDMOverlays in
+-- DeathKnight.lua / CreateOverlay in Shared.lua).
+ns.CXUI_GetOrCreateCDMOverlay = GetOrCreateCDMOverlay
 
 -- Delegates to the shared dispatcher (same one Shared.lua uses) so CDM icon
 -- glows and class-feature overlay glows can never drift out of sync again.
@@ -1002,6 +1080,123 @@ SlashCmdList["CDMGLOWDEBUG"] = function(msg)
         end
         if count == 0 then print("|cff0070ddcxUI:|r no CDM frames found") end
 
+    elseif cmd == "diag" then
+        local AddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+        print("|cff0070ddcxUI:|r === glow diag ===")
+        print(("|cff0070ddcxUI:|r EllesmereUI loaded=%s  ElvUI global=%s  EllesmereUI global=%s"):format(
+            tostring(AddOnLoaded and AddOnLoaded("EllesmereUI")),
+            tostring(_G.ElvUI ~= nil),
+            tostring(_G.EllesmereUI ~= nil)
+        ))
+
+        local function DumpChain(f, label)
+            print(("|cff0070ddcxUI:|r -- %s --"):format(label))
+            local n, depth = f, 0
+            while n and depth < 12 do
+                local ok, name = pcall(function() return n.GetName and n:GetName() end)
+                if not ok then name = nil end
+                local w, h = 0, 0
+                pcall(function() w, h = n:GetSize() end)
+                local scale, es = 1, 1
+                pcall(function() scale = n:GetScale() end)
+                pcall(function() es = n:GetEffectiveScale() end)
+                local strata, level = "?", "?"
+                pcall(function() strata = n:GetFrameStrata() end)
+                pcall(function() level = n:GetFrameLevel() end)
+                print(("  [%d] %-28s size=%s x %s  scale=%.4f  effScale=%.4f  strata=%s  level=%s"):format(
+                    depth, tostring(name or "<anon>"),
+                    tostring(w and string.format("%.1f", w)), tostring(h and string.format("%.1f", h)),
+                    scale or 1, es or 1, tostring(strata), tostring(level)
+                ))
+                -- Anchor point detail for the first 2 levels only (target
+                -- frame + its direct parent) — this tells us whether
+                -- SetAllPoints actually took effect, and if not, what points
+                -- (if any) the frame actually has instead.
+                if depth <= 1 then
+                    local ok3, numPoints = pcall(function() return n:GetNumPoints() end)
+                    if ok3 and numPoints then
+                        print(("      numPoints=%d"):format(numPoints))
+                        for i = 1, numPoints do
+                            local ok4, point, relTo, relPoint, x, y = pcall(function() return n:GetPoint(i) end)
+                            if ok4 then
+                                local relName = "?"
+                                pcall(function() relName = (relTo and relTo.GetName and relTo:GetName()) or (relTo and tostring(relTo)) or "nil" end)
+                                print(("        [%d] point=%s relativeTo=%s relativePoint=%s x=%s y=%s"):format(
+                                    i, tostring(point), tostring(relName), tostring(relPoint), tostring(x), tostring(y)))
+                            end
+                        end
+                    else
+                        print("      (GetNumPoints failed or unavailable)")
+                    end
+                end
+                local ok2, p = pcall(function() return n:GetParent() end)
+                n = ok2 and p or nil
+                depth = depth + 1
+            end
+        end
+
+        local function DumpIconTexture(icon)
+            local tex = icon.icon or icon.Icon or (icon.GetNormalTexture and icon:GetNormalTexture())
+            if not tex then print("  (no icon texture found: tried icon.icon / icon.Icon / GetNormalTexture)"); return end
+            local desat, alpha, blend = "?", "?", "?"
+            pcall(function() desat = tex:IsDesaturated() end)
+            pcall(function() alpha = tex:GetAlpha() end)
+            pcall(function() blend = tex:GetBlendMode() end)
+            local r, g, b, a = 1, 1, 1, 1
+            pcall(function() r, g, b, a = tex:GetVertexColor() end)
+            print(("  icon texture: desaturated=%s alpha=%s blend=%s vertexColor=%.2f,%.2f,%.2f,%.2f"):format(
+                tostring(desat), tostring(alpha), tostring(blend), r, g, b, a))
+        end
+
+        local count = 0
+        for frame, sid in pairs(CDMGlow.frameSpellID) do
+            if IsSafeFrame(frame) then
+                count = count + 1
+                DumpChain(frame, ("production-selected icon spell=%s"):format(tostring(sid)))
+                DumpIconTexture(frame)
+                local overlay = cdmOverlays[frame]
+                if overlay then
+                    DumpChain(overlay, "our overlay child")
+                    if overlay._CXUI_PixelGlow then
+                        local pf = overlay._CXUI_PixelGlow
+                        DumpChain(pf, "our pixel glow frame")
+                        print(("   shown=%s alpha=%.2f"):format(tostring(pf:IsShown()), pf:GetAlpha()))
+                    end
+                    if overlay._CXUI_CDMGlow then
+                        local cf = overlay._CXUI_CDMGlow
+                        DumpChain(cf, "our proc glow frame")
+                        print(("   shown=%s alpha=%.2f"):format(tostring(cf:IsShown()), cf:GetAlpha()))
+                    end
+                else
+                    print("  (no cxUI overlay created yet for this icon)")
+                end
+                if count >= 4 then break end
+            end
+        end
+        if count == 0 then print("|cff0070ddcxUI:|r no CDM frames found for diag (CDMGlow.frameSpellID empty — UpdateGlows hasn't run or found nothing)") end
+
+        print("|cff0070ddcxUI:|r -- cdmOverlays cache (every icon that ever got a glow) --")
+        local n = 0
+        for iconFrame, overlay in pairs(cdmOverlays) do
+            n = n + 1
+            local sid = GetButtonSpellID(iconFrame)
+            DumpChain(iconFrame, ("cached icon #%d spell=%s"):format(n, tostring(sid)))
+            DumpIconTexture(iconFrame)
+            DumpChain(overlay, "  -> overlay")
+            if overlay._CXUI_PixelGlow then
+                local pf = overlay._CXUI_PixelGlow
+                DumpChain(pf, "  -> pixel glow frame")
+                print(("     shown=%s alpha=%.2f"):format(tostring(pf:IsShown()), pf:GetAlpha()))
+            end
+            if overlay._CXUI_CDMGlow then
+                local cf = overlay._CXUI_CDMGlow
+                DumpChain(cf, "  -> proc glow frame")
+                print(("     shown=%s alpha=%.2f"):format(tostring(cf:IsShown()), cf:GetAlpha()))
+            end
+        end
+        if n == 0 then print("  (cdmOverlays cache is empty — no glow has ever been requested on a real icon this session)") end
+        print("|cff0070ddcxUI:|r === end diag ===")
+
     elseif cmd == "test" then
         local f = GetOrCreateGlowTestFrame()
         f:Show()
@@ -1032,6 +1227,7 @@ SlashCmdList["CDMGLOWDEBUG"] = function(msg)
 
     else
         print("|cff0070ddcxUI:|r /cdmglow debug     — CDM frames in viewers")
+        print("|cff0070ddcxUI:|r /cdmglow diag      — dump scale/level/strata chain + icon texture state for real CDM icons")
         print("|cff0070ddcxUI:|r /cdmglow test      — show a test glow at screen center (current style)")
         print("|cff0070ddcxUI:|r /cdmglow testoff   — hide the test glow")
     end
