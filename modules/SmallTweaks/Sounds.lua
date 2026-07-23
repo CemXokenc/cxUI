@@ -77,6 +77,33 @@ local function CancelPullCountdown()
 end
 
 -- ---------------------------------------------------------------------------
+-- QUEUE POP SOUND
+-- Plays a sound the instant a dungeon/raid, battleground, or arena queue
+-- pops. Ported from BetterBlizzQueue (sound part only, no timer/warning).
+-- ---------------------------------------------------------------------------
+
+local QUEUE_POP_SOUND = 567458 -- same file BetterBlizzQueue used
+
+local function PlayQueuePopSound()
+    if not CXUI_DB.queuePopSound then return end
+    PlaySoundFile(QUEUE_POP_SOUND, "Master")
+end
+
+-- Dungeon / Raid (LFG proposal)
+local function OnLFGProposalShow()
+    local proposalExists, _, _, _, _, _, _, hasResponded = GetLFGProposal()
+    if not proposalExists or hasResponded then return end
+    PlayQueuePopSound()
+end
+
+-- Battleground / Arena
+if PVPReadyDialog_Display then
+    hooksecurefunc("PVPReadyDialog_Display", function()
+        PlayQueuePopSound()
+    end)
+end
+
+-- ---------------------------------------------------------------------------
 -- LOW HEALTH ALERT
 -- ---------------------------------------------------------------------------
 
@@ -102,6 +129,7 @@ f:RegisterEvent("START_PLAYER_COUNTDOWN")
 f:RegisterEvent("CANCEL_PLAYER_COUNTDOWN")
 f:RegisterEvent("START_TIMER")
 f:RegisterEvent("PLAYER_REGEN_DISABLED")
+f:RegisterEvent("LFG_PROPOSAL_SHOW")
 
 f:SetScript("OnEvent", function(self, event, ...)
     if event == "READY_CHECK" then
@@ -129,5 +157,8 @@ f:SetScript("OnEvent", function(self, event, ...)
 
     elseif event == "PLAYER_REGEN_DISABLED" then
         CancelPullCountdown()
+
+    elseif event == "LFG_PROPOSAL_SHOW" then
+        OnLFGProposalShow()
     end
 end)

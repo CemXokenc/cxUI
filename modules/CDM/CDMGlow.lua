@@ -428,7 +428,7 @@ ns.CXUI_Glow_Stop  = CXUI_Glow_Stop
 local PROC_CONFIG = {
     DEATHKNIGHT = {
         -- Procs
-        --[81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
+        [81340] = { 47541, 207317, 1242174, 383269 },    -- Sudden Doom            → Death Coil, Epidemic, Necrotic Coil, Graveyard
         --[51124] = { 49020, 207230 },                     -- Killing Machine        → Obliterate, Frostscythe
         --["overlay:49184"] = { 49184 },                   -- Rime                   → Howling Blast
         ["cdm:1228433"]   = { 1228433 },                 -- Frostbane              → always glow if present in CDM

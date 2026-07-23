@@ -25,6 +25,7 @@ local function EnsureDBDefaults()
         rcm                       = true,
         inviteSound               = true,
         pullTimerSound            = true,
+        queuePopSound             = true,
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
         mogMountFlyingInGround    = true,
@@ -85,7 +86,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 640)
+content:SetSize(560, 670)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -207,27 +208,28 @@ CreateCheckbox("Ready Check Alert",           "altTabAlerts",       "Plays ready
 CreateCheckbox("Block Right-Click in Combat", "rcm",                "Prevents accidental right-click targeting in dungeons and raids.",         -280, false, R)
 CreateCheckbox("Group Invite Sound",          "inviteSound",        "Plays a sound through Master when a group invite arrives.",                 -310, false, L)
 CreateCheckbox("Pull Timer Countdown Sound",  "pullTimerSound",     "Plays audio for the preparation countdown (5, 4, 3, 2, 1).",               -310, false, R)
-CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -340, false, L)
-CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -340, false, R)
-CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -370, false, L)
-CreateCheckbox("Auto-Accept Resurrection",    "autoAcceptResurrection", "Automatically accepts resurrection requests, but not while the resurrecting unit is in combat.", -370, false, R)
-CreateCheckbox("Auto-Release in PvP",         "autoReleasePvP",         "Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect.", -400, false, L)
-CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",     "Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list.", -400, true, R)
-CreateCheckbox("Move 'Reset Filter' Button",  "moveResetButton",    "Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap.",         -430, true,  L)
-CreateCheckbox("Mail: Remember Last Recipient", "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -430, false, R)
+CreateCheckbox("Queue Pop Sound",             "queuePopSound",      "Plays a sound the moment a dungeon/raid, battleground, or arena queue pops.", -340, false, L)
+CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -370, false, L)
+CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -370, false, R)
+CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -400, false, L)
+CreateCheckbox("Auto-Accept Resurrection",    "autoAcceptResurrection", "Automatically accepts resurrection requests, but not while the resurrecting unit is in combat.", -400, false, R)
+CreateCheckbox("Auto-Release in PvP",         "autoReleasePvP",         "Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect.", -430, false, L)
+CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",     "Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list.", -430, true, R)
+CreateCheckbox("Move 'Reset Filter' Button",  "moveResetButton",    "Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap.",         -460, true,  L)
+CreateCheckbox("Mail: Remember Last Recipient", "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -460, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Module 4 — Class Features
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 4: Class Features", -470)
-CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -495, false, L)
-CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -495, false, R)
-CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -525, false, L)
-CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -525, false, R)
-CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -555, false, L)
-CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -555, false, R)
-CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -585, false, L)
-CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -585, false, R)
+CreateHeader("Module 4: Class Features", -500)
+CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -525, false, L)
+CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -525, false, R)
+CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -555, false, L)
+CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -555, false, R)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -585, false, L)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -585, false, R)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -615, false, L)
+CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -615, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
