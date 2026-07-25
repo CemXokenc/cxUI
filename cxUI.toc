@@ -25,6 +25,7 @@ modules\SmallTweaks\Alerts.lua
 modules\SmallTweaks\MacroOverride.lua
 modules\SmallTweaks\Sounds.lua
 modules\SmallTweaks\ExtraActionBar.lua
+modules\SmallTweaks\ExpandVendorWindow.lua
 modules\SmallTweaks\RCM.lua
 modules\SmallTweaks\MogMountFlyingInGround.lua
 modules\SmallTweaks\Death.lua
