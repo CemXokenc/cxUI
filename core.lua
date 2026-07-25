@@ -48,6 +48,7 @@ local function EnsureDBDefaults()
         moveResetButton           = true,
         mailRememberRecipient     = true,
         buyEmAll                  = true,
+        noAutoClose               = true,
 		---------------------------------
     }
     for k, v in pairs(defaults) do
@@ -90,7 +91,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 740)
+content:SetSize(560, 770)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -224,25 +225,26 @@ CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",     "Adds pa
 CreateCheckbox("Move 'Reset Filter' Button",  "moveResetButton",    "Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap.",         -460, true,  R)
 CreateCheckbox("Mail: Remember Last Recipient", "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -490, false, L)
 CreateCheckbox("Buy Em All",                    "buyEmAll",           "Shift-Click a vendor item to open a Max/Stack purchase window instead of Blizzard's default popup.", -490, false, R)
+CreateCheckbox("No Auto Close",                 "noAutoClose",        "Stops opening a panel (map, bags, character, etc.) from auto-closing other open panels, and keeps ESC working to close them properly.", -520, true, L)
 
 -- ---------------------------------------------------------------------------
 -- Module 4 — Class Features
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 4: Class Features", -530)
-CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -555, false, L)
-CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -555, false, R)
-CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -585, false, L)
-CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -585, false, R)
-CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -615, false, L)
-CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -615, false, R)
-CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -645, false, L)
-CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -645, false, R)
+CreateHeader("Module 4: Class Features", -560)
+CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -585, false, L)
+CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -585, false, R)
+CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -615, false, L)
+CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -615, false, R)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM when Dark Transformation has <10s CD.",         -645, false, L)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -645, false, R)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -675, false, L)
+CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -675, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Module 5 — Mythic+
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Mythic+", -685)
-CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -710, false, L)
+CreateHeader("Module 5: Mythic+", -715)
+CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -740, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Panel events

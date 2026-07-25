@@ -4,7 +4,7 @@
 ## Notes-ukUA: Мінімалістичний інтерфейс: авто-ховання панелей та квест-лога, підсвітка проків для CDM.
 ## Version: 1.0.0
 ## Author: cemxokenc
-## SavedVariables: CXUI_DB, CDMProcGlowDB
+## SavedVariables: CXUI_DB, CDMProcGlowDB, CXUI_NoAutoCloseDB
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
 
 # Libraries
@@ -32,6 +32,7 @@ modules\SmallTweaks\Death.lua
 modules\SmallTweaks\LFG.lua
 modules\SmallTweaks\Mail.lua
 modules\SmallTweaks\BuyEmAll.lua
+modules\SmallTweaks\NoAutoClose.lua
 
 # Module: Class Features (Shared must load first)
 modules\ClassFeatures\Shared.lua
