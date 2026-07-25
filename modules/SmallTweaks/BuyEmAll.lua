@@ -22,10 +22,6 @@ local function IsEnabled()
     return CXUI_DB and CXUI_DB.buyEmAll
 end
 
-local function ConfirmEnabled()
-    return CXUI_DB and CXUI_DB.buyEmAllConfirm
-end
-
 -- Strings shown on the window itself (buttons, tooltips, confirmation popup).
 local L = {
     MAX          = "Max",
@@ -150,18 +146,9 @@ local function ClearCurrencyDisplay()
 end
 
 ------------------------------------------------------------
--- Confirmation popups
+-- Fallback popup for the rare case Blizzard doesn't hand back an item
+-- link (so we can't build a proper Max/Stack window at all).
 ------------------------------------------------------------
-
-StaticPopupDialogs["CXUI_BUYEMALL_CONFIRM"] = {
-    preferredIndex = 3,
-    text = L.CONFIRM,
-    button1 = YES,
-    button2 = NO,
-    OnAccept = function(dialog) BEA:DoPurchase(dialog.data) end,
-    timeout = 0,
-    hideOnEscape = true,
-}
 
 BEA.ConfirmNoItemLink = 0
 StaticPopupDialogs["CXUI_BUYEMALL_CONFIRM2"] = {
@@ -173,11 +160,6 @@ StaticPopupDialogs["CXUI_BUYEMALL_CONFIRM2"] = {
     timeout = 0,
     hideOnEscape = true,
 }
-
-function BEA:DoConfirmation(amount)
-    local dialog = StaticPopup_Show("CXUI_BUYEMALL_CONFIRM", amount, self.itemName)
-    dialog.data = amount
-end
 
 ------------------------------------------------------------
 -- Helpers
@@ -432,15 +414,7 @@ function BEA:VerifyPurchase(amount)
     end
 
     if amount > 0 then
-        if amount > self.stack and amount > self.defaultStack then
-            if ConfirmEnabled() then
-                self:DoConfirmation(amount)
-            else
-                self:DoPurchase(amount)
-            end
-        else
-            self:DoPurchase(amount)
-        end
+        self:DoPurchase(amount)
     end
 end
 
@@ -772,21 +746,6 @@ maxButton:SetScript("OnLeave", function() BEA:OnLeave() end)
 
 function BEA:OnHide()
     ClearCurrencyDisplay()
-    StaticPopup_Hide("CXUI_BUYEMALL_CONFIRM")
 end
 
 ClearCurrencyDisplay()
-
-------------------------------------------------------------
--- Slash command, kept for parity with the original addon.
-------------------------------------------------------------
-
-SLASH_CXUIBUYEMALL1 = "/buyemall"
-SlashCmdList["CXUIBUYEMALL"] = function(message)
-    if message == "confirm" then
-        CXUI_DB.buyEmAllConfirm = not CXUI_DB.buyEmAllConfirm
-        print("cxUI BuyEmAll: Large purchase confirm window " .. (CXUI_DB.buyEmAllConfirm and "enabled." or "disabled."))
-    else
-        print("cxUI BuyEmAll: Use /buyemall confirm to enable/disable the large purchase confirm.")
-    end
-end

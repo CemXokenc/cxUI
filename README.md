@@ -50,7 +50,8 @@ cxUI/
     │   ├── MogMountFlyingInGround.lua #   flying mount in MogMount's ground slot
     │   ├── Death.lua               #   auto-accept resurrection / auto-release in PvP
     │   ├── LFG.lua                 #   Dungeon Finder advanced filters / reset button position
-    │   └── Mail.lua                #   remember last mail recipient
+    │   ├── Mail.lua                #   remember last mail recipient
+    │   └── BuyEmAll.lua            #   Shift-Click vendor items to open a Max/Stack purchase window
     └── ClassFeatures/              # Module 4 — class-specific overlays
         ├── Shared.lua              #   frame scan & overlay helpers (loads first)
         ├── DeathKnight.lua         #   enemy counter, festering glow, putrefy cross, frost swap
@@ -146,6 +147,7 @@ Quality-of-life improvements, one file per feature. Everything here is independe
 | `LFG.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res, and same-spec filters to the Dungeon Finder search list |
 | `LFG.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's "Reset Filter" button to the left side to avoid overlap |
 | `Mail.lua` | Remember Last Recipient | Keeps the last recipient in the mailbox "To" field after sending, until the mailbox is closed |
+| `BuyEmAll.lua` | Buy Em All | Shift-Click a vendor item to open a Max/Stack purchase window instead of Blizzard's default popup. Ported from the standalone [BuyEmAll](https://www.curseforge.com/wow/addons/buyemall) addon |
 
 To disable a single tweak without a reload, you can comment out its line in `cxUI.toc`.
 
@@ -216,6 +218,7 @@ Options marked **`(Requires Reload)*`** need `/reload` to take effect.
 | Small Tweaks | Dungeon Finder: Advanced Filters | ✅ |
 | Small Tweaks | Move 'Reset Filter' Button | ✅ |
 | Small Tweaks | Mail: Remember Last Recipient | ❌ |
+| Small Tweaks | Buy Em All | ❌ |
 | Class Features | Enemy Counter — Unholy DK | ❌ |
 | Class Features | Festering Strike Glow — Unholy DK | ❌ |
 | Class Features | Putrefy Cross — Unholy DK | ❌ |
