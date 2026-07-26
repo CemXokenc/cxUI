@@ -33,6 +33,7 @@ modules\SmallTweaks\LFG.lua
 modules\SmallTweaks\Mail.lua
 modules\SmallTweaks\BuyEmAll.lua
 modules\SmallTweaks\NoAutoClose.lua
+modules\SmallTweaks\AutoConfirm.lua
 
 # Module: Class Features (Shared must load first)
 modules\ClassFeatures\Shared.lua
