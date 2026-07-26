@@ -9,6 +9,10 @@ local addonName, cxns = ... -- cxns = cxUI's shared addon namespace (deliberatel
 -- closes your bags), and keeps ESC working correctly to close everything
 -- again, including on protected/secure frames.
 --
+-- The original addon's separate "move default position" options panel/mover
+-- UI was intentionally dropped - frames that lose their position just fall
+-- back to a fixed TOPLEFT corner (see DEFAULT_POSITION_* below).
+--
 -- Everything below lives on a private `ns` table that is local to this file
 -- ONLY - it is NOT cxUI's shared addon namespace (that's `cxns` above), so
 -- none of this can collide with state/functions used by other cxUI modules.
@@ -36,6 +40,13 @@ ns.ignore = {
 local uiSpecialFrameBlacklist = {
     PlayerSpellsFrame = true, -- cannot be safely closed with UISpecialFrames
 };
+
+-- Fixed fallback position for panels that lose their on-screen location once
+-- Blizzard's UIPanelLayout system is disabled for them. No mover/options UI
+-- for this - it's just a sane default corner.
+local DEFAULT_POSITION_ANCHOR = 'TOPLEFT';
+local DEFAULT_POSITION_X = 50;
+local DEFAULT_POSITION_Y = -50;
 
 local UpdateScaleForFit = UpdateScaleForFit or UIPanelUpdateScaleForFit or FrameUtil.UpdateScaleForFit;
 
@@ -103,11 +114,11 @@ function ns:SetDefaultPosition(frame)
     frame:ClearAllPoints();
     (frame.SetPointBase or frame.SetPoint)(
         frame,
-        self.db.defaultPosition.anchor,
+        DEFAULT_POSITION_ANCHOR,
         UIParent,
-        self.db.defaultPosition.anchor,
-        self.db.defaultPosition.x,
-        self.db.defaultPosition.y
+        DEFAULT_POSITION_ANCHOR,
+        DEFAULT_POSITION_X,
+        DEFAULT_POSITION_Y
     );
 end
 
@@ -404,6 +415,9 @@ function ns:Init()
     self.escHandlerMap = {};
     self.handlerFrameIndex = 0;
     self.sharedAttributesFrame = CreateFrame('Frame', nil, nil, 'SecureHandlerBaseTemplate');
+    self.sharedAttributesFrame:SetAttribute('anchor', DEFAULT_POSITION_ANCHOR);
+    self.sharedAttributesFrame:SetAttribute('x', DEFAULT_POSITION_X);
+    self.sharedAttributesFrame:SetAttribute('y', DEFAULT_POSITION_Y);
     self.combatLockdownQueue = {};
 
     hooksecurefunc('ShowUIPanel', function(frame) self:OnShowUIPanel(frame); end);
@@ -424,154 +438,4 @@ function ns:Init()
     self.eventFrame:RegisterEvent('PLAYER_INTERACTION_MANAGER_FRAME_HIDE');
     self.eventFrame:RegisterEvent('PLAYER_REGEN_ENABLED');
     self.eventFrame:RegisterEvent('PLAYER_REGEN_DISABLED');
-
-    self:initOptions()
-end
-
-function ns:initOptions()
-    -- Kept as its own SavedVariable/settings-category, separate from
-    -- CXUI_DB, to preserve the original addon's mover/position feature
-    -- untouched. Renamed from `NoAutoCloseDB` so it can never collide with
-    -- the standalone NoAutoClose addon's saved variables if that's also
-    -- installed alongside cxUI.
-    CXUI_NoAutoCloseDB = CXUI_NoAutoCloseDB or {};
-    self.db = CXUI_NoAutoCloseDB;
-    local defaults = {
-        defaultPosition = {
-            anchor = 'TOPLEFT',
-            x = 50,
-            y = -50,
-        },
-    };
-    for k, v in pairs(defaults) do
-        if self.db[k] == nil then
-            self.db[k] = v;
-        end
-    end
-    local function updatePositionAttributes(anchor, x, y)
-        self.sharedAttributesFrame:SetAttribute('anchor', anchor);
-        self.sharedAttributesFrame:SetAttribute('x', x);
-        self.sharedAttributesFrame:SetAttribute('y', y);
-    end
-
-    local panel = CreateFrame('Frame');
-    panel.name = 'NoAutoClose';
-
-    local title = panel:CreateFontString('ARTWORK', nil, 'GameFontNormalLarge');
-    title:SetPoint('TOPLEFT', 10, -15);
-    title:SetText('No Auto Close');
-
-    local defaultPositionHeader = panel:CreateFontString('ARTWORK', nil, 'GameFontNormal');
-    defaultPositionHeader:SetPoint('TOPLEFT', title, 'BOTTOMLEFT', 0, -15);
-    defaultPositionHeader:SetText('Default Position');
-
-    local defaultPositionDescription = panel:CreateFontString('ARTWORK', nil, 'GameFontHighlight');
-    defaultPositionDescription:SetPoint('TOPLEFT', defaultPositionHeader, 'BOTTOMLEFT', 5, -5);
-    defaultPositionDescription:SetText('Set the default position for panels that are handled by NoAutoClose.');
-
-    local currentDefaultPosition = panel:CreateFontString('ARTWORK', nil, 'GameFontHighlight');
-    currentDefaultPosition:SetPoint('TOPLEFT', defaultPositionDescription, 'BOTTOMLEFT', 0, -5);
-    local function updatePositionText()
-        currentDefaultPosition:SetText(('Current default position: %s (%.2f, %.2f)'):format(self.db.defaultPosition.anchor, self.db.defaultPosition.x, self.db.defaultPosition.y));
-    end
-    updatePositionText();
-    local moverFrame = self:GetMoverFrame(function(anchor, x, y)
-        self.db.defaultPosition.anchor = anchor;
-        self.db.defaultPosition.x = x;
-        self.db.defaultPosition.y = y;
-        updatePositionText();
-        if InCombatLockdown() then
-            self:AddToCombatLockdownQueue(updatePositionAttributes, anchor, x, y);
-        else
-            updatePositionAttributes(anchor, x, y);
-        end
-    end);
-    panel:SetScript('OnHide', function() moverFrame:Hide(); end);
-
-    local showMoverButton = CreateFrame('Button', nil, panel, 'UIPanelButtonTemplate');
-    showMoverButton:SetPoint('TOPLEFT', currentDefaultPosition, 'BOTTOMLEFT', 0, -5);
-    showMoverButton:SetSize(150, 25);
-    showMoverButton:SetText('Move default position');
-    showMoverButton:SetScript('OnClick', function()
-        moverFrame:SetShown(not moverFrame:IsShown());
-    end);
-    -- todo: add a dropdown for the anchor, and number inputs for x and y
-
-    local resetToDefaultButton = CreateFrame('Button', nil, panel, 'UIPanelButtonTemplate');
-    resetToDefaultButton:SetPoint('TOPLEFT', showMoverButton, 'BOTTOMLEFT', 0, -5);
-    resetToDefaultButton:SetSize(150, 25);
-    resetToDefaultButton:SetText('Reset to default');
-    resetToDefaultButton:SetScript('OnClick', function()
-        self.db.defaultPosition = defaults.defaultPosition;
-        updatePositionText();
-        moverFrame:ClearAllPoints();
-        moverFrame:SetPoint(self.db.defaultPosition.anchor, self.db.defaultPosition.x, self.db.defaultPosition.y);
-    end);
-
-    local category, _ = Settings.RegisterCanvasLayoutCategory(panel, panel.name);
-    Settings.RegisterAddOnCategory(category);
-
-    SLASH_CXUINOAUTOCLOSE1 = '/noautoclose';
-    SLASH_CXUINOAUTOCLOSE2 = '/nac';
-    SlashCmdList['CXUINOAUTOCLOSE'] = function()
-        if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel and InCombatLockdown() then
-            print("Cannot open the settings in combat")
-            return;
-        end
-        Settings.OpenToCategory(category:GetID());
-    end;
-end
-
-function ns:GetMoverFrame(onMoveCallback)
-    local NineSliceLayout =
-    {
-        ["TopRightCorner"] = { atlas = "%s-NineSlice-Corner", mirrorLayout = true, x = 8, y = 8 },
-        ["TopLeftCorner"] = { atlas = "%s-NineSlice-Corner", mirrorLayout = true, x = -8, y = 8 },
-        ["BottomLeftCorner"] = { atlas = "%s-NineSlice-Corner", mirrorLayout = true, x = -8, y = -8 },
-        ["BottomRightCorner"] = { atlas = "%s-NineSlice-Corner", mirrorLayout = true, x = 8, y = -8 },
-        ["TopEdge"] = { atlas = "_%s-NineSlice-EdgeTop" },
-        ["BottomEdge"] = { atlas = "_%s-NineSlice-EdgeBottom" },
-        ["LeftEdge"] = { atlas = "!%s-NineSlice-EdgeLeft" },
-        ["RightEdge"] = { atlas = "!%s-NineSlice-EdgeRight" },
-        ["Center"] = { atlas = "%s-NineSlice-Center", x = -8, y = 8, x1 = 8, y1 = -8, },
-    };
-
-    local frame = CreateFrame('Frame', 'CXUI_NoAutoCloseMoverFrame', UIParent);
-    frame:SetSize(150, 100);
-    frame:SetPoint(self.db.defaultPosition.anchor, self.db.defaultPosition.x, self.db.defaultPosition.y);
-    frame:SetFrameStrata('DIALOG');
-    frame:SetFrameLevel(9990);
-    frame.layoutType = 'UniqueCornersLayout';
-    frame.layoutTextureKit = 'OptionsFrame';
-    NineSliceUtil.ApplyLayout(frame, NineSliceLayout, 'editmode-actionbar-highlight');
-
-    local closeButton = CreateFrame('Button', nil, frame, 'UIPanelCloseButton');
-    closeButton:SetFrameStrata('DIALOG')
-    closeButton:SetFrameLevel(9999);
-    closeButton:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', 0, 0);
-    closeButton:SetScript('OnClick', function()
-        frame:Hide();
-    end);
-
-    local label = frame:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall');
-    label:SetAllPoints();
-    label:SetIgnoreParentScale(true);
-    label:SetJustifyH('CENTER');
-    label:SetJustifyV('MIDDLE');
-    label:SetText('NoAutoClose');
-
-    frame.onMoveCallback = onMoveCallback;
-    frame:SetMovable(true);
-    frame:SetScript('OnMouseDown', function()
-        frame:StartMoving();
-    end);
-    frame:SetScript('OnMouseUp', function()
-        frame:StopMovingOrSizing();
-        frame:SetUserPlaced(false);
-        local anchor, _, _, x, y = frame:GetPoint();
-        frame.onMoveCallback(anchor, x, y);
-    end);
-    frame:Hide();
-
-    return frame;
 end

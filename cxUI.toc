@@ -4,7 +4,7 @@
 ## Notes-ukUA: Мінімалістичний інтерфейс: авто-ховання панелей та квест-лога, підсвітка проків для CDM.
 ## Version: 1.0.0
 ## Author: cemxokenc
-## SavedVariables: CXUI_DB, CDMProcGlowDB, CXUI_NoAutoCloseDB
+## SavedVariables: CXUI_DB
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
 
 # Libraries
