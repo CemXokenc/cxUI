@@ -253,7 +253,11 @@ CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound w
 -- ---------------------------------------------------------------------------
 -- HookScript instead of SetScript — preserves WoW's own OnShow set by the Settings API.
 -- Explicitly refresh every checkbox so the UI always reflects CXUI_DB.
-optionsPanel:HookScript("OnShow", function()
+-- Pulled out into a standalone function so it can be called from multiple
+-- triggers (OnShow alone isn't reliable — it only fires on a hidden->shown
+-- transition, and the Settings window doesn't always give us one when
+-- switching categories or reopening after a /reload).
+local function RefreshCheckboxStates()
     EnsureDBDefaults()
     for _, cb in ipairs(allCheckboxes) do
         if cb.radioValue ~= nil then
@@ -261,6 +265,40 @@ optionsPanel:HookScript("OnShow", function()
         else
             cb.frame:SetChecked(CXUI_DB[cb.key])
         end
+    end
+end
+
+optionsPanel:HookScript("OnShow", RefreshCheckboxStates)
+
+-- Safety net: while the panel is actually visible, keep re-syncing the
+-- checkboxes on a slow timer. This costs nothing when the panel is closed
+-- and guarantees the display can never drift from CXUI_DB for long, even
+-- if the game's Show/Hide transitions don't behave the way we expect.
+local refreshTicker
+optionsPanel:HookScript("OnShow", function()
+    if not refreshTicker then
+        refreshTicker = C_Timer.NewTicker(1, function()
+            if optionsPanel:IsShown() then
+                RefreshCheckboxStates()
+            end
+        end)
+    end
+end)
+optionsPanel:HookScript("OnHide", function()
+    if refreshTicker then
+        refreshTicker:Cancel()
+        refreshTicker = nil
+    end
+end)
+
+-- Also refresh right after entering the world (covers /reload and login),
+-- in case the panel was somehow left in a shown state from a previous
+-- session without a fresh OnShow transition.
+local refreshOnEnter = CreateFrame("Frame")
+refreshOnEnter:RegisterEvent("PLAYER_ENTERING_WORLD")
+refreshOnEnter:SetScript("OnEvent", function()
+    if optionsPanel:IsShown() then
+        RefreshCheckboxStates()
     end
 end)
 
