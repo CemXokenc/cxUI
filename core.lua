@@ -29,6 +29,7 @@ local function EnsureDBDefaults()
         hideExtraActionDecor      = true,
         externalAlertSound        = true,
         mythicPlusDispelAlert     = true,
+        escTeleportButtons        = true,
         expandVendorWindow        = true,
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
@@ -249,6 +250,8 @@ CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pu
 CreateHeader("Module 5: Mythic+", -745)
 CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -770, false, L)
 CreateCheckbox("Dispellable Debuff Alert", "mythicPlusDispelAlert", "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.", -770, false, R)
+local escTeleCheck = CreateCheckbox("ESC Menu Dungeon Teleports", "escTeleportButtons", "Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC).", -800, false, L)
+escTeleCheck:HookScript("OnClick", function() if ns.CXUI_ESCTeleports_Refresh then ns.CXUI_ESCTeleports_Refresh() end end)
 
 -- ---------------------------------------------------------------------------
 -- Panel events

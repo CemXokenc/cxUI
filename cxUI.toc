@@ -44,3 +44,4 @@ modules\ClassFeatures\Warlock.lua
 # Module: Mythic+
 modules\MythicPlus\ExternalAlert.lua
 modules\MythicPlus\DispelAlert.lua
+modules\MythicPlus\ESCTeleports.lua
