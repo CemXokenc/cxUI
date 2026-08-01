@@ -6,6 +6,7 @@
 ## Author: cemxokenc
 ## SavedVariables: CXUI_DB
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
+## OptionalDeps: EllesmereUI, EllesmereUIMythicTimer
 
 # Libraries
 libs\LibCustomGlow-1.0.lua
@@ -45,3 +46,4 @@ modules\ClassFeatures\Warlock.lua
 modules\MythicPlus\ExternalAlert.lua
 modules\MythicPlus\DispelAlert.lua
 modules\MythicPlus\ESCTeleports.lua
+modules\MythicPlus\BossPBPreview.lua
