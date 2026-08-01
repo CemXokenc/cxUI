@@ -71,25 +71,43 @@ end
 -- ---------------------------------------------------------------------------
 local alertedInstance = {} -- [unit] = auraInstanceID we already alerted for
 
-local canQuery = C_UnitAuras and C_UnitAuras.GetDebuffDataByIndex
+local canQuery = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.IsAuraFilteredOutByInstanceID
 
 local function CheckUnitForDispellableDebuff(unit)
     if not IsEnabled() then return end
     if not IsInMythicPlus() then return end
 
     if not canQuery then
-        Debug("C_UnitAuras.GetDebuffDataByIndex missing on this client -- can't check")
+        Debug("Required C_UnitAuras functions missing on this client -- can't check")
         return
     end
 
-    -- "RAID_PLAYER_DISPELLABLE": only debuffs the ACTIVE PLAYER can dispel
-    -- are returned here at all -- Blizzard does the filtering for us.
-    local auraData = C_UnitAuras.GetDebuffDataByIndex(unit, 1, "RAID_PLAYER_DISPELLABLE")
+    local matchedInstanceID = nil
 
-    if auraData and auraData.auraInstanceID then
-        if alertedInstance[unit] ~= auraData.auraInstanceID then
-            alertedInstance[unit] = auraData.auraInstanceID
-            Debug("Match on", unit, "auraInstanceID", auraData.auraInstanceID)
+    for i = 1, 40 do
+        local aura = C_UnitAuras.GetAuraDataByIndex(unit, i, "HARMFUL")
+        if not aura then break end
+
+        -- auraInstanceID is a plain number, never secret -- safe to use.
+        local auraInstanceID = aura.auraInstanceID
+
+        -- Per-instance membership check: returns a plain boolean telling us
+        -- whether THIS specific aura passes the "player can dispel it"
+        -- filter, without ever exposing the aura's actual (secret) type to
+        -- us. This is the same pattern real addons like Plater use via
+        -- IsAuraFilteredOutByInstanceID(unit, id, "RAID_PLAYER_DISPELLABLE").
+        local filteredOut = auraInstanceID and C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, auraInstanceID, "RAID_PLAYER_DISPELLABLE")
+
+        if filteredOut == false then
+            matchedInstanceID = auraInstanceID
+            break
+        end
+    end
+
+    if matchedInstanceID then
+        if alertedInstance[unit] ~= matchedInstanceID then
+            alertedInstance[unit] = matchedInstanceID
+            Debug("Match on", unit, "auraInstanceID", matchedInstanceID)
             PlayDispelAlertSound(unit)
         end
     else
