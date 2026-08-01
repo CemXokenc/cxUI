@@ -46,4 +46,4 @@ modules\ClassFeatures\Warlock.lua
 modules\MythicPlus\ExternalAlert.lua
 modules\MythicPlus\DispelAlert.lua
 modules\MythicPlus\ESCTeleports.lua
-modules\MythicPlus\BossPBPreview.lua
+modules\MythicPlus\BossTimerPreview.lua

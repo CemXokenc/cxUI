@@ -139,9 +139,9 @@ local function OnEMTRefresh()
             if split then
                 local timeFS = rows[idx].time
                 if foundLevel == level then
-                    timeFS:SetText("|cff888888PB " .. FormatTime(split) .. "|r")
+                    timeFS:SetText("|cff888888" .. FormatTime(split) .. "|r")
                 else
-                    timeFS:SetText("|cff888888PB " .. FormatTime(split) .. " (+" .. foundLevel .. ")|r")
+                    timeFS:SetText("|cff888888" .. FormatTime(split) .. " (+" .. foundLevel .. ")|r")
                 end
             end
             -- No PB data at all down to the floor level -> leave whatever
