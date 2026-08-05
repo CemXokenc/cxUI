@@ -35,6 +35,7 @@ local function EnsureDBDefaults()
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
         mogMountFlyingInGround    = true,
+        SpaceCastInterruptBlock   = true,
 		---------------------------------
         cdmEnemyCounter           = true,
         noMovement                = true,
@@ -231,6 +232,7 @@ CreateCheckbox("Mail: Remember Last Recipient", "mailRememberRecipient", "Keeps 
 CreateCheckbox("Buy Em All",                    "buyEmAll",           "Shift-Click a vendor item to open a Max/Stack purchase window instead of Blizzard's default popup.", -490, false, R)
 CreateCheckbox("No Auto Close",                 "noAutoClose",        "Stops opening a panel (map, bags, character, etc.) from auto-closing other open panels, and keeps ESC working to close them properly.", -520, true, L)
 CreateCheckbox("Auto Confirm Purchases & Mail Warnings", "autoConfirm", "Automatically accepts the 'confirm purchase' and 'this item will become non-refundable' (mail) popups without requiring a manual click.", -550, false, L)
+CreateCheckbox("Block Space Bar duriong Cast",     "SpaceCastInterruptBlock", "Disables the Space bar while casting to prevent accidental jumps", -550, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Module 4 — Class Features

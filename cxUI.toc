@@ -24,6 +24,7 @@ modules\CDM\CDMGlow.lua
 modules\SmallTweaks\Absorb.lua
 modules\SmallTweaks\Alerts.lua
 modules\SmallTweaks\MacroOverride.lua
+modules\SmallTweaks\SpaceCastInterruptBlock.lua
 modules\SmallTweaks\Sounds.lua
 modules\SmallTweaks\ExtraActionBar.lua
 modules\SmallTweaks\ExpandVendorWindow.lua
