@@ -152,6 +152,11 @@ local function CreateButton(parent, data, yOffset)
     btn:RegisterEvent("SPELLS_CHANGED")
     btn:RegisterEvent("CHALLENGE_MODE_COMPLETED")
     btn:SetScript("OnEvent", function(self, event)
+        -- Once built, buttons persist (and keep receiving events) even after
+        -- the feature is toggled off, since they're only ever hidden, not
+        -- destroyed. Bail out here so a disabled feature truly does nothing.
+        if not IsEnabled() then return end
+
         if event == "CHALLENGE_MODE_COMPLETED" then
             -- Cooldown starts a moment after the vignette fires; give it a beat.
             C_Timer.After(2, function()
@@ -199,6 +204,19 @@ GameMenuFrame:HookScript("OnShow", function()
 end)
 
 GameMenuFrame:HookScript("OnHide", function()
-    if container then container:Hide() end
+    -- container hosts SecureActionButtonTemplate children, which makes Hide()
+    -- on it a protected call while in combat lockdown. Skip it in that case;
+    -- PLAYER_REGEN_ENABLED below will clean it up once combat ends.
+    if container and not InCombatLockdown() then
+        container:Hide()
+    end
     StopTicking()
+end)
+
+local cleanupFrame = CreateFrame("Frame")
+cleanupFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+cleanupFrame:SetScript("OnEvent", function()
+    if container and container:IsShown() and not GameMenuFrame:IsShown() then
+        container:Hide()
+    end
 end)

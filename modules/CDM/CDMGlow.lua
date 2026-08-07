@@ -436,8 +436,8 @@ local PROC_CONFIG = {
         ["ready:42650"]   = { 42650 },                   -- Army of the Dead       → glow when ready
         ["ready:1249658"] = { 1249658 },                 -- Breath of Sindragosa   → glow when ready
         -- Utility
-        ["ready:47528"] = { 47528 },                     -- Mind Freeze            → glow when ready
-        ["ready:49576"] = { 49576 },                     -- Death Grip             → glow when ready
+        -- ["ready:47528"] = { 47528 },                     -- Mind Freeze            → glow when ready
+        -- ["ready:49576"] = { 49576 },                     -- Death Grip             → glow when ready
     },
     MAGE = {
         -- Procs
@@ -448,8 +448,10 @@ local PROC_CONFIG = {
         -- CDs
         ["ready:84714"] = { 84714 },                     -- Frozen Orb             → glow when ready
         -- Utility
-        ["ready:2139"] = { 2139 },                       -- Counterspell           → glow when ready
+        -- ["ready:2139"] = { 2139 },                       -- Counterspell           → glow when ready
         ["ready:475"]  = { 475 },                        -- Remove Curse           → glow when ready
+        ["ready:30449"]  = { 30449 },                        -- Spellsteal           → glow when ready
+		
     },
     WARLOCK = {
         -- Procs
@@ -463,8 +465,10 @@ local PROC_CONFIG = {
         ["cdm:1276452"]  = { 1276452 },                  -- Grimoire: Imp Lord     → always glow if present in CDM
         ["cdm:1276467"]  = { 1276467 },                  -- Grimoire: Fel Ravager  → always glow if present in CDM
         -- Utility
-        ["ready:119914"] = { 119914 },                   -- Axe Toss              → glow when ready
-        ["ready:119910"] = { 119910 },                   -- Spell Lock             → glow when ready
+        -- ["ready:119914"] = { 119914 },                   -- Axe Toss              → glow when ready
+        -- ["ready:119910"] = { 119910 },                   -- Spell Lock             → glow when ready
+        -- ["ready:89808"] = { 89808 },                   -- Singe Magic            → glow when ready
+        -- ["ready:19505"] = { 19505 },                   -- Devour Magic            → glow when ready
     },
     WARRIOR = {
 		-- Procs
@@ -472,8 +476,29 @@ local PROC_CONFIG = {
 		-- CDs
 		["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
 		-- Utility
-		["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
-	}, PALADIN = {}, HUNTER = {}, ROGUE = {},
+		-- ["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
+		["ready:64382"]  = { 64382 },                    -- Shattering Throw                → glow when ready
+	}, PALADIN = {
+		-- Procs
+        -- CDs        
+        -- Utility
+		-- ["ready:96231"] = { 96231 },                   -- Rebuke        → glow when ready
+		["ready:4987"] = { 4987 },                   -- Cleanse        → glow when ready
+		["ready:213644"] = { 213644 },                   -- Cleanse Toxins        → glow when ready
+	}, HUNTER = {
+		-- Procs
+        -- CDs        
+        -- Utility
+		-- ["ready:147362"] = { 147362 },                   -- Counter Shot        → glow when ready		
+		["ready:19801"] = { 19801 },                   -- Tranquilizing Shot        → glow when ready		
+		["ready:212640"] = { 212640 },                   -- Mending Bandage      → glow when ready		
+	}, ROGUE = {
+		-- Procs
+        -- CDs        
+        -- Utility
+		-- ["ready:1766"]  = { 1766 },                    -- Kick                → glow when ready
+		["ready:5938"]  = { 5938 },                    -- Shiv                → glow when ready
+	},
     PRIEST = {
         -- Procs
         --[375981] = { 8092, 450983 },                     -- Shadowy Insight        → Mind Blast, Void Blast
@@ -486,24 +511,42 @@ local PROC_CONFIG = {
         ["ready:263165"]  = { 263165 },                  -- Void Torrent           → glow when ready
         ["ready:450983"]  = { 450983 },                  -- Void Blast             → glow when ready
         -- Utility
-        ["ready:15487"]  = { 15487 },                    -- Silence                → glow when ready
+        -- ["ready:15487"]  = { 15487 },                    -- Silence                → glow when ready
+        ["ready:32375"] = { 32375 },                   -- Mass Dispel        → glow when ready
         ["ready:213634"] = { 213634 },                   -- Purify Disease         → glow when ready
-        ["ready:528"]    = { 528 },                      -- Dispel Magic           → glow when ready
         ["ready:527"]    = { 527 },                      -- Purify                 → glow when ready
+        ["ready:528"]    = { 528 },                      -- Dispel Magic           → glow when ready
     },
-    SHAMAN = {},
+    SHAMAN = {
+		-- Procs
+        -- CDs        
+        -- Utility
+		-- ["ready:57994"]  = { 57994 },                    -- Wind Shear            → glow when ready
+		["ready:8166"]  = { 8166 },                    -- Poison Cleansing Totem            → glow when ready
+		["ready:51886"]  = { 51886 },                    -- Cleanse Spirit                → glow when ready
+		["ready:77130"]  = { 77130 },                    -- Purify Spirit               → glow when ready
+		["ready:370"]  = { 370 },                    -- Purge                → glow when ready
+	},
     MONK = {
         -- Procs
         --[438443] = { 101546 },                           -- Dance of Chi-Ji            → Spinning Crane Kick
         --[443112] = { 124682 },                           -- Strength of the Black Ox  → Enveloping Mist
-    },
-    DRUID = {
-		-- Procs        
         -- CDs        
         -- Utility
-		["ready:106839"]  = { 106839 },                    -- Skull Bash                → glow when ready
-		["ready:2908"]  = { 2908 },   		               -- Soothe        	        → glow when ready
+		-- ["ready:116705"] = { 116705 },                   -- Spear Hand Strike        → glow when ready
+		["ready:218164"] = { 218164 },                   -- Detox        → glow when ready
+		["ready:115450"] = { 115450 },                   -- Detox        → glow when ready
+    },
+    DRUID = {
+		-- Procs
+        -- CDs        
+        -- Utility
+		-- ["ready:106839"]  = { 106839 },                    -- Skull Bash                → glow when ready
+		-- ["ready:78675"]  = { 78675 },   		               -- Solar Beam	        → glow when ready		
+		-- ["ready:106839"]  = { 106839 },   		               -- Skull Bash	        → glow when ready		
 		["ready:2782"]  = { 2782 },   		               -- Remove Corruption	        → glow when ready
+		["ready:88423"]  = { 88423 },   		               -- Nature's Cure        → glow when ready
+		["ready:2908"]  = { 2908 },   		               -- Soothe        	        → glow when ready
 	},
     DEMONHUNTER = {
         -- Procs
@@ -514,10 +557,20 @@ local PROC_CONFIG = {
         ["ready:191427"]  = { 191427 },                  -- Metamorphosis          → glow when ready
         ["ready:473728"]  = { 473728 },                  -- Void Ray               → glow when ready
         -- Utility
-        ["ready:183752"] = { 183752 },                   -- Disrupt                → glow when ready
+        -- ["ready:183752"] = { 183752 },                   -- Disrupt                → glow when ready
         ["ready:278326"] = { 278326 },                   -- Consume Magic          → glow when ready
+        ["ready:205604"] = { 205604 },                   -- Reverse Magic        → glow when ready
     },
-    EVOKER = {},
+    EVOKER = {
+		-- Procs
+        -- CDs        
+        -- Utility
+		-- ["ready:351338"] = { 351338 },                   -- Quell        → glow when ready
+		["ready:374251"] = { 374251 },                   -- Cauterizing Flame         → glow when ready
+		["ready:365585"] = { 365585 },                   -- Expunge         → glow when ready
+		["ready:360823"] = { 360823 },                   -- Naturalize         → glow when ready		
+		["ready:372048"] = { 372048 },                   -- Oppressing Roar         → glow when ready		
+	},
 }
 
 -- ---------------------------------------------------------------------------

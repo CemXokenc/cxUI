@@ -18,12 +18,32 @@ local function IsEnabled()
     return CXUI_DB and CXUI_DB.SpaceCastInterruptBlock
 end
 
+-- SetOverrideBindingClick/ClearOverrideBindings are protected functions and
+-- can only be called outside of combat lockdown. If an event fires mid-combat
+-- (very common for UNIT_SPELLCAST_*), remember the desired state and apply
+-- it as soon as combat ends instead of calling the protected function
+-- directly, to avoid ADDON_ACTION_BLOCKED errors.
+local pendingBlock = nil -- nil = nothing pending, true/false = desired state
+
+local function ApplyBindingState(shouldBlock)
+    if InCombatLockdown() then
+        pendingBlock = shouldBlock
+        return
+    end
+    if shouldBlock then
+        SetOverrideBindingClick(frame, false, "SPACE", "CXUI_SpaceBlockDummy")
+    else
+        ClearOverrideBindings(frame)
+    end
+    pendingBlock = nil
+end
+
 local function BlockSpace()
-    SetOverrideBindingClick(frame, false, "SPACE", "CXUI_SpaceBlockDummy")
+    ApplyBindingState(true)
 end
 
 local function UnblockSpace()
-    ClearOverrideBindings(frame)
+    ApplyBindingState(false)
 end
 
 frame:RegisterEvent("UNIT_SPELLCAST_START")
@@ -32,8 +52,17 @@ frame:RegisterEvent("UNIT_SPELLCAST_FAILED")
 frame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 frame:SetScript("OnEvent", function(self, event, unit)
+    if event == "PLAYER_REGEN_ENABLED" then
+        -- Combat just ended; apply whatever state was requested while locked down.
+        if pendingBlock ~= nil then
+            ApplyBindingState(pendingBlock)
+        end
+        return
+    end
+
     if unit ~= "player" then return end
 
     if not IsEnabled() then
