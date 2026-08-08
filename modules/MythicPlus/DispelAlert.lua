@@ -60,22 +60,31 @@ end
 -- Same list style Decursive builds its "CuringSpells" table from.
 -- ---------------------------------------------------------------------------
 local DISPEL_SPELLS = {
+    -- Healer-spec dispels (full Magic dispel, most also gain more via a talent)
     [88423]  = { Magic = true },                  -- Nature's Cure (Druid, Restoration)
     [360823] = { Magic = true },                  -- Naturalize (Evoker, Preservation)
-    [218164] = { Magic = true },                  -- Detox (Monk, Mistweaver)
+    [115450] = { Magic = true },                  -- Detox (Monk, Mistweaver)
     [4987]   = { Magic = true },                  -- Cleanse (Paladin, Holy)
-    [213644] = { Poison = true, Disease = true }, -- Cleanse Toxins (Paladin, Protection/Retribution)
     [527]    = { Magic = true },                  -- Purify (Priest, Discipline/Holy)
-    [213634] = { Disease = true },                -- Purify Disease (Priest, Shadow)
     [77130]  = { Magic = true },                  -- Purify Spirit (Shaman, Restoration)
+
+    -- Non-healer-spec dispels (partial types, no Magic -- this is the group
+    -- that was missing before: Guardian/Balance/Feral Druid, Brewmaster/
+    -- Windwalker Monk, Devastation/Augmentation Evoker, etc.)
+    [2782]   = { Curse = true, Poison = true },   -- Remove Corruption (Druid, Balance/Feral/Guardian)
+    [218164] = { Poison = true, Disease = true }, -- Detox (Monk, Brewmaster/Windwalker)
+    [374251] = { Curse = true, Poison = true, Disease = true }, -- Cauterizing Flame (Evoker, Devastation/Augmentation)
+    [365585] = { Poison = true },                 -- Expunge (Evoker, Devastation/Augmentation)
+    [213644] = { Poison = true, Disease = true }, -- Cleanse Toxins (Paladin, Protection/Retribution)
+    [213634] = { Disease = true },                -- Purify Disease (Priest, Shadow)
     [51886]  = { Curse = true },                  -- Cleanse Spirit (Shaman, Elemental/Enhancement)
-    [475]    = { Curse = true },                  -- Remove Curse (Mage)
+    [475]    = { Curse = true },                  -- Remove Curse (Mage, any spec)
     [89808]  = { Magic = true },                  -- Singe Magic (Warlock, via Imp)
 }
 
 local DISPEL_TALENT_ADDITIONS = {
     [392378] = { baseSpell = 88423,  add = { Curse = true, Poison = true } },   -- Improved Nature's Cure
-    [388874] = { baseSpell = 218164, add = { Poison = true, Disease = true } }, -- Improved Detox
+    [388874] = { baseSpell = 115450, add = { Poison = true, Disease = true } }, -- Improved Detox (Mistweaver)
     [383016] = { baseSpell = 77130,  add = { Curse = true } },                  -- Improved Purify Spirit
 }
 
