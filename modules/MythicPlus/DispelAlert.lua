@@ -186,8 +186,8 @@ end
 local DISPEL_FILTER = "RAID_PLAYER_DISPELLABLE"
 
 local function GetUnitDebuff(unitToken, i)
-    local auraData = C_UnitAuras and C_UnitAuras.GetDebuffDataByIndex(unitToken, i, DISPEL_FILTER)
-    if not auraData then
+    local ok, auraData = pcall(C_UnitAuras.GetDebuffDataByIndex, unitToken, i, DISPEL_FILTER)
+    if not ok or not auraData then
         return nil
     end
     return auraData.name, auraData.dispelName, auraData.spellId, auraData.auraInstanceID
@@ -201,11 +201,15 @@ local alertedInstance = {} -- [unit] = auraInstanceID we already alerted for
 local function CheckUnitForDispellableDebuff(unit)
     if not IsEnabled() then return end
     if not IsInMythicPlus() then return end
-    if not next(myDispelTypes) then return end -- nothing this spec can dispel
+    if not next(myDispelTypes) then return end
     if not C_UnitAuras then return end
 
-    local matchedInstanceID = nil
+    if InCombatLockdown and InCombatLockdown() then
+        Debug("Skip: in combat, aura data may be secret/tainted")
+        return
+    end
 
+    local matchedInstanceID = nil
     for i = 1, 40 do
         local name, typeName, spellID, auraInstanceID = GetUnitDebuff(unit, i)
         if not name then break end

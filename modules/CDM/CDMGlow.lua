@@ -475,6 +475,7 @@ local PROC_CONFIG = {
 		--[29725] = { 281000 },                     -- Sudden Death        → Execute
 		-- CDs
 		["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
+		["ready:446035"]  = { 446035 },                    -- Bladestorm               → glow when ready
 		-- Utility
 		-- ["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
 		["ready:64382"]  = { 64382 },                    -- Shattering Throw                → glow when ready
@@ -518,8 +519,13 @@ local PROC_CONFIG = {
         ["ready:528"]    = { 528 },                      -- Dispel Magic           → glow when ready
     },
     SHAMAN = {
-		-- Procs
-        -- CDs        
+		-- Procs		
+        -- CDs
+		-- ["ready:452201"]  = { 452201 },                    -- Tempest            → glow when ready
+		["ready:191634"]  = { 191634 },                    -- Poison Cleansing Totem            → glow when ready
+		-- ["ready:114050"]  = { 114050 },                    -- Ascendance            → glow when ready
+		["ready:462620"]  = { 462620 },                    -- Earth Quake            → glow when ready
+		["ready:117014"]  = { 117014 },                    -- Elemental Blast            → glow when ready
         -- Utility
 		-- ["ready:57994"]  = { 57994 },                    -- Wind Shear            → glow when ready
 		["ready:8166"]  = { 8166 },                    -- Poison Cleansing Totem            → glow when ready
@@ -531,7 +537,7 @@ local PROC_CONFIG = {
         -- Procs
         --[438443] = { 101546 },                           -- Dance of Chi-Ji            → Spinning Crane Kick
         --[443112] = { 124682 },                           -- Strength of the Black Ox  → Enveloping Mist
-        -- CDs        
+        -- CDs		
         -- Utility
 		-- ["ready:116705"] = { 116705 },                   -- Spear Hand Strike        → glow when ready
 		["ready:218164"] = { 218164 },                   -- Detox        → glow when ready
@@ -539,7 +545,10 @@ local PROC_CONFIG = {
     },
     DRUID = {
 		-- Procs
-        -- CDs        
+        -- CDs  
+		["ready:204066"] = { 204066 },                 -- Lunar Beam     → glow when ready		
+		["ready:202770"] = { 202770 },                 -- Fury of Elune     → glow when ready		
+		["ready:1261867"] = { 1261867 },                 -- Heart of the Wild     → glow when ready
         -- Utility
 		-- ["ready:106839"]  = { 106839 },                    -- Skull Bash                → glow when ready
 		-- ["ready:78675"]  = { 78675 },   		               -- Solar Beam	        → glow when ready		
