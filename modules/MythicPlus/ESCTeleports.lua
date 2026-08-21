@@ -14,17 +14,17 @@ local addonName, ns = ...
 -- while the teleport is on cooldown.
 -- ---------------------------------------------------------------------------
 
--- Current season (Midnight S1) Mythic+ dungeon teleports.
+-- Current season (Midnight S2) Mythic+ dungeon teleports.
 -- Update this list at the start of each new M+ season.
 local DUNGEONS = {
-    {icon = "Interface\\Icons\\achievement_dungeon_dragonacademy",        spellID = 393273,  name = "AA"},
-    {icon = "Interface\\Icons\\inv_achievement_dungeon_maisarahills",     spellID = 1254559, name = "MC"},
-    {icon = "Interface\\Icons\\inv_achievement_dungeon_magistersterrace", spellID = 1254572, name = "MT"},
-    {icon = "Interface\\Icons\\inv_achievement_dungeon_nexuspointxenas",  spellID = 1254563, name = "NPX"},
-    {icon = "Interface\\Icons\\achievement_dungeon_icecrown_pitofsaron",  spellID = 1254555, name = "POS"},
-    {icon = "Interface\\Icons\\achievement_dungeon_argusdungeon",         spellID = 1254551, name = "SEAT"},
-    {icon = "Interface\\Icons\\achievement_dungeon_arakkoaspires",        spellID = 159898,  name = "SR"},
-    {icon = "Interface\\Icons\\inv_achievement_dungeon_windrunnerspire",  spellID = 1254400, name = "WS"},
+    {icon = "Interface\\Icons\\inv_achievement_dungeon_altaroffangs",       spellID = 1286812, name = "AoF"},
+    {icon = "Interface\\Icons\\inv_achievement_dungeon_murderrow",         spellID = 1286809, name = "MR"},
+    {icon = "Interface\\Icons\\inv_achievement_dungeon_proveyourworth",    spellID = 1286807, name = "DoN"},
+    {icon = "Interface\\Icons\\inv_achievement_dungeon_lightbloom",        spellID = 1286801, name = "BV"},
+    {icon = "Interface\\Icons\\inv_achievement_dungeon_voidscararena",     spellID = 1286804, name = "VA"},
+    {icon = "Interface\\Icons\\achievement_dungeon_kingsrest",             spellID = 1286831, name = "KR"},
+    {icon = "Interface\\Icons\\achievement_dungeon_templeofsethraliss",    spellID = 1286828, name = "ToS"},
+    {icon = "Interface\\Icons\\achievement_dungeon_lifepools",             spellID = 393256,  name = "RLP"},
 }
 
 local function IsEnabled()

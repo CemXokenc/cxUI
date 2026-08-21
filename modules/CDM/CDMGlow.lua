@@ -474,7 +474,7 @@ local PROC_CONFIG = {
 		-- Procs
 		--[29725] = { 281000 },                     -- Sudden Death        → Execute
 		-- CDs
-		["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
+		-- ["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
 		["ready:446035"]  = { 446035 },                    -- Bladestorm               → glow when ready
 		-- Utility
 		-- ["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
