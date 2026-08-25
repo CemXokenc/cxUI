@@ -36,8 +36,7 @@ local SPELL_FROSTSCYTHE         = 207230
 local FESTERING_DELAY  = 20
 local PUTREFY_DELAY    = 36
 local PUTREFY_DURATION = 9
-local REAPER_DELAY     = 35
-local REAPER_DURATION  = 10
+local REAPER_DURATION  = 6
 
 -- ---------------------------------------------------------------------------
 -- FESTERING STRIKE GLOW (cdmFesteringGlow)
@@ -146,9 +145,7 @@ local function OnDarkTransformationCast()
     reaperWarningActive = false
     for _, ov in pairs(cdmReaperOverlays) do HideXCross(ov) end
     if CXUI_DB[DB_REAPER] then
-        reaperWarningTimer = C_Timer.NewTimer(REAPER_DELAY, function()
-            reaperWarningTimer = nil; ShowReaperWarning()
-        end)
+        ShowReaperWarning()
     end
 end
 

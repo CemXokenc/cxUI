@@ -476,24 +476,28 @@ local PROC_CONFIG = {
 		-- CDs
 		-- ["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
 		["ready:446035"]  = { 446035 },                    -- Bladestorm               → glow when ready
+		["ready:260708"]  = { 260708 },                    -- Sweeping Strikes               → glow when ready
 		-- Utility
 		-- ["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
 		["ready:64382"]  = { 64382 },                    -- Shattering Throw                → glow when ready
-	}, PALADIN = {
+	}, 
+	PALADIN = {
 		-- Procs
         -- CDs        
         -- Utility
 		-- ["ready:96231"] = { 96231 },                   -- Rebuke        → glow when ready
 		["ready:4987"] = { 4987 },                   -- Cleanse        → glow when ready
 		["ready:213644"] = { 213644 },                   -- Cleanse Toxins        → glow when ready
-	}, HUNTER = {
+	}, 
+	HUNTER = {
 		-- Procs
         -- CDs        
         -- Utility
 		-- ["ready:147362"] = { 147362 },                   -- Counter Shot        → glow when ready		
 		["ready:19801"] = { 19801 },                   -- Tranquilizing Shot        → glow when ready		
 		["ready:212640"] = { 212640 },                   -- Mending Bandage      → glow when ready		
-	}, ROGUE = {
+	}, 
+	ROGUE = {
 		-- Procs
         -- CDs        
         -- Utility
