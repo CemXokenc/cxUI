@@ -36,7 +36,8 @@ local SPELL_FROSTSCYTHE         = 207230
 local FESTERING_DELAY  = 20
 local PUTREFY_DELAY    = 36
 local PUTREFY_DURATION = 9
-local REAPER_DURATION  = 6
+local REAPER_DURATION      = 6
+local REAPER_GLOW_DURATION = 5
 
 -- ---------------------------------------------------------------------------
 -- FESTERING STRIKE GLOW (cdmFesteringGlow)
@@ -107,18 +108,15 @@ end
 local DB_REAPER = "cdmReaperCross"
 local cdmReaperOverlays    = {}
 local reaperWarningActive  = false
-local reaperWarningTimer   = nil
 local reaperDurationTimer  = nil
-local ShowReaperWarning    -- forward declaration
 
 local function StopReaperWarning()
     reaperWarningActive = false
-    if reaperWarningTimer  then reaperWarningTimer:Cancel();  reaperWarningTimer  = nil end
     if reaperDurationTimer then reaperDurationTimer:Cancel(); reaperDurationTimer = nil end
     for _, ov in pairs(cdmReaperOverlays) do HideXCross(ov) end
 end
 
-ShowReaperWarning = function()
+local function ShowReaperWarning()
     if reaperDurationTimer then reaperDurationTimer:Cancel(); reaperDurationTimer = nil end
     reaperWarningActive = true
     if CXUI_DB[DB_REAPER] then
@@ -126,6 +124,46 @@ ShowReaperWarning = function()
     end
     reaperDurationTimer = C_Timer.NewTimer(REAPER_DURATION, function()
         reaperDurationTimer = nil; StopReaperWarning()
+    end)
+end
+
+-- ---------------------------------------------------------------------------
+-- DT GLOW (cdmDTGlow) — talent-gated: if the player knows talent
+-- TALENT_DT_GLOW, glow the Dark Transformation CDM icon for
+-- DT_GLOW_DURATION seconds, starting DT_GLOW_DELAY seconds after DT is cast.
+-- ---------------------------------------------------------------------------
+
+local DB_DT_GLOW        = "cdmDTGlow"
+local TALENT_DT_GLOW    = 1271974
+local DT_GLOW_DELAY     = 15
+local DT_GLOW_DURATION  = 5
+
+local cdmDTOverlays     = {}
+local dtGlowActive      = false
+local dtGlowDelayTimer  = nil
+local dtGlowDurationTimer = nil
+
+local function StopDTGlow()
+    dtGlowActive = false
+    if dtGlowDelayTimer    then dtGlowDelayTimer:Cancel();    dtGlowDelayTimer    = nil end
+    if dtGlowDurationTimer then dtGlowDurationTimer:Cancel(); dtGlowDurationTimer = nil end
+    for _, ov in pairs(cdmDTOverlays) do StopGlow(ov) end
+end
+
+local function ShowDTGlow()
+    dtGlowActive = true
+    for _, ov in pairs(cdmDTOverlays) do StartGlow(ov) end
+    dtGlowDurationTimer = C_Timer.NewTimer(DT_GLOW_DURATION, function()
+        dtGlowDurationTimer = nil; StopDTGlow()
+    end)
+end
+
+local function StartDTGlowDelay()
+    StopDTGlow()
+    if not CXUI_DB[DB_DT_GLOW] then return end
+    if not IsPlayerSpell(TALENT_DT_GLOW) then return end
+    dtGlowDelayTimer = C_Timer.NewTimer(DT_GLOW_DELAY, function()
+        dtGlowDelayTimer = nil; ShowDTGlow()
     end)
 end
 
@@ -140,13 +178,12 @@ local function OnDarkTransformationCast()
         end)
     end
 
-    if reaperWarningTimer  then reaperWarningTimer:Cancel();  reaperWarningTimer  = nil end
-    if reaperDurationTimer then reaperDurationTimer:Cancel(); reaperDurationTimer = nil end
-    reaperWarningActive = false
-    for _, ov in pairs(cdmReaperOverlays) do HideXCross(ov) end
+    StopReaperWarning()
     if CXUI_DB[DB_REAPER] then
         ShowReaperWarning()
     end
+
+    StartDTGlowDelay()
 end
 
 -- ---------------------------------------------------------------------------
@@ -225,6 +262,7 @@ local function ScanCDMOverlays()
     local wasFesteringActive = festeringGlowActive
     local wasPutrefyActive   = putrefyWarningActive
     local wasReaperActive    = reaperWarningActive
+    local wasDTGlowActive    = dtGlowActive
 
     if CXUI_DB.cxaoeDebugFestering then
         print(string.format("|cff00ff00cxUI:|r ScanCDMOverlays() rebuild — wasFestering=%s", tostring(wasFesteringActive)))
@@ -242,8 +280,14 @@ local function ScanCDMOverlays()
     for _, ov in pairs(cdmReaperOverlays) do ov:Hide() end
     wipe(cdmReaperOverlays); reaperWarningActive = false
 
+    for _, ov in pairs(cdmDTOverlays) do
+        if ov._glowActive then StopGlow(ov) end
+        ov:Hide()
+    end
+    wipe(cdmDTOverlays); dtGlowActive = false
+
     ScanFramesBySpellID(
-        {SPELL_FESTERING_STRIKE, SPELL_PUTREFY, SPELL_REAPER},
+        {SPELL_FESTERING_STRIKE, SPELL_PUTREFY, SPELL_REAPER, SPELL_DARK_TRANSFORMATION},
         function(frame, spellID)
             if spellID == SPELL_FESTERING_STRIKE then
                 if not cdmFesteringOverlays[frame] then
@@ -258,6 +302,10 @@ local function ScanCDMOverlays()
                 if not cdmReaperOverlays[frame] then
                     local ov = CreateOverlay(frame); AttachXCross(ov)
                     cdmReaperOverlays[frame] = ov
+                end
+            elseif spellID == SPELL_DARK_TRANSFORMATION then
+                if not cdmDTOverlays[frame] then
+                    cdmDTOverlays[frame] = CreateOverlay(frame)
                 end
             end
         end
@@ -289,6 +337,10 @@ local function ScanCDMOverlays()
     if wasReaperActive and CXUI_DB[DB_REAPER] then
         reaperWarningActive = true
         for _, ov in pairs(cdmReaperOverlays) do ShowXCross(ov) end
+    end
+    if wasDTGlowActive and CXUI_DB[DB_DT_GLOW] then
+        dtGlowActive = true
+        for _, ov in pairs(cdmDTOverlays) do StartGlow(ov) end
     end
 end
 
@@ -346,6 +398,7 @@ CF.OnCDMReanchor(function() DKRescan() end)
 CF.OnArenaReset(function()
     StopPutrefyWarning()
     StopReaperWarning()
+    StopDTGlow()
 end)
 
 -- ---------------------------------------------------------------------------
@@ -375,6 +428,7 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
         -- keep these here as an explicit safety net for non-arena scenarios.
         StopPutrefyWarning()
         StopReaperWarning()
+        StopDTGlow()
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         C_Timer.After(1, function() DKRescan() end)
@@ -384,6 +438,7 @@ dkFrame:SetScript("OnEvent", function(self, event, ...)
         HideFesteringGlow()
         StopPutrefyWarning()
         StopReaperWarning()
+        StopDTGlow()
         C_Timer.After(2, function() DKRescan() end)
 
     elseif event == "ACTIONBAR_PAGE_CHANGED" then
@@ -408,18 +463,21 @@ SlashCmdList["CXAOEDEBUG"] = function(msg)
     local cmd = (msg or ""):lower()
     if cmd == "scan" then
         DKRescan()
-        local cf, cp, cs, cr = 0, 0, 0, 0
+        local cf, cp, cs, cr, cd = 0, 0, 0, 0, 0
         for _ in pairs(cdmFesteringOverlays) do cf = cf + 1 end
         for _ in pairs(cdmPutrefyOverlays)   do cp = cp + 1 end
         for _ in ipairs(oblFrames)            do cs = cs + 1 end
         for _ in pairs(cdmReaperOverlays)     do cr = cr + 1 end
+        for _ in pairs(cdmDTOverlays)         do cd = cd + 1 end
         print("|cff0070ddcxUI:|r festering=" .. cf
-            .. "  putrefy=" .. cp .. "  frostswap=" .. cs .. "  reaper=" .. cr)
+            .. "  putrefy=" .. cp .. "  frostswap=" .. cs .. "  reaper=" .. cr .. "  dtglow=" .. cd)
     elseif cmd == "status" then
         print("|cff0070ddcxUI:|r spec=" .. tostring(GetSpecialization())
             .. "  festering=" .. tostring(festeringGlowActive)
             .. "  putrefy=" .. tostring(putrefyWarningActive)
             .. "  reaper=" .. tostring(reaperWarningActive)
+            .. "  dtglow=" .. tostring(dtGlowActive)
+            .. "  talentKnown=" .. tostring(IsPlayerSpell(TALENT_DT_GLOW))
             .. "  barpage=" .. tostring(GetActionBarPage()))
         for frame, ov in pairs(cdmFesteringOverlays) do
             print(string.format(

@@ -42,6 +42,7 @@ local function EnsureDBDefaults()
         cdmPutrefyCross           = true,
         cdmFlurryCross            = true,
         cdmReaperCross            = true,
+        cdmDTGlow                 = true,
         cdmFrostBarSwap           = true,
         cdmFesteringGlow          = true,
         burningRushReminder       = true,
@@ -246,6 +247,7 @@ CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x
 CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -675, false, R)
 CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -705, false, L)
 CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -705, false, R)
+CreateCheckbox("DT Glow — Unholy DK",               "cdmDTGlow",        "White glow on Dark Transformation CDM for 5s, starting 15s after cast (requires talent).", -735, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Module 5 — Mythic+
