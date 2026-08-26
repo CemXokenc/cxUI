@@ -252,10 +252,10 @@ CreateCheckbox("DT Glow — Unholy DK",               "cdmDTGlow",        "White
 -- ---------------------------------------------------------------------------
 -- Module 5 — Mythic+
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Mythic+", -745)
-CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -770, false, L)
-CreateCheckbox("Dispellable Debuff Alert", "mythicPlusDispelAlert", "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.", -770, false, R)
-local escTeleCheck = CreateCheckbox("ESC Menu Dungeon Teleports", "escTeleportButtons", "Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC).", -800, false, L)
+CreateHeader("Module 5: Mythic+", -775)
+CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -800, false, L)
+CreateCheckbox("Dispellable Debuff Alert", "mythicPlusDispelAlert", "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.", -800, false, R)
+local escTeleCheck = CreateCheckbox("ESC Menu Dungeon Teleports", "escTeleportButtons", "Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC).", -830, false, L)
 escTeleCheck:HookScript("OnClick", function() if ns.CXUI_ESCTeleports_Refresh then ns.CXUI_ESCTeleports_Refresh() end end)
 CreateCheckbox("Boss PB Preview (EllesmereUI M+ Timer)", "bossPBPreview", "Shows your best split for each upcoming boss directly in EllesmereUIMythicTimer's own frame, before you kill it. Falls back to the closest lower key level you've completed if you have no data for the current level yet. Requires EllesmereUI + EllesmereUIMythicTimer.", -830, false, R)
 
