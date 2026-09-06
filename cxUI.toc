@@ -42,6 +42,7 @@ modules\ClassFeatures\Shared.lua
 modules\ClassFeatures\DeathKnight.lua
 modules\ClassFeatures\Mage.lua
 modules\ClassFeatures\Warlock.lua
+modules\ClassFeatures\Warrior.lua
 
 # Module: Mythic+
 modules\MythicPlus\ExternalAlert.lua

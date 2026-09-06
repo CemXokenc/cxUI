@@ -42,10 +42,10 @@ local function EnsureDBDefaults()
         cdmPutrefyCross           = true,
         cdmFlurryCross            = true,
         cdmReaperCross            = true,
-        cdmDTGlow                 = true,
         cdmFrostBarSwap           = true,
         cdmFesteringGlow          = true,
         burningRushReminder       = true,
+        warriorExecuteAlert       = true,
 		---------------------------------
         autoAcceptResurrection    = true,
         autoReleasePvP            = true,
@@ -97,7 +97,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 800)
+content:SetSize(560, 860)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x
 CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -675, false, R)
 CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -705, false, L)
 CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -705, false, R)
-CreateCheckbox("DT Glow — Unholy DK",               "cdmDTGlow",        "White glow on Dark Transformation CDM for 5s, starting 15s after cast (requires talent).", -735, false, L)
+CreateCheckbox("Execute Alert — Warrior", "warriorExecuteAlert", "Speaks 'Execute' via TTS and flashes 'EXECUTE!' on screen the moment Execute becomes usable on your target (target entered execute range). Ignores Sudden Death procs so it only fires for a real health-threshold entry. Warrior only.", -735, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Module 5 — Mythic+

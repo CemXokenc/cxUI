@@ -475,8 +475,8 @@ local PROC_CONFIG = {
 		--[29725] = { 281000 },                     -- Sudden Death        → Execute
 		-- CDs
 		-- ["ready:12294"]  = { 12294 },                    -- Mortal Strike                → glow when ready
-		["ready:446035"]  = { 446035 },                    -- Bladestorm               → glow when ready
-		["ready:260708"]  = { 260708 },                    -- Sweeping Strikes               → glow when ready
+		-- ["ready:446035"]  = { 446035 },                    -- Bladestorm               → glow when ready
+		-- ["ready:260708"]  = { 260708 },                    -- Sweeping Strikes               → glow when ready
 		-- Utility
 		-- ["ready:6552"]  = { 6552 },                    -- Pummel                → glow when ready
 		["ready:64382"]  = { 64382 },                    -- Shattering Throw                → glow when ready
