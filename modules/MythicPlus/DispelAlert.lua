@@ -186,6 +186,25 @@ local NO_MATCH_COLOR = CreateColor(0, 0, 0, 0)
 local myDispelTypes = {}
 
 -- ---------------------------------------------------------------------------
+-- Where this is allowed to run: dungeons (any difficulty, incl. Mythic+),
+-- Delves, scenarios, and open world. NOT raids, and NOT PvP (arenas/BGs).
+-- Declared here (before Tier B) because BuildDesiredAuraSoundRegistrations
+-- below references IsInMythicPlus -- local functions are only visible to
+-- code that comes AFTER their declaration in the file, so this must be
+-- defined before it's first used, not just before it's first called.
+-- ---------------------------------------------------------------------------
+local ALLOWED_INSTANCE_TYPES = {
+    party    = true,
+    scenario = true,
+    none     = true,
+}
+
+local function IsInMythicPlus()
+    local _, instanceType = IsInInstance()
+    return ALLOWED_INSTANCE_TYPES[instanceType] or false
+end
+
+-- ---------------------------------------------------------------------------
 -- Tier A: curve trick, same as Decursive's D.Status.dsCurve. Only used to
 -- drive the chat print (and, on clients without AddAuraSound, the sound).
 -- ---------------------------------------------------------------------------
@@ -365,21 +384,6 @@ local function RecomputeDispelTypes()
     end
     Debug("Recompute: class", classToken, "level", UnitLevel("player"), "-> can cure:",
         (#summary > 0) and table.concat(summary, ", ") or "NOTHING (no known dispel spell yet)")
-end
-
--- ---------------------------------------------------------------------------
--- Where this is allowed to run: dungeons (any difficulty, incl. Mythic+),
--- Delves, scenarios, and open world. NOT raids, and NOT PvP (arenas/BGs).
--- ---------------------------------------------------------------------------
-local ALLOWED_INSTANCE_TYPES = {
-    party    = true,
-    scenario = true,
-    none     = true,
-}
-
-local function IsInMythicPlus()
-    local _, instanceType = IsInInstance()
-    return ALLOWED_INSTANCE_TYPES[instanceType] or false
 end
 
 -- ---------------------------------------------------------------------------

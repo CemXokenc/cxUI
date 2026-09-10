@@ -34,7 +34,7 @@ local function EnsureDBDefaults()
         expandVendorWindow        = true,
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
-        mogMountFlyingInGround    = true,
+        mogCompanionsBlockAutoMacro = true,
         SpaceCastInterruptBlock   = true,
 		---------------------------------
         cdmEnemyCounter           = true,
@@ -224,7 +224,7 @@ CreateCheckbox("Hide Extra Action Button Decor", "hideExtraActionDecor", "Remove
 CreateCheckbox("Low Health Sound Alert",      "lowHealthAlert",     "Plays a custom sound when your health is low.",                            -370, false, L)
 CreateCheckbox("Mega Macro Override",         "overrideMacroFrame", "Redirects the default 'Macros' menu button to Mega Macro.",               -370, false, R)
 CreateCheckbox("Expand Vendor Window (5x10 Grid)", "expandVendorWindow", "Shows 5 columns x 10 rows of items on vendors instead of Blizzard's default 2x5.", -400, true, L)
-CreateCheckbox("MogMount: Flying in Ground",  "mogMountFlyingInGround", "Allows picking a flying mount in MogMount's Ground slot. Requires MogMount addon.", -400, false, R)
+CreateCheckbox("MogCompanions: Block Auto-Macro", "mogCompanionsBlockAutoMacro", "Stops MogCompanions from (re)creating its own Mount/Hearthstone macros, which can pile up as duplicates alongside MegaMacro. Requires MogCompanions addon.", -400, false, R)
 CreateCheckbox("Auto-Accept Resurrection",    "autoAcceptResurrection", "Automatically accepts resurrection requests, but not while the resurrecting unit is in combat.", -430, false, L)
 CreateCheckbox("Auto-Release in PvP",         "autoReleasePvP",         "Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect.", -430, false, R)
 CreateCheckbox("Dungeon Finder: Advanced Filters", "dungeonFilter",     "Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list.", -460, true, L)
