@@ -9,7 +9,7 @@ local addonName, ns = ...
 -- contact icon, same empty-slot texture): a small panel of cells appears
 -- next to the mailbox. Click a filled cell to instantly fill in that
 -- recipient; click an empty cell to add a new one; right-click a filled
--- cell to remove it.
+-- cell for a context menu (change icon / delete).
 -- ===========================================================================
 
 local BUTTON_SIZE   = 36  -- same as original addon's CONTACT_BUTTON_SIZE
@@ -17,16 +17,41 @@ local BUTTON_GAP    = 3   -- same as original addon's CONTACT_BUTTON_MARGIN
 local COLUMNS       = 2
 local MAX_CONTACTS  = 20
 
-local DEFAULT_ICON       = "Interface\\Icons\\INV_Misc_GroupLooking" -- same default icon as original addon
+local DEFAULT_ICON       = "INV_Misc_GroupLooking" -- same default icon as original addon
 local EMPTY_SLOT_TEXTURE = 4701874 -- interface/containerframe/bagsitemslot2x, same empty-slot look as original addon
+
+-- Icon choices offered in the picker: the default + the main gathering/
+-- crafting professions (no Cooking/Fishing/Archaeology/First Aid).
+local ICON_CHOICES = {
+    DEFAULT_ICON,
+    "Trade_Alchemy",                -- Alchemy
+    "Trade_BlacksmithING",          -- Blacksmithing
+    "Trade_Engraving",              -- Enchanting
+    "Trade_Engineering",            -- Engineering
+    "Trade_Herbalism",              -- Herbalism
+    "INV_Inscription_Tradeskill01", -- Inscription
+    "INV_Misc_Gem_02",              -- Jewelcrafting
+    "Trade_LeatherWorking",         -- Leatherworking
+    "Trade_Mining",                 -- Mining
+    "INV_Misc_Pelt_Wolf_01",        -- Skinning
+    "Trade_Tailoring",              -- Tailoring
+}
 
 local function IsEnabled()
     return CXUI_DB.favoriteContacts
 end
 
+-- Returns the saved contact list, migrating old plain-string entries
+-- (from before per-contact icons existed) into { name = ..., icon = ... }.
 local function GetList()
     CXUI_DB.favoriteContactsList = CXUI_DB.favoriteContactsList or {}
-    return CXUI_DB.favoriteContactsList
+    local list = CXUI_DB.favoriteContactsList
+    for i, entry in ipairs(list) do
+        if type(entry) == "string" then
+            list[i] = { name = entry, icon = DEFAULT_ICON }
+        end
+    end
+    return list
 end
 
 -- ---------------------------------------------------------------------------
@@ -42,14 +67,19 @@ StaticPopupDialogs["CXUI_FAVCONTACT_ADD"] = {
         self.EditBox:SetText("")
         self.EditBox:SetFocus()
     end,
-    OnAccept = function(self)
+    OnAccept = function(self, data)
         local name = self.EditBox:GetText()
         if name then name = name:trim() end
         if name and name ~= "" then
             local list = GetList()
             if #list < MAX_CONTACTS then
-                table.insert(list, name)
+                local index = #list + 1
+                table.insert(list, { name = name, icon = DEFAULT_ICON })
                 if ns.CXUI_FavoriteContacts_Refresh then ns.CXUI_FavoriteContacts_Refresh() end
+                -- Let the player immediately pick an icon for the new contact.
+                if data and data.button and ns.CXUI_FavoriteContacts_ShowIconPicker then
+                    ns.CXUI_FavoriteContacts_ShowIconPicker(data.button, index)
+                end
             end
         end
     end,
@@ -93,6 +123,116 @@ local function UseContact(name)
 end
 
 -- ---------------------------------------------------------------------------
+-- Icon picker: a small popup grid of icon buttons anchored below whichever
+-- cell was clicked. Reused for both "add" (pick icon for a new contact) and
+-- the right-click context menu's "Change Icon" option.
+-- ---------------------------------------------------------------------------
+local ICON_PICKER_COLUMNS = 4
+local ICON_BUTTON_SIZE    = 30
+local ICON_BUTTON_GAP     = 4
+
+local iconPicker
+local iconPickerTargetIndex
+
+local function ApplyIconChoice(iconName)
+    local list = GetList()
+    local entry = list[iconPickerTargetIndex]
+    if entry then
+        entry.icon = iconName
+        if ns.CXUI_FavoriteContacts_Refresh then ns.CXUI_FavoriteContacts_Refresh() end
+    end
+    if iconPicker then iconPicker:Hide() end
+end
+
+local function CreateIconPicker()
+    local frame = CreateFrame("Frame", "CXUI_FavoriteContactsIconPicker", UIParent, "BackdropTemplate")
+    frame:SetFrameStrata("DIALOG")
+    frame:SetToplevel(true)
+    frame:EnableMouse(true)
+    frame:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    frame:SetBackdropColor(0, 0, 0, 0.95)
+
+    local rows = math.ceil(#ICON_CHOICES / ICON_PICKER_COLUMNS)
+    local width = ICON_PICKER_COLUMNS * (ICON_BUTTON_SIZE + ICON_BUTTON_GAP) + ICON_BUTTON_GAP
+    local height = rows * (ICON_BUTTON_SIZE + ICON_BUTTON_GAP) + ICON_BUTTON_GAP + 16
+    frame:SetSize(width, height)
+
+    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", 4, 4)
+    close:SetSize(20, 20)
+
+    for i, iconName in ipairs(ICON_CHOICES) do
+        local btn = CreateFrame("Button", nil, frame, "ActionButtonTemplate")
+        btn:SetSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
+        btn:SetNormalTexture(0)
+        btn:SetPushedTexture(0)
+        if btn:GetHighlightTexture() then
+            btn:GetHighlightTexture():SetAllPoints(btn)
+        end
+        btn.icon:SetTexture("Interface\\Icons\\" .. iconName)
+        btn.icon:SetTexCoord(0, 1, 0, 1)
+        btn.icon:Show()
+
+        local column = (i - 1) % ICON_PICKER_COLUMNS
+        local row = math.floor((i - 1) / ICON_PICKER_COLUMNS)
+        btn:SetPoint("TOPLEFT",
+            ICON_BUTTON_GAP + column * (ICON_BUTTON_SIZE + ICON_BUTTON_GAP),
+            -(ICON_BUTTON_GAP + 16 + row * (ICON_BUTTON_SIZE + ICON_BUTTON_GAP)))
+
+        btn:SetScript("OnClick", function() ApplyIconChoice(iconName) end)
+        btn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText(iconName)
+            GameTooltip:Show()
+        end)
+        btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    end
+
+    frame:Hide()
+    return frame
+end
+
+function ns.CXUI_FavoriteContacts_ShowIconPicker(anchorButton, index)
+    if not iconPicker then
+        iconPicker = CreateIconPicker()
+    end
+    iconPickerTargetIndex = index
+    iconPicker:ClearAllPoints()
+    iconPicker:SetPoint("TOPLEFT", anchorButton, "BOTTOMLEFT", 0, -4)
+    iconPicker:Show()
+end
+
+-- ---------------------------------------------------------------------------
+-- Right-click context menu (change icon / delete), using the same modern
+-- Menu API the original addon used.
+-- ---------------------------------------------------------------------------
+local function GenerateContactContextMenu(ownerRegion, rootDescription, index)
+    local list = GetList()
+    local entry = list[index]
+    if not entry then return end
+
+    rootDescription:CreateButton("Change Icon", function()
+        ns.CXUI_FavoriteContacts_ShowIconPicker(ownerRegion, index)
+    end)
+    rootDescription:CreateButton(DELETE, function()
+        StaticPopup_Show("CXUI_FAVCONTACT_REMOVE", entry.name, nil, { index = index })
+    end)
+    rootDescription:CreateButton(CANCEL, function() end)
+end
+
+local function OpenContactContextMenu(button)
+    local menuDescription = MenuUtil.CreateRootMenuDescription(MenuVariants.GetDefaultContextMenuMixin())
+    Menu.PopulateDescription(GenerateContactContextMenu, button, menuDescription, button.index)
+    local anchor = CreateAnchor("TOPLEFT", button, "BOTTOMLEFT", 0, 0)
+    Menu.GetManager():OpenMenu(button, menuDescription, anchor)
+end
+
+-- ---------------------------------------------------------------------------
 -- UI
 -- ---------------------------------------------------------------------------
 local container
@@ -115,7 +255,7 @@ local function CreateCell(index)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText(self.name)
             GameTooltip:AddLine("Left-Click: use this recipient", 0.6, 0.6, 0.6, true)
-            GameTooltip:AddLine("Right-Click: remove", 0.6, 0.6, 0.6, true)
+            GameTooltip:AddLine("Right-Click: change icon / remove", 0.6, 0.6, 0.6, true)
             GameTooltip:Show()
         elseif self.isAdd then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -129,12 +269,12 @@ local function CreateCell(index)
     button:SetScript("OnClick", function(self, mouseButton)
         if self.name then
             if mouseButton == "RightButton" then
-                StaticPopup_Show("CXUI_FAVCONTACT_REMOVE", self.name, nil, { index = self.index })
+                OpenContactContextMenu(self)
             else
                 UseContact(self.name)
             end
         elseif self.isAdd then
-            StaticPopup_Show("CXUI_FAVCONTACT_ADD")
+            StaticPopup_Show("CXUI_FAVCONTACT_ADD", nil, nil, { button = self })
         end
     end)
 
@@ -142,14 +282,14 @@ local function CreateCell(index)
     return button
 end
 
-local function UpdateCell(index, name, isAdd)
+local function UpdateCell(index, name, iconName, isAdd)
     local button = CreateCell(index)
     button.index = index
     button.name = name
     button.isAdd = isAdd
 
     if name then
-        button.icon:SetTexture(DEFAULT_ICON)
+        button.icon:SetTexture("Interface\\Icons\\" .. (iconName or DEFAULT_ICON))
         button.icon:SetTexCoord(0, 1, 0, 1)
         button.icon:SetVertexColor(1, 1, 1, 1)
     elseif isAdd then
@@ -191,6 +331,7 @@ end
 function ns.CXUI_FavoriteContacts_Refresh()
     if not IsEnabled() then
         if container then container:Hide() end
+        if iconPicker then iconPicker:Hide() end
         RepositionOpenMailFrame(0)
         return
     end
@@ -203,9 +344,10 @@ function ns.CXUI_FavoriteContacts_Refresh()
 
     for i = 1, cellCount do
         if i <= #list then
-            UpdateCell(i, list[i], false)
+            local entry = list[i]
+            UpdateCell(i, entry.name, entry.icon, false)
         else
-            UpdateCell(i, nil, true)
+            UpdateCell(i, nil, nil, true)
         end
     end
     for i = cellCount + 1, #buttons do
@@ -236,6 +378,7 @@ f:SetScript("OnEvent", function(self, event, arg1)
     end
     if event == "MAIL_CLOSED" then
         if container then container:Hide() end
+        if iconPicker then iconPicker:Hide() end
         return
     end
     -- ADDON_LOADED(Blizzard_MailFrame) or MAIL_SHOW
