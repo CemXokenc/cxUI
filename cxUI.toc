@@ -35,6 +35,7 @@ modules\SmallTweaks\Mail.lua
 modules\SmallTweaks\BuyEmAll.lua
 modules\SmallTweaks\NoAutoClose.lua
 modules\SmallTweaks\AutoConfirm.lua
+modules\SmallTweaks\FavoriteContacts.lua
 
 # Module: Class Features (Shared must load first)
 modules\ClassFeatures\Shared.lua

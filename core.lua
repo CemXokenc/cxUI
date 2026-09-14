@@ -54,6 +54,7 @@ local function EnsureDBDefaults()
         buyEmAll                  = true,
         noAutoClose               = true,
         autoConfirm               = true,
+        favoriteContacts          = true,
 		---------------------------------
     }
     for k, v in pairs(defaults) do
@@ -96,7 +97,7 @@ scrollFrame:SetPoint("BOTTOMRIGHT", optionsPanel, "BOTTOMRIGHT", -27,  55)
 
 -- Content frame — tall enough to hold all checkboxes.
 local content = CreateFrame("Frame", "CXUI_OptionsContent", scrollFrame)
-content:SetSize(560, 860)
+content:SetSize(560, 890)
 scrollFrame:SetScrollChild(content)
 
 -- ---------------------------------------------------------------------------
@@ -232,30 +233,32 @@ CreateCheckbox("Buy Em All",                    "buyEmAll",           "Shift-Cli
 CreateCheckbox("No Auto Close",                 "noAutoClose",        "Stops opening a panel (map, bags, character, etc.) from auto-closing other open panels, and keeps ESC working to close them properly.", -520, true, L)
 CreateCheckbox("Auto Confirm Purchases & Mail Warnings", "autoConfirm", "Automatically accepts the 'confirm purchase' and 'this item will become non-refundable' (mail) popups without requiring a manual click.", -550, false, L)
 CreateCheckbox("Block Space Bar duriong Cast",     "SpaceCastInterruptBlock", "Disables the Space bar while casting to prevent accidental jumps", -550, false, R)
+local favContactsCheck = CreateCheckbox("Favorite Contacts (Mailbox)", "favoriteContacts", "Adds a small panel of cells next to the mailbox. Click a filled cell to fill in that recipient, click '+' to add a new one, right-click to remove.", -580, false, L)
+favContactsCheck:HookScript("OnClick", function() if ns.CXUI_FavoriteContacts_Refresh then ns.CXUI_FavoriteContacts_Refresh() end end)
 
 -- ---------------------------------------------------------------------------
 -- Module 4 — Class Features
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 4: Class Features", -590)
-CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -615, false, L)
-CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -615, false, R)
-CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -645, false, L)
-CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -645, false, R)
-CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM for 6s right after Dark Transformation is cast.", -675, false, L)
-CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -675, false, R)
-CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -705, false, L)
-CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -705, false, R)
-CreateCheckbox("Execute Alert — Warrior", "warriorExecuteAlert", "Speaks 'Execute' via TTS and flashes 'EXECUTE!' on screen the moment Execute becomes usable on your target (target entered execute range). Ignores Sudden Death procs so it only fires for a real health-threshold entry. Warrior only.", -735, false, L)
+CreateHeader("Module 4: Class Features", -620)
+CreateCheckbox("Enemy Counter",                     "cdmEnemyCounter",  "Shows nearby enemy count in the center of the screen. Works for all classes.", -645, false, L)
+CreateCheckbox("No Movement",                       "noMovement",       "Shows movement ability cooldown when unavailable. Works for all classes.", -645, false, R)
+CreateCheckbox("Putrefy Cross — Unholy DK",         "cdmPutrefyCross",  "Red x on Putrefy CDM when Dark Transformation has <9s CD.",         -675, false, L)
+CreateCheckbox("Flurry Cross — Frost Mage",         "cdmFlurryCross",   "Red x on Flurry CDM when both procs (190446 & 1247729) active.",    -675, false, R)
+CreateCheckbox("Reaper Cross — Unholy DK",          "cdmReaperCross",   "Red x on Reaper CDM for 6s right after Dark Transformation is cast.", -705, false, L)
+CreateCheckbox("Swap ST/AOE — Frost DK",            "cdmFrostBarSwap",  "Swap Obli/Scythe and FS/GA icons on CDM after action bars swaps.",  -705, false, R)
+CreateCheckbox("Festering Strike Glow — Unholy DK", "cdmFesteringGlow", "White glow on Festering Strike/Scythe when buff has <5s left.",     -735, false, L)
+CreateCheckbox("Burning Rush Reminder — Warlock",   "burningRushReminder", "Pulsing on-screen alert while Burning Rush is active.",              -735, false, R)
+CreateCheckbox("Execute Alert — Warrior", "warriorExecuteAlert", "Speaks 'Execute' via TTS and flashes 'EXECUTE!' on screen the moment Execute becomes usable on your target (target entered execute range). Ignores Sudden Death procs so it only fires for a real health-threshold entry. Warrior only.", -765, false, L)
 
 -- ---------------------------------------------------------------------------
 -- Module 5 — Mythic+
 -- ---------------------------------------------------------------------------
-CreateHeader("Module 5: Mythic+", -775)
-CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -800, false, L)
-CreateCheckbox("Dispellable Debuff Alert", "mythicPlusDispelAlert", "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.", -800, false, R)
-local escTeleCheck = CreateCheckbox("ESC Menu Dungeon Teleports", "escTeleportButtons", "Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC).", -830, false, L)
+CreateHeader("Module 5: Mythic+", -805)
+CreateCheckbox("External Cooldown Alert", "externalAlertSound", "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.", -830, false, L)
+CreateCheckbox("Dispellable Debuff Alert", "mythicPlusDispelAlert", "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.", -830, false, R)
+local escTeleCheck = CreateCheckbox("ESC Menu Dungeon Teleports", "escTeleportButtons", "Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC).", -860, false, L)
 escTeleCheck:HookScript("OnClick", function() if ns.CXUI_ESCTeleports_Refresh then ns.CXUI_ESCTeleports_Refresh() end end)
-CreateCheckbox("Boss PB Preview (EllesmereUI M+ Timer)", "bossPBPreview", "Shows your best split for each upcoming boss directly in EllesmereUIMythicTimer's own frame, before you kill it. Falls back to the closest lower key level you've completed if you have no data for the current level yet. Requires EllesmereUI + EllesmereUIMythicTimer.", -830, false, R)
+CreateCheckbox("Boss PB Preview (EllesmereUI M+ Timer)", "bossPBPreview", "Shows your best split for each upcoming boss directly in EllesmereUIMythicTimer's own frame, before you kill it. Falls back to the closest lower key level you've completed if you have no data for the current level yet. Requires EllesmereUI + EllesmereUIMythicTimer.", -860, false, R)
 
 -- ---------------------------------------------------------------------------
 -- Panel events
