@@ -29,7 +29,6 @@ modules\SmallTweaks\Sounds.lua
 modules\SmallTweaks\ExtraActionBar.lua
 modules\SmallTweaks\ExpandVendorWindow.lua
 modules\SmallTweaks\RCM.lua
-modules\SmallTweaks\MogCompanionsBlockAutoMacro.lua
 modules\SmallTweaks\Death.lua
 modules\SmallTweaks\LFG.lua
 modules\SmallTweaks\Mail.lua
