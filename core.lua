@@ -55,6 +55,7 @@ local function EnsureDBDefaults()
         noAutoClose               = true,
         autoConfirm               = true,
         favoriteContacts          = true,
+        transmogOutfits           = true,
 		---------------------------------
     }
     for k, v in pairs(defaults) do
@@ -235,6 +236,7 @@ CreateCheckbox("Auto Confirm Purchases & Mail Warnings", "autoConfirm", "Automat
 CreateCheckbox("Block Space Bar duriong Cast",     "SpaceCastInterruptBlock", "Disables the Space bar while casting to prevent accidental jumps", -550, false, R)
 local favContactsCheck = CreateCheckbox("Favorite Contacts (Mailbox)", "favoriteContacts", "Adds a small panel of cells next to the mailbox. Click a filled cell to fill in that recipient, click '+' to add a new one, right-click to remove.", -580, false, L)
 favContactsCheck:HookScript("OnClick", function() if ns.CXUI_FavoriteContacts_Refresh then ns.CXUI_FavoriteContacts_Refresh() end end)
+CreateCheckbox("Transmog Outfits (Account-Wide)", "transmogOutfits", "Adds a 'TransmogOutfits' button to the Wardrobe that saves outfit sets shared across every character on the account. Always sorted A-Z on open.", -580, true, R)
 
 -- ---------------------------------------------------------------------------
 -- Module 4 — Class Features
