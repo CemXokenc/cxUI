@@ -35,6 +35,7 @@ local function EnsureDBDefaults()
         lowHealthAlert            = true,
         overrideMacroFrame        = true,
         SpaceCastInterruptBlock   = true,
+        disableDurabilityMount    = true,
 		---------------------------------
         cdmEnemyCounter           = true,
         noMovement                = true,
@@ -232,6 +233,8 @@ CreateCheckbox("Move 'Reset Filter' Button",  "moveResetButton",    "Shifts the 
 CreateCheckbox("Mail: Remember Last Recipient", "mailRememberRecipient", "Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed.", -490, false, L)
 CreateCheckbox("Buy Em All",                    "buyEmAll",           "Shift-Click a vendor item to open a Max/Stack purchase window instead of Blizzard's default popup.", -490, false, R)
 CreateCheckbox("No Auto Close",                 "noAutoClose",        "Stops opening a panel (map, bags, character, etc.) from auto-closing other open panels, and keeps ESC working to close them properly.", -520, true, L)
+local durMountCheck = CreateCheckbox("Hide Durability & Mount Seats", "disableDurabilityMount", "Hides Blizzard's durability frame (the armor figure with yellow/red pieces) and the seat indicator shown on mounts that can carry passengers.", -520, false, R)
+durMountCheck:HookScript("OnClick", function() if ns.CXUI_DisableDurabilityMount_Refresh then ns.CXUI_DisableDurabilityMount_Refresh() end end)
 CreateCheckbox("Auto Confirm Purchases & Mail Warnings", "autoConfirm", "Automatically accepts the 'confirm purchase' and 'this item will become non-refundable' (mail) popups without requiring a manual click.", -550, false, L)
 CreateCheckbox("Block Space Bar duriong Cast",     "SpaceCastInterruptBlock", "Disables the Space bar while casting to prevent accidental jumps", -550, false, R)
 local favContactsCheck = CreateCheckbox("Favorite Contacts (Mailbox)", "favoriteContacts", "Adds a small panel of cells next to the mailbox. Click a filled cell to fill in that recipient, click '+' to add a new one, right-click to remove.", -580, false, L)
