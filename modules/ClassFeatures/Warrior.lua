@@ -51,6 +51,8 @@ local SUDDEN_DEATH_GLOW_IDS = {
 }
 
 local EXECUTE_SOUND_FILE = "Interface\\AddOns\\cxUI\\Media\\execute.mp3"
+local EXECUTE_SOUND_COOLDOWN = 5
+local lastSoundTime = 0
 
 local executeSpellID
 local lastInRange = nil -- nil = unknown/no target yet, true/false once evaluated
@@ -112,7 +114,13 @@ end
 
 local function FireExecuteAlert()
     if not (CXUI_DB and CXUI_DB.warriorExecuteAlert) then return end
-    PlaySoundFile(EXECUTE_SOUND_FILE, "Master")
+
+    local now = GetTime()
+    if now - lastSoundTime >= EXECUTE_SOUND_COOLDOWN then
+        lastSoundTime = now
+        PlaySoundFile(EXECUTE_SOUND_FILE, "Master")
+    end
+
     FlashExecuteText()
 end
 
