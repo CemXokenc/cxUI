@@ -1,11 +1,11 @@
 local addonName, ns = ...
+
 -- ---------------------------------------------------------------------------
--- MODULE: MYTHIC+ -> EXTERNAL COOLDOWN ALERT
+-- MYTHIC+: EXTERNAL COOLDOWN ALERT
 --
 -- Plays a custom sound whenever an external defensive cooldown is cast on
 -- you. Watches TWO independent sources simultaneously and reacts to
--- whichever one is actually active -- no reload needed if you toggle
--- between them in Edit Mode / EllesmereUI settings mid-session:
+-- whichever one is actually active (no reload needed to switch between them):
 --
 --   1. Blizzard's native "External Cooldowns" Edit Mode frame
 --      (ExternalDefensivesFrame.AuraContainer).
@@ -13,14 +13,21 @@ local addonName, ns = ...
 --      (global frame "EUF_ExternalDefensives").
 --
 -- DETECTION STRATEGY: rather than hooking OnShow on each icon button (which
--- can race -- a button can appear and fire OnShow in the same instant it's
--- first discovered, before the hook is installed, silently swallowing the
--- alert), we track every known icon's :IsShown() state and poll it on a
--- short timer. An alert fires on the false -> true transition. This is
--- immune to hook-install timing and works identically for both sources.
+-- can race), every known icon's :IsShown() state is polled on a short timer;
+-- an alert fires on the false -> true transition.
+--
+-- The two timers exist ONLY while the option is on.
 -- ---------------------------------------------------------------------------
-local EXTERNAL_ALERT_SOUND = "Interface\\AddOns\\cxUI\\media\\moan.ogg"
-local POLL_INTERVAL = 0.2   -- how often to check for newly-shown icons
+
+local MP = ns:GetModule("MythicPlus")
+
+local F = MP:NewFeature{
+    key  = "externalAlertSound",
+    name = "External Cooldown Alert",
+    desc = "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.",
+}
+
+local POLL_INTERVAL   = 0.2 -- how often to check for newly-shown icons
 local RESCAN_INTERVAL = 2.0 -- how often to look for newly-created icon buttons
 
 CXUI_ExternalAlertDebug = CXUI_ExternalAlertDebug or false
@@ -30,40 +37,24 @@ local function Debug(...)
     end
 end
 
-local function IsEnabled()
-    return CXUI_DB and CXUI_DB.externalAlertSound
-end
-
-local function IsInEditMode()
-    return EditModeManagerFrame and EditModeManagerFrame:IsEditModeActive()
-end
-
 local loginGracePeriod = true
 
 local function PlayExternalAlertSound(source, frame)
     Debug("Trigger from", source, frame and (frame:GetName() or "(unnamed)") or "?")
-    if not IsEnabled() then
-        Debug("  -> suppressed: externalAlertSound is OFF")
-        return
-    end
-    if IsInEditMode() then
+    if MP.IsInEditMode() then
         Debug("  -> suppressed: in Edit Mode")
         return
     end
-    local willPlay, handle = PlaySoundFile(EXTERNAL_ALERT_SOUND, "Master")
+    local willPlay, handle = MP.PlayFile(ns.Media("ExternalAlert", "moan.ogg"))
     Debug("  -> PlaySoundFile ->", willPlay, handle)
 end
 
--- ---------------------------------------------------------------------------
--- Tracked icon registry: frame -> { shown = bool, source = "blizzard"/"ellesmere" }
--- Weak-keyed so recycled/destroyed buttons can be collected.
--- ---------------------------------------------------------------------------
+-- frame -> { shown = bool, source = "blizzard"/"ellesmere" } (weak keys)
 local tracked = setmetatable({}, { __mode = "k" })
 
 local function RegisterFrame(frame, source)
     if tracked[frame] then return end
-    -- Capture current state WITHOUT alerting -- we only care about future
-    -- transitions, not whatever was already on screen when we found it.
+    -- Capture current state WITHOUT alerting: only future transitions matter.
     local shownNow = frame:IsShown()
     tracked[frame] = { shown = shownNow, source = source }
     Debug("Registered", source, "icon", frame:GetName() or "(unnamed)", "initial shown =", shownNow)
@@ -91,15 +82,11 @@ local function ScanEllesmereExternals()
     ellesmereAvailable = ScanChildrenInto(_G.EUF_ExternalDefensives, "ellesmere")
 end
 
-local blizzContainerHooked = false
 local function TryHookBlizzardContainer()
-    if blizzContainerHooked then return end
     local container = ExternalDefensivesFrame and ExternalDefensivesFrame.AuraContainer
     if not container then return end
-    blizzContainerHooked = true
-    Debug("Blizzard AuraContainer found, installing SetShown/OnShow hooks")
-    hooksecurefunc(container, "SetShown", ScanBlizzardExternals)
-    container:HookScript("OnShow", ScanBlizzardExternals)
+    F:Hook(container, "SetShown", ScanBlizzardExternals)
+    F:HookScript(container, "OnShow", ScanBlizzardExternals)
 end
 
 local function ScanAll()
@@ -108,10 +95,7 @@ local function ScanAll()
     ScanEllesmereExternals()
 end
 
--- ---------------------------------------------------------------------------
--- Poll: edge-detect false -> true on every tracked icon, regardless of
--- which source it came from or when it was registered.
--- ---------------------------------------------------------------------------
+-- Edge-detect false -> true on every tracked icon.
 local function PollTrackedFrames()
     if loginGracePeriod then return end
     for frame, state in pairs(tracked) do
@@ -123,21 +107,33 @@ local function PollTrackedFrames()
     end
 end
 
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-initFrame:RegisterUnitEvent("UNIT_AURA", "player")
-initFrame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_ENTERING_WORLD" then
-        C_Timer.After(3, function()
-            loginGracePeriod = false
-            Debug("Login grace period ended")
-        end)
-    end
-    ScanAll()
-end)
+local function StartGracePeriod()
+    loginGracePeriod = true
+    F:After(3, function()
+        loginGracePeriod = false
+        Debug("Login grace period ended")
+    end)
+end
 
-C_Timer.NewTicker(POLL_INTERVAL, PollTrackedFrames)
-C_Timer.NewTicker(RESCAN_INTERVAL, ScanAll) -- catches icons created without a UNIT_AURA firing
+function F:OnEnable()
+    local ev = self:NewEventFrame()
+    ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+    ev:RegisterUnitEvent("UNIT_AURA", "player")
+    ev:SetScript("OnEvent", function(_, event)
+        if event == "PLAYER_ENTERING_WORLD" then StartGracePeriod() end
+        ScanAll()
+    end)
+
+    self:NewTicker(POLL_INTERVAL, PollTrackedFrames)
+    self:NewTicker(RESCAN_INTERVAL, ScanAll) -- catches icons created without a UNIT_AURA firing
+
+    StartGracePeriod()
+    ScanAll()
+end
+
+function F:OnDisable()
+    wipe(tracked)
+end
 
 SLASH_CXEXTERNAL1 = "/cxexternal"
 SlashCmdList["CXEXTERNAL"] = function(msg)
@@ -147,14 +143,14 @@ SlashCmdList["CXEXTERNAL"] = function(msg)
         print("|cff33ccff[cxUI ExternalAlert]|r debug", CXUI_ExternalAlertDebug and "ON" or "OFF")
     elseif msg == "scan" then
         print("|cff33ccff[cxUI ExternalAlert]|r forcing rescan...")
-        ScanAll()
+        if F:IsOn() then ScanAll() end
     elseif msg == "status" then
         local blizzCount, elleCount = 0, 0
         for _, state in pairs(tracked) do
             if state.source == "blizzard" then blizzCount = blizzCount + 1
             else elleCount = elleCount + 1 end
         end
-        print("|cff33ccff[cxUI ExternalAlert]|r enabled:", IsEnabled() and "yes" or "no")
+        print("|cff33ccff[cxUI ExternalAlert]|r enabled:", F:IsOn() and "yes" or "no")
         print("  Blizzard source available:", tostring(blizzardAvailable), "| tracked icons:", blizzCount)
         print("  Ellesmere source available:", tostring(ellesmereAvailable), "| tracked icons:", elleCount)
     else

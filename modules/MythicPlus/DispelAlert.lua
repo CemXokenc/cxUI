@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ---------------------------------------------------------------------------
--- MODULE: DUNGEON DISPELLABLE DEBUFF ALERT
+-- MYTHIC+: DISPELLABLE DEBUFF ALERT
 --
 -- Plays a sound (and, where possible, prints a text alert) the moment any
 -- party member gets hit by a debuff that YOUR current spec can dispel.
@@ -64,7 +64,16 @@ local addonName, ns = ...
 --     exist yet.
 -- ---------------------------------------------------------------------------
 
-local DISPEL_ALERT_SOUND_FILE = "Interface\\AddOns\\cxUI\\media\\AfflictionAlert.ogg"
+local MP = ns:GetModule("MythicPlus")
+
+local F = MP:NewFeature{
+    key  = "mythicPlusDispelAlert",
+    name = "Dispellable Debuff Alert",
+    desc = "Plays a sound when a party member gets a debuff your spec can dispel. Dungeons only.",
+    info = "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.",
+}
+
+local DISPEL_ALERT_SOUND_FILE = ns.Media("DispelAlert", "AfflictionAlert.ogg")
 
 -- Debug mode: /cxdispel debug  (toggles verbose chat prints)
 --             /cxdispel status (prints current gating state)
@@ -76,9 +85,7 @@ local function Debug(...)
     end
 end
 
-local function IsEnabled()
-    return CXUI_DB and CXUI_DB.mythicPlusDispelAlert
-end
+local function IsEnabled() return F:IsOn() end
 
 -- withSound=false is used by the Tier A path once Tier B is handling actual
 -- playback for this client, so we don't double up sounds for exact matches.
@@ -335,7 +342,7 @@ local function ScheduleAuraSoundRefresh(delay)
     end
 
     auraSoundRefreshScheduled = true
-    C_Timer.After(delay or 0, function()
+    F:After(delay or 0, function()
         auraSoundRefreshScheduled = false
         RefreshAuraSoundRegistrations()
         if auraSoundRefreshPending then
@@ -456,16 +463,7 @@ end
 -- ---------------------------------------------------------------------------
 -- Events
 -- ---------------------------------------------------------------------------
-local f = CreateFrame("Frame")
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:RegisterEvent("PLAYER_TALENT_UPDATE")
-f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-f:RegisterEvent("SPELLS_CHANGED")
-f:RegisterEvent("UNIT_AURA")
-f:RegisterEvent("GROUP_ROSTER_UPDATE")
-f:RegisterEvent("PLAYER_REGEN_ENABLED")
-
-f:SetScript("OnEvent", function(self, event, unit)
+local function OnEvent(_, event, unit)
     if event == "UNIT_AURA" then
         if unit and (unit == "player" or unit:match("^party%d$") or unit:match("^raid%d+$")) then
             CheckUnitForDispellableDebuff(unit)
@@ -490,9 +488,44 @@ f:SetScript("OnEvent", function(self, event, unit)
             ScheduleAuraSoundRefresh(0)
         end
     end
+end
+
+-- Finishes removing AuraSound registrations after combat ends when the
+-- feature was switched off mid-combat (registered only while pending).
+local removalWatcher = CreateFrame("Frame")
+removalWatcher:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    RefreshAuraSoundRegistrations() -- IsEnabled() is false -> removes everything
 end)
 
-RecomputeDispelTypes()
+function F:OnEnable()
+    auraSoundRefreshScheduled = false
+    auraSoundRefreshPending = false
+
+    local ev = self:NewEventFrame()
+    ev:SetScript("OnEvent", OnEvent)
+    ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+    ev:RegisterEvent("PLAYER_TALENT_UPDATE")
+    ev:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    ev:RegisterEvent("SPELLS_CHANGED")
+    ev:RegisterEvent("UNIT_AURA")
+    ev:RegisterEvent("GROUP_ROSTER_UPDATE")
+    ev:RegisterEvent("PLAYER_REGEN_ENABLED")
+
+    RecomputeDispelTypes()
+end
+
+function F:OnDisable()
+    wipe(alertedInstance)
+    auraSoundRefreshScheduled = false
+    -- AuraSound registrations live inside Blizzard's engine and keep playing on
+    -- their own, so they must be removed explicitly.
+    if AuraSoundRegistrationBlocked() then
+        removalWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
+    else
+        RefreshAuraSoundRegistrations()
+    end
+end
 
 -- ---------------------------------------------------------------------------
 -- Slash command: /cxdispel debug  -- toggle verbose debug prints

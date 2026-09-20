@@ -4,274 +4,233 @@
 
 **Minimalist interface addon for World of Warcraft**
 
-A lightweight, performance-focused suite that declutters your screen and enhances combat awareness.
-
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/CemXokenc/cxUI)
-[![Game Version](https://img.shields.io/badge/game-12.0.0-orange.svg)](https://worldofwarcraft.com)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
 </div>
 
 ---
 
-## 📦 Installation
+## Installation
 
-1. **Download** the latest release or clone this repository
-2. **Extract** the `cxUI` folder into:
-   ```
-   World of Warcraft\_retail_\Interface\AddOns\
-   ```
-3. **Restart** the game or type `/reload`
-4. **Configure** via ESC → Options → AddOns → cxUI
+1. Extract the `cxUI` folder into `World of Warcraft\_retail_\Interface\AddOns\`
+2. Restart the game or `/reload`
+3. Configure via **ESC → Options → AddOns → cxUI**
 
 ---
 
-## 🗂️ Structure
+## Settings window
+
+* **Home page** — the title and one large button per module (module name in blue, description in yellow).
+* **Module page** — module list on the left, that module's options on the right. Every option is two rows:
+  `[x] Name` and a short description under it. Hover an option for a longer explanation when it has one.
+* Options marked **(Requires Reload)\*** only take full effect after `/reload`. Everything else applies immediately.
+
+The window is generated from the module registry — adding a module or feature never requires touching `options.lua`.
+
+---
+
+## Structure
 
 ```
 cxUI/
-├── core.lua                        # Settings DB & options panel
 ├── cxUI.toc
+├── core.lua                 # SavedVariables defaults + startup
+├── options.lua              # settings window (built from the registry)
 ├── libs/
-│   └── LibCustomGlow-1.0.lua
-├── media/
-│   └── lowhp.ogg
+├── media/                   # one sub-folder per feature that owns files
+│   ├── CDMGlow/             #   pixel-glow textures
+│   ├── DispelAlert/
+│   ├── ExecuteAlert/
+│   ├── ExternalAlert/
+│   └── LowHealthSound/
 └── modules/
-    ├── Transparency/               # Module 1 — auto-hide bars & tracker
-    │   └── Transparency.lua
-    ├── CDM/                        # Module 2 — CDM proc/pixel glow
-    │   └── CDMGlow.lua
-    ├── SmallTweaks/                # Module 3 — one file per tweak
-    │   ├── Absorb.lua              #   absorb display
-    │   ├── Alerts.lua              #   suppress talent notifications
-    │   ├── MacroOverride.lua       #   redirect Macros → Mega Macro
-    │   ├── Sounds.lua              #   ready check / invite / pull timer / low health
-    │   ├── RCM.lua                 #   block right-click targeting in combat
-    │   ├── MogMountFlyingInGround.lua #   flying mount in MogMount's ground slot
-    │   ├── Death.lua               #   auto-accept resurrection / auto-release in PvP
-    │   ├── LFG.lua                 #   Dungeon Finder advanced filters / reset button position
-    │   ├── Mail.lua                #   remember last mail recipient
-    │   └── BuyEmAll.lua            #   Shift-Click vendor items to open a Max/Stack purchase window
-    └── ClassFeatures/              # Module 4 — class-specific overlays
-        ├── Shared.lua              #   frame scan & overlay helpers (loads first)
-        ├── DeathKnight.lua         #   enemy counter, festering glow, putrefy cross, frost swap
-        └── Mage.lua                #   flurry cross
+    ├── Modules.lua          # module registry + feature lifecycle (shared by all modules)
+    ├── <Module>/
+    │   ├── <Module>.lua     # registers the module + helpers shared by its features
+    │   └── <Feature>.lua    # exactly one file per feature
+    └── ...
 ```
 
-Every module lives in its own folder for consistent structure. Modules with multiple independent features (`SmallTweaks`, `ClassFeatures`) have one file per feature so each can be edited or disabled without touching anything else.
-
-Shared helpers between `DeathKnight.lua` and `Mage.lua` (frame scan, overlay creation, glow/cross utilities) live in `Shared.lua` and are exported via the `ns.CF` addon namespace table.
-
----
-
-## 🎯 Modules
-
-### 🌫️ Module 1: Transparency & Auto-Hide — `Module_Transparency.lua`
-
-Intelligently fades UI elements based on context and mouse position.
-
-| Feature | Behaviour |
-|---|---|
-| Action Bars | Hide out of combat, reveal on mouseover |
-| Micro Menu & Bags | Fade until hovered |
-| Quest Tracker | Only visible on mouseover |
+Load order in `cxUI.toc` matters in one place: **CDM before ClassFeatures** (ClassFeatures uses the CDM glow engine).
+Media paths are built with `ns.Media("Folder", "file.ogg")`.
 
 ---
 
-### 🛡️ Absorb Display
+## How features work (the lifecycle)
 
-Displays total shield amount in the center of the screen during combat. Auto-scales numbers (1.2K, 450K, …) and hides when out of combat. Lives in `modules/SmallTweaks/Absorb.lua`, toggled as part of Module 3 below.
-
----
-
-### ✨ Module 2: CDM Glow — `modules/CDM/CDMGlow.lua`
-
-Custom glow effects when class procs activate. Scans action bars automatically and works with Blizzard Cooldown Viewer and custom bar addons.
-
-**Default:** Death Knight — Sudden Doom → Death Coil glow.
-
-#### Glow Style
-
-Pick which visual style is used for every proc glow, via **ESC → Options → AddOns → cxUI**:
-
-| Style | Description |
-|---|---|
-| **Proc Glow** (default) | Blizzard's native gold flipbook glow — same animation as the standard action bar proc glow |
-| **Pixel Glow** | A ring of small pixels ("marching ants") travelling around the frame border, à la WeakAuras pixel glow |
-
-Both engines are fully self-contained (isolated frame pools, no `LibStub`), so switching styles — or having ElvUI loaded — can never break or desync the glow. Switching takes effect immediately on any currently-active glow, no reload needed.
-
-#### Adding your own spells
-
-Open `CDMGlow.lua` and edit the `PROC_CONFIG` table:
+Every option is a *feature* object registered in its module:
 
 ```lua
-local PROC_CONFIG = {
-    DEATHKNIGHT = { [81340] = { 47541, 207317 } },
-    PALADIN = { [59578] = { 879 } },   -- Art of War → Exorcism
-    WARRIOR = { [85739] = { 100 } },   -- Slam proc → Mortal Strike
+local M = ns:GetModule("Sounds")
+
+local F = M:NewFeature{
+    key  = "myOption",              -- CXUI_DB key (also the default = true)
+    name = "My Option",
+    desc = "One short line shown under the checkbox.",
+    -- default = false,             -- start disabled
+    -- reload = true,               -- only (de)activated at login
+    -- class  = "WARRIOR",          -- only ever runs on this class
 }
+
+function F:OnEnable()
+    local ev = self:NewEventFrame()                 -- events/OnUpdate are removed automatically on disable
+    ev:RegisterEvent("READY_CHECK")
+    ev:SetScript("OnEvent", function() ... end)
+
+    self:NewTicker(1, function() ... end)           -- timers are cancelled automatically on disable
+    self:After(2, function() ... end)
+    self:Hook("SomeBlizzardFunc", function() ... end)          -- installed once, inert while the option is off
+    self:HookScript(SomeFrame, "OnShow", function() ... end)
+end
+
+function F:OnDisable()
+    -- undo anything *visible* (hide frames, restore alpha/anchors, remove engine-side registrations)
+end
 ```
 
-- `[Aura_Spell_ID]` — the buff/proc you're tracking
-- `{ Target_Spell_ID, … }` — abilities that should glow
+**Guarantee:** an option that is off has no events, no timers and no `OnUpdate` scripts. Blizzard hooks (`hooksecurefunc`)
+cannot be removed, so they are installed only if the option has been on at some point in the session, and return
+immediately while it is off. Use `F:IsOn()` in any callback you write yourself.
 
-Spell IDs are in Wowhead URLs or via `/dump GetSpellInfo("Name")` in-game.
-
-**Commands:**
-```
-/cdmglow on       Enable
-/cdmglow off      Disable
-/cdmglow rescan   Force rescan of action bars
-```
+`(Requires Reload)` features are only activated at login (their code does nothing at all if the option is off then).
 
 ---
 
-### 🔧 Module 3: Small Tweaks — `modules/SmallTweaks/`
+## Modules
 
-Quality-of-life improvements, one file per feature. Everything here is independent — enable only what you need.
+### 1. Transparency — `modules/Transparency/`
 
-| File | Feature | What it does |
-|---|---|---|
-| `Absorb.lua` | Enable Absorb Display | Shows total shield amount in screen center during combat |
-| `Alerts.lua` | Hide Help Tips | Suppresses "You have unspent talent points" and similar notifications |
-| `MacroOverride.lua` | Mega Macro Override | Redirects the default Macros button to Mega Macro (if installed) |
-| `Sounds.lua` | Ready Check Alert | Plays ready check sound through Master — audible when alt-tabbed |
-| `Sounds.lua` | Group Invite Sound | Plays dungeon-finder alarm through Master on any group invite |
-| `Sounds.lua` | Pull Timer Countdown | Audio at 10, 5, 4, 3, 2, 1 s for `/pull`, BigWigs, DBM, BG/arena timers. Requires `SharedMedia_Causese` |
-| `Sounds.lua` | Low Health Alert | Plays a custom sound when your health drops critically low |
-| `RCM.lua` | Block Right-Click Targeting | Prevents accidental right-click targeting in Dungeons & Raids during combat |
-| `MogMountFlyingInGround.lua` | MogMount: Flying in Ground | Allows picking a flying mount in MogMount's ground slot. Requires MogMount addon |
-| `Death.lua` | Auto-Accept Resurrection | Automatically accepts resurrection requests, but not while the resurrecting unit is in combat |
-| `Death.lua` | Auto-Release in PvP | Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect |
-| `LFG.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res, and same-spec filters to the Dungeon Finder search list |
-| `LFG.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's "Reset Filter" button to the left side to avoid overlap |
-| `Mail.lua` | Remember Last Recipient | Keeps the last recipient in the mailbox "To" field after sending, until the mailbox is closed |
-| `BuyEmAll.lua` | Buy Em All | Shift-Click a vendor item to open a Max/Stack purchase window instead of Blizzard's default popup. Ported from the standalone [BuyEmAll](https://www.curseforge.com/wow/addons/buyemall) addon |
+Auto-hide action bars, micro menu and quest tracker.  
+Shared file: `Transparency.lua`
 
-To disable a single tweak without a reload, you can comment out its line in `cxUI.toc`.
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `ActionBars.lua` | Action Bar Auto-hide | Hides bars out of combat. Hover to reveal. | — |
+| `MicroMenu.lua` | Micro Menu Auto-hide | Hides Micro Menu and Bags. Hover to reveal. | — |
+| `QuestTracker.lua` | Quest Tracker Hover | Quest tracker only visible on mouseover. | — |
 
----
+### 2. CDM — `modules/CDM/`
 
-### ⚔️ Module 4: Class Features — `modules/ClassFeatures/`
+Glow effects for Cooldown Manager icons.  
+Shared file: `CDM.lua`
 
-Contextual combat overlays for specific class mechanics. Only the file matching your class runs; the others return immediately.
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `CDMGlow.lua` | Enable CDM Proc Glow | Special highlights for class-specific procs. | — |
+| `SuppressBlizzardGlow.lua` | Suppress Blizzard Glow on CDM | Hides all Blizzard proc glows on CDM frames. Action bars unaffected. | — |
 
-**`Shared.lua`** loads first and exports frame-scan and overlay utilities (`ns.CF`) used by both class files.
+### 3. Class Features — `modules/ClassFeatures/`
 
-#### Death Knight (`DeathKnight.lua`)
+Class-specific overlays and alerts.  
+Shared file: `ClassFeatures.lua`
 
-| Feature | DB key | Description |
-|---|---|---|
-| Enemy Counter | `cdmEnemyCounter` | Live enemy count above the Death Coil CDM button. Helps decide DC vs Epidemic (3+ enemies). Unholy only. |
-| Festering Strike Glow | `cdmFesteringGlow` | White glow on Festering Strike/Scythe CDM when buff has <5 s left. Unholy only. |
-| Putrefy Cross | `cdmPutrefyCross` | Red × on Putrefy CDM when Dark Transformation has <9 s CD. Unholy only. |
-| Frost Bar Swap | `cdmFrostBarSwap` | Swaps Obliterate/Scythe and FS/GA icons on CDM after action bar page changes. Frost only. |
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `BurningRushReminder.lua` | Burning Rush Reminder — Warlock | Pulsing on-screen alert while Burning Rush is active. | — |
+| `EnemyCounter.lua` | Enemy Counter | Shows nearby enemy count in the center of the screen. Works for all classes. | — |
+| `ExecuteAlert.lua` | Execute Alert — Warrior | Sound + on-screen 'EXECUTE!' when your target enters execute range. | — |
+| `FesteringGlow.lua` | Festering Strike Glow — Unholy DK | White glow on Festering Strike when the buff has <5s left. | — |
+| `FlurryCross.lua` | Flurry Cross — Frost Mage | Red x on Flurry CDM after Flurry is cast, until Ice Lance or 6s pass. | — |
+| `FrostBarSwap.lua` | Swap ST/AOE — Frost DK | Swaps Obliterate/Frostscythe icons on the CDM when the action bar page changes. | — |
+| `NoMovement.lua` | No Movement | Shows movement ability cooldown when unavailable. Works for all classes. | — |
+| `PutrefyCross.lua` | Putrefy Cross — Unholy DK | Red x on Putrefy CDM when Dark Transformation has <9s CD. | — |
+| `ReaperCross.lua` | Reaper Cross — Unholy DK | Red x on Reaper CDM for 6s right after Dark Transformation is cast. | — |
 
-**Debug commands:**
-```
-/cxaoe scan     Rescan CDM frames and print counts
-/cxaoe status   Print spec, enemy count, glow/cross state
-```
+### 4. Combat — `modules/Combat/`
 
-#### Mage (`Mage.lua`)
+Absorb display, input safety, resurrection helpers.  
+Shared file: `Combat.lua`
 
-| Feature | DB key | Description |
-|---|---|---|
-| Flurry Cross | `cdmFlurryCross` | Red × on Flurry CDM when both procs (190446 & 1247729) are active. Cleared on Ice Lance cast. |
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `AbsorbDisplay.lua` | Enable Absorb Display | Shows total shield amount in screen center. | — |
+| `AutoAcceptResurrection.lua` | Auto-Accept Resurrection | Automatically accepts resurrection requests, but not while the resurrecting unit is in combat. | — |
+| `AutoReleasePvP.lua` | Auto-Release in PvP | Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect. | — |
+| `BlockRightClick.lua` | Block Right-Click in Combat | Prevents accidental right-click targeting in dungeons and raids. | — |
+| `BlockSpaceCast.lua` | Block Space Bar During Cast | Disables the Space bar while casting to prevent accidental jumps. | — |
 
-**Debug commands:**
-```
-/cxmage scan    Rescan CDM frames
-/cxmage force   Force-show the cross for testing
-```
+### 5. Interface — `modules/Interface/`
 
----
+Blizzard UI cleanup and behaviour tweaks.  
+Shared file: `Interface.lua`
 
-## ⚙️ Settings
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `HideDurabilityMount.lua` | Hide Durability & Mount Seats | Hides the durability figure and the seat indicator shown on mounts that can carry passengers. | — |
+| `HideExtraActionDecor.lua` | Hide Extra Action Button Decor | Removes the decorative ring texture from ExtraActionButton1 and ZoneAbilityFrame. | — |
+| `HideHelpTips.lua` | Hide Talent Alerts | Hides annoying talent-related notifications. | — |
+| `MacroOverride.lua` | Mega Macro Override | Redirects the default 'Macros' menu button to Mega Macro. | — |
+| `NoAutoClose.lua` | No Auto Close | Opening a panel (map, bags, character...) no longer closes other open panels. ESC still closes them properly. | yes |
+| `TransmogOutfits.lua` | Transmog Outfits (Account-Wide) | Adds a 'TransmogOutfits' button to the Wardrobe that saves outfits shared by every character. | yes |
 
-```
-ESC → Options → AddOns → cxUI
-```
+### 6. Sounds — `modules/Sounds/`
 
-Options marked **`(Requires Reload)*`** need `/reload` to take effect.
+Audio alerts for ready checks, invites, queues and pulls.  
+Shared file: `Sounds.lua`
 
-| Module | Setting | Reload |
-|---|---|---|
-| Transparency | Action Bar Auto-hide | ❌ |
-| Transparency | Micro Menu Auto-hide | ❌ |
-| Transparency | Quest Tracker Hover | ✅ |
-| CDM Glow | Enable Proc Glow | ❌ |
-| CDM Glow | Suppress Untracked Glows | ❌ |
-| CDM Glow | Glow Style (Proc / Pixel) | ❌ |
-| Small Tweaks | Enable Absorb Display | ✅ |
-| Small Tweaks | Hide Talent Alerts | ✅ |
-| Small Tweaks | Mega Macro Override | ❌ |
-| Small Tweaks | Ready Check Alert | ❌ |
-| Small Tweaks | Group Invite Sound | ❌ |
-| Small Tweaks | Pull Timer Countdown Sound | ❌ |
-| Small Tweaks | Low Health Sound Alert | ❌ |
-| Small Tweaks | Block Right-Click Targeting | ❌ |
-| Small Tweaks | MogMount: Flying in Ground | ❌ |
-| Small Tweaks | Auto-Accept Resurrection | ❌ |
-| Small Tweaks | Auto-Release in PvP | ❌ |
-| Small Tweaks | Dungeon Finder: Advanced Filters | ✅ |
-| Small Tweaks | Move 'Reset Filter' Button | ✅ |
-| Small Tweaks | Mail: Remember Last Recipient | ❌ |
-| Small Tweaks | Buy Em All | ❌ |
-| Class Features | Enemy Counter — Unholy DK | ❌ |
-| Class Features | Festering Strike Glow — Unholy DK | ❌ |
-| Class Features | Putrefy Cross — Unholy DK | ❌ |
-| Class Features | Flurry Cross — Frost Mage | ❌ |
-| Class Features | Swap ST/AOE — Frost DK | ❌ |
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `GroupInviteSound.lua` | Group Invite Sound | Plays a sound through Master when a group invite arrives. | — |
+| `LowHealthSound.lua` | Low Health Sound Alert | Plays a custom sound when your health is low. | — |
+| `PullTimerSound.lua` | Pull Timer Countdown Sound | Plays audio for the preparation countdown (10, 5, 4, 3, 2, 1). | — |
+| `QueuePopSound.lua` | Queue Pop Sound | Plays a sound the moment a dungeon/raid, battleground, or arena queue pops. | — |
+| `ReadyCheckSound.lua` | Ready Check Alert | Plays ready check sound through Master channel. Audible when alt-tabbed. | — |
 
----
+### 7. Group Finder — `modules/GroupFinder/`
 
-## 🚀 Performance
+Dungeon Finder filters and layout.  
+Shared file: `GroupFinder.lua`
 
-- Event-driven architecture — no polling
-- Class files early-return for non-matching classes
-- Minimal memory footprint (~500 KB)
-- Frame updates only on relevant events
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `DungeonFilter.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list. | yes |
+| `MoveResetButton.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap. | — |
 
----
+### 8. Vendor & Mail — `modules/VendorMail/`
 
-## 🐛 Troubleshooting
+Vendor window, purchases and mailbox helpers.  
+Shared file: `VendorMail.lua`
 
-**Settings panel not showing?**
-Try `/reload`. Make sure the addon is enabled on the character select screen.
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `AutoConfirm.lua` | Auto Confirm Purchases & Mail Warnings | Automatically accepts the 'confirm purchase' and 'non-refundable' (mail) popups. | — |
+| `BuyEmAll.lua` | Buy Em All | Shift-Click a vendor item to open a Max/Stack purchase window instead of Blizzard's default popup. | — |
+| `ExpandVendorWindow.lua` | Expand Vendor Window (5x10 Grid) | Shows 5 columns x 10 rows of items on vendors instead of Blizzard's default 2x5. | yes |
+| `FavoriteContacts.lua` | Favorite Contacts (Mailbox) | Adds a panel of favorite recipients next to the mailbox. Click one to fill in 'To'. | — |
+| `RememberRecipient.lua` | Mail: Remember Last Recipient | Keeps the last recipient in the mailbox 'To' field after sending until the mailbox is closed. | — |
 
-**CDM Glow not working?**
-Verify spell IDs, then run `/cdmglow rescan`. Check that Blizzard Cooldown Viewer is enabled.
+### 9. Mythic+ — `modules/MythicPlus/`
 
-**Enemy Counter not appearing?**
-Must be Unholy Death Knight (spec 3), in active combat, with enemies on nameplates. Run `/cxaoe scan` out of combat to verify the Death Coil CDM frame is found. If `counter=0`, try `/reload` — CDM may not have fully initialized yet.
+Alerts, teleports and timer add-ons for dungeons.  
+Shared file: `MythicPlus.lua`
 
-**Pull Timer not playing sounds?**
-`SharedMedia_Causese` must be installed. Supported sources: `/pull`, BigWigs, DBM, BG/arena preparation timers.
-
-**Festering or Putrefy overlays not showing?**
-Run `/cxaoe scan` to rebuild CDM frame references, then check `/cxaoe status` for state.
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `BossTimerPreview.lua` | Boss PB Preview (EllesmereUI M+ Timer) | Shows your best split for each upcoming boss in EllesmereUIMythicTimer. Needs EllesmereUI. | — |
+| `DispelAlert.lua` | Dispellable Debuff Alert | Plays a sound when a party member gets a debuff your spec can dispel. Dungeons only. | — |
+| `ESCTeleports.lua` | ESC Menu Dungeon Teleports | Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC). | — |
+| `ExternalAlert.lua` | External Cooldown Alert | Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you. | — |
 
 ---
 
-## 📝 Credits
+## Commands
 
-**Author:** cemxokenc  
-**Inspiration:** Minimalist UI philosophy, ElvUI, LortiUI
+```
+/cdmglow test | testoff | debug | diag     CDM glow engine / CDM frames
+/cxaoe scan | status | debug               Death Knight CDM overlays
+/cxmage scan | force                       Flurry cross
+/cxwarlock show | hide | status            Burning Rush reminder
+/cxexternal debug | scan | status          External cooldown alert
+/cxdispel debug | status                   Dispellable debuff alert
+/cxautoconfirm debug | status              Auto confirm
+```
+
+## Customising
+
+* **CDM proc glow spells** — edit `PROC_CONFIG` in `modules/CDM/CDMGlow.lua`.
+* **ESC teleport list** — edit `DUNGEONS` in `modules/MythicPlus/ESCTeleports.lua` each season.
+* **Dispel spell-ID list** — `SPELLS_BY_TYPE` in `modules/MythicPlus/DispelAlert.lua`.
 
 ---
 
-## 📄 License
+## License
 
 Open source under the MIT License.
-
----
-
-<div align="center">
-
-**[Report an Issue](https://github.com/CemXokenc/cxUI/issues)** • **[Request a Feature](https://github.com/CemXokenc/cxUI/issues/new)**
-
-Made with ❤️ for the WoW community
-
-</div>

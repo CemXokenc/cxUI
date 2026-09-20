@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ---------------------------------------------------------------------------
--- MODULE: MYTHIC+ -> ESC MENU DUNGEON TELEPORTS
+-- MYTHIC+: ESC MENU DUNGEON TELEPORTS
 --
 -- Adds a vertical column of clickable dungeon-teleport buttons (abbreviated
 -- name + icon), anchored to the Game Menu (the panel opened by pressing
@@ -27,9 +27,13 @@ local DUNGEONS = {
     {icon = "Interface\\Icons\\achievement_dungeon_lifepools",             spellID = 393256,  name = "RLP"},
 }
 
-local function IsEnabled()
-    return CXUI_DB and CXUI_DB.escTeleportButtons
-end
+local MP = ns:GetModule("MythicPlus")
+
+local F = MP:NewFeature{
+    key  = "escTeleportButtons",
+    name = "ESC Menu Dungeon Teleports",
+    desc = "Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC).",
+}
 
 local buttons = {}
 local container
@@ -84,7 +88,7 @@ end
 
 local function StartTicking()
     if cooldownTicker then return end
-    cooldownTicker = C_Timer.NewTicker(1, function()
+    cooldownTicker = F:NewTicker(1, function()
         for _, btn in ipairs(buttons) do RefreshCooldownText(btn) end
     end)
     for _, btn in ipairs(buttons) do
@@ -149,24 +153,6 @@ local function CreateButton(parent, data, yOffset)
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    btn:RegisterEvent("SPELLS_CHANGED")
-    btn:RegisterEvent("CHALLENGE_MODE_COMPLETED")
-    btn:SetScript("OnEvent", function(self, event)
-        -- Once built, buttons persist (and keep receiving events) even after
-        -- the feature is toggled off, since they're only ever hidden, not
-        -- destroyed. Bail out here so a disabled feature truly does nothing.
-        if not IsEnabled() then return end
-
-        if event == "CHALLENGE_MODE_COMPLETED" then
-            -- Cooldown starts a moment after the vignette fires; give it a beat.
-            C_Timer.After(2, function()
-                UpdateButtonTexture(self); SnapshotCooldown(self); RefreshCooldownText(self)
-            end)
-        else
-            UpdateButtonTexture(self); SnapshotCooldown(self); RefreshCooldownText(self)
-        end
-    end)
-
     btn.cdStart, btn.cdDuration = 0, 0
     return btn
 end
@@ -188,35 +174,64 @@ local function BuildContainer()
     end
 end
 
--- Called from the options checkbox so toggling takes effect immediately
--- if the Game Menu happens to already be open.
-function ns.CXUI_ESCTeleports_Refresh()
-    if not container then return end
-    container:SetShown(IsEnabled() and GameMenuFrame:IsShown())
+-- The container is protected (secure children): Hide() can't run in combat.
+-- If it has to go while in combat, a one-shot listener finishes the job when
+-- combat ends (registered only while something is pending).
+local pendingHide = CreateFrame("Frame")
+pendingHide:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    if container and not (F:IsOn() and GameMenuFrame:IsShown()) then container:Hide() end
+end)
+
+local function RefreshAll(btn)
+    UpdateButtonTexture(btn); SnapshotCooldown(btn); RefreshCooldownText(btn)
 end
 
-GameMenuFrame:HookScript("OnShow", function()
-    if not IsEnabled() then return end
-    if InCombatLockdown() then return end
-    BuildContainer()
-    container:Show()
-    StartTicking()
-end)
+function F:OnEnable()
+    self:HookScript(GameMenuFrame, "OnShow", function()
+        if InCombatLockdown() then return end
+        BuildContainer()
+        container:Show()
+        StartTicking()
+    end)
 
-GameMenuFrame:HookScript("OnHide", function()
-    -- container hosts SecureActionButtonTemplate children, which makes Hide()
-    -- on it a protected call while in combat lockdown. Skip it in that case;
-    -- PLAYER_REGEN_ENABLED below will clean it up once combat ends.
-    if container and not InCombatLockdown() then
-        container:Hide()
-    end
-    StopTicking()
-end)
+    self:HookScript(GameMenuFrame, "OnHide", function()
+        -- Hide() on the container is protected in combat; it hides with its
+        -- parent anyway, and pendingHide cleans up after combat.
+        if container and not InCombatLockdown() then
+            container:Hide()
+        end
+        StopTicking()
+    end)
 
-local cleanupFrame = CreateFrame("Frame")
-cleanupFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-cleanupFrame:SetScript("OnEvent", function()
-    if container and container:IsShown() and not GameMenuFrame:IsShown() then
-        container:Hide()
+    -- Learned-state / cooldown refresh (one frame for all buttons)
+    local ev = self:NewEventFrame()
+    ev:RegisterEvent("SPELLS_CHANGED")
+    ev:RegisterEvent("CHALLENGE_MODE_COMPLETED")
+    ev:SetScript("OnEvent", function(_, event)
+        if event == "CHALLENGE_MODE_COMPLETED" then
+            -- Cooldown starts a moment after the vignette fires; give it a beat.
+            F:After(2, function() for _, btn in ipairs(buttons) do RefreshAll(btn) end end)
+        else
+            for _, btn in ipairs(buttons) do RefreshAll(btn) end
+        end
+    end)
+
+    -- Enabled while the Game Menu is already open
+    if GameMenuFrame:IsShown() and not InCombatLockdown() then
+        BuildContainer()
+        container:Show()
+        StartTicking()
     end
-end)
+end
+
+function F:OnDisable()
+    cooldownTicker = nil -- cancelled by F:Silence()
+    if container and container:IsShown() then
+        if InCombatLockdown() then
+            pendingHide:RegisterEvent("PLAYER_REGEN_ENABLED")
+        else
+            container:Hide()
+        end
+    end
+end

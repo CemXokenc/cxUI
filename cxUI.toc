@@ -1,53 +1,82 @@
-## Interface: 120001, 120000
+## Interface: 120000, 120001, 120005, 120007, 120100
 ## Title: |cff0070ddcx|cffffff00UI|r
-## Notes: Minimalist UI suite: Auto-hiding Action Bars, Micro Menu, and Quest Log with CDM Proc Highlighter.
-## Notes-ukUA: Мінімалістичний інтерфейс: авто-ховання панелей та квест-лога, підсвітка проків для CDM.
-## Version: 1.0.0
+## Notes: Minimalist UI suite
+## Version: 2.0.0
 ## Author: cemxokenc
 ## SavedVariables: CXUI_DB
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
-## OptionalDeps: EllesmereUI, EllesmereUIMythicTimer
 
-# Libraries
-libs\LibCustomGlow-1.0.lua
-
-# Core
+# Core: DB + startup, then the module registry / feature lifecycle
 core.lua
+modules\Modules.lua
 
 # Module: Transparency
 modules\Transparency\Transparency.lua
+modules\Transparency\ActionBars.lua
+modules\Transparency\MicroMenu.lua
+modules\Transparency\QuestTracker.lua
 
-# Module: CDM
+# Module: CDM (shared glow engine: must load before ClassFeatures)
+modules\CDM\CDM.lua
 modules\CDM\CDMGlow.lua
+modules\CDM\SuppressBlizzardGlow.lua
 
-# Module: Small Tweaks
-modules\SmallTweaks\Absorb.lua
-modules\SmallTweaks\Alerts.lua
-modules\SmallTweaks\MacroOverride.lua
-modules\SmallTweaks\SpaceCastInterruptBlock.lua
-modules\SmallTweaks\DisableDurabilityMount.lua
-modules\SmallTweaks\Sounds.lua
-modules\SmallTweaks\ExtraActionBar.lua
-modules\SmallTweaks\ExpandVendorWindow.lua
-modules\SmallTweaks\RCM.lua
-modules\SmallTweaks\Death.lua
-modules\SmallTweaks\LFG.lua
-modules\SmallTweaks\Mail.lua
-modules\SmallTweaks\BuyEmAll.lua
-modules\SmallTweaks\NoAutoClose.lua
-modules\SmallTweaks\AutoConfirm.lua
-modules\SmallTweaks\FavoriteContacts.lua
-modules\SmallTweaks\TransmogOutfits.lua
+# Module: Class Features
+modules\ClassFeatures\ClassFeatures.lua
+modules\ClassFeatures\EnemyCounter.lua
+modules\ClassFeatures\NoMovement.lua
+modules\ClassFeatures\FesteringGlow.lua
+modules\ClassFeatures\PutrefyCross.lua
+modules\ClassFeatures\ReaperCross.lua
+modules\ClassFeatures\FrostBarSwap.lua
+modules\ClassFeatures\FlurryCross.lua
+modules\ClassFeatures\BurningRushReminder.lua
+modules\ClassFeatures\ExecuteAlert.lua
 
-# Module: Class Features (Shared must load first)
-modules\ClassFeatures\Shared.lua
-modules\ClassFeatures\DeathKnight.lua
-modules\ClassFeatures\Mage.lua
-modules\ClassFeatures\Warlock.lua
-modules\ClassFeatures\Warrior.lua
+# Module: Combat
+modules\Combat\Combat.lua
+modules\Combat\AbsorbDisplay.lua
+modules\Combat\BlockRightClick.lua
+modules\Combat\BlockSpaceCast.lua
+modules\Combat\AutoAcceptResurrection.lua
+modules\Combat\AutoReleasePvP.lua
+
+# Module: Interface
+modules\Interface\Interface.lua
+modules\Interface\HideHelpTips.lua
+modules\Interface\HideDurabilityMount.lua
+modules\Interface\HideExtraActionDecor.lua
+modules\Interface\NoAutoClose.lua
+modules\Interface\MacroOverride.lua
+modules\Interface\TransmogOutfits.lua
+
+# Module: Sounds
+modules\Sounds\Sounds.lua
+modules\Sounds\ReadyCheckSound.lua
+modules\Sounds\GroupInviteSound.lua
+modules\Sounds\PullTimerSound.lua
+modules\Sounds\QueuePopSound.lua
+modules\Sounds\LowHealthSound.lua
+
+# Module: Group Finder
+modules\GroupFinder\GroupFinder.lua
+modules\GroupFinder\DungeonFilter.lua
+modules\GroupFinder\MoveResetButton.lua
+
+# Module: Vendor & Mail
+modules\VendorMail\VendorMail.lua
+modules\VendorMail\ExpandVendorWindow.lua
+modules\VendorMail\BuyEmAll.lua
+modules\VendorMail\AutoConfirm.lua
+modules\VendorMail\RememberRecipient.lua
+modules\VendorMail\FavoriteContacts.lua
 
 # Module: Mythic+
+modules\MythicPlus\MythicPlus.lua
 modules\MythicPlus\ExternalAlert.lua
 modules\MythicPlus\DispelAlert.lua
 modules\MythicPlus\ESCTeleports.lua
 modules\MythicPlus\BossTimerPreview.lua
+
+# Settings window (last: builds from the module registry)
+options.lua

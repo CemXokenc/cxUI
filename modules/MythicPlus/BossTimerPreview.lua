@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 -- ---------------------------------------------------------------------------
--- MODULE: MYTHIC+ -> BOSS PB PREVIEW
+-- MYTHIC+: BOSS PB PREVIEW
 --
 -- EllesmereUIMythicTimer only shows how much faster/slower you killed a
 -- boss AFTER the fact, compared to your best split. This module injects
@@ -20,9 +20,10 @@ local addonName, ns = ...
 --   _G._EMT_AceDB               - its live profile db
 -- We hooksecurefunc the redraw function and, right after each redraw,
 -- overwrite the time text of any not-yet-completed boss row with our own
--- prediction. We never write to EllesmereUIMythicTimer's saved data --
--- only read its best-split history, and only overwrite FontString
--- *display text*, which it fully regenerates on the next redraw anyway.
+-- prediction. We only read its best-split history and overwrite FontString
+-- *display text* (regenerated on the next redraw). The one thing we DO change
+-- is two of its profile options (see TryHook) - and only while this feature is
+-- on: the previous values are put back when it is turned off.
 --
 -- CAVEAT: EllesmereUIMythicTimer doesn't expose the boss row FontStrings
 -- by name, so we find them by elimination (every other FontString on its
@@ -41,12 +42,18 @@ local EMT_KNOWN_FS_FIELDS = {
     "_previewFS", "_enemyBarText", "_barTimerFS",
 }
 
-local function IsEnabled()
-    return CXUI_DB and CXUI_DB.bossPBPreview
-end
+local MP = ns:GetModule("MythicPlus")
+
+local F = MP:NewFeature{
+    key  = "bossPBPreview",
+    name = "Boss PB Preview (EllesmereUI M+ Timer)",
+    desc = "Shows your best split for each upcoming boss in EllesmereUIMythicTimer. Needs EllesmereUI.",
+    info = "Shows your best split for each upcoming boss directly in EllesmereUIMythicTimer's own frame, before you kill it. Falls back to the closest lower key level you've completed if you have no data for the current level yet. Requires EllesmereUI + EllesmereUIMythicTimer.",
+}
 
 local hooked = false
 local warnedOnce = false
+local changed -- { showUpcoming = old, compareMode = old } while we own the profile settings
 
 local function GetEMTProfile()
     return _G._EMT_AceDB and _G._EMT_AceDB.profile
@@ -110,7 +117,6 @@ local function GetBossRowFontStrings(frame, expectedCount)
 end
 
 local function OnEMTRefresh()
-    if not IsEnabled() then return end
 
     local mapID = C_ChallengeMode.GetActiveChallengeMapID()
     if not mapID then return end
@@ -151,42 +157,47 @@ local function OnEMTRefresh()
 end
 
 local function TryHook()
-    if hooked then return end
     if not (_G._EMT_StandaloneRefresh and _G._EMT_GetStandaloneFrame and _G._EMT_AceDB) then
-        return
+        return false
     end
-    hooked = true
 
     -- Turn on EllesmereUIMythicTimer's own (UI-hidden) "show upcoming split
     -- target" option so it actually builds a row for uncompleted bosses for
     -- us to then overwrite. Only set the compare mode if the user hasn't
-    -- already picked one themselves in EllesmereUI's own options.
+    -- already picked one themselves. Old values are remembered for OnDisable.
     local p = GetEMTProfile()
-    if p then
+    if p and not changed then
+        changed = { showUpcoming = p.showUpcomingSplitTargets, compareMode = p.objectiveCompareMode }
         p.showUpcomingSplitTargets = true
         if not p.objectiveCompareMode or p.objectiveCompareMode == "NONE" then
             p.objectiveCompareMode = "LEVEL"
         end
     end
 
-    hooksecurefunc("_EMT_StandaloneRefresh", OnEMTRefresh)
+    hooked = F:Hook("_EMT_StandaloneRefresh", OnEMTRefresh)
+    return hooked
 end
 
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-initFrame:SetScript("OnEvent", function(self)
-    TryHook()
-    if not hooked then
-        -- EllesmereUIMythicTimer hasn't finished loading its globals yet
-        -- (unusual load order / addon disabled at the time). Poll briefly.
-        local tries = 0
-        local ticker
-        ticker = C_Timer.NewTicker(1, function()
-            tries = tries + 1
-            TryHook()
-            if hooked or tries >= 15 then
-                if ticker then ticker:Cancel() end
-            end
-        end)
+function F:OnEnable()
+    warnedOnce = false
+    if TryHook() then return end
+
+    -- EllesmereUIMythicTimer hasn't finished loading its globals yet
+    -- (unusual load order / addon disabled at the time). Poll briefly.
+    local tries = 0
+    local ticker
+    ticker = self:NewTicker(1, function()
+        tries = tries + 1
+        if TryHook() or tries >= 15 then ticker:Cancel() end
+    end)
+end
+
+function F:OnDisable()
+    -- Hand EllesmereUIMythicTimer's settings back exactly as we found them.
+    local p = GetEMTProfile()
+    if p and changed then
+        p.showUpcomingSplitTargets = changed.showUpcoming
+        p.objectiveCompareMode = changed.compareMode
     end
-end)
+    changed = nil
+end
