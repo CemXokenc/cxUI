@@ -8,6 +8,7 @@ local F = S:NewFeature{
     key  = "inviteSound",
     name = "Group Invite Sound",
     desc = "Plays a sound through Master when a group invite arrives.",
+    sound = { kind = "kit", value = 8960, name = "Dungeon Finder Alarm" },
 }
 
 function F:OnEnable()
@@ -19,6 +20,6 @@ function F:OnEnable()
             local _, newStatus = ...
             if newStatus ~= "invited" then return end
         end
-        S.PlayKit(8960)
+        F:PlaySound()
     end)
 end

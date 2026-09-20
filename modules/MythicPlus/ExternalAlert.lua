@@ -25,6 +25,7 @@ local F = MP:NewFeature{
     key  = "externalAlertSound",
     name = "External Cooldown Alert",
     desc = "Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you.",
+    sound = { kind = "file", value = ns.Media("ExternalAlert", "ExternalAlert.ogg"), name = "External Cooldown Alert" },
 }
 
 local POLL_INTERVAL   = 0.2 -- how often to check for newly-shown icons
@@ -45,7 +46,7 @@ local function PlayExternalAlertSound(source, frame)
         Debug("  -> suppressed: in Edit Mode")
         return
     end
-    local willPlay, handle = MP.PlayFile(ns.Media("ExternalAlert", "moan.ogg"))
+    local willPlay, handle = F:PlaySound()
     Debug("  -> PlaySoundFile ->", willPlay, handle)
 end
 

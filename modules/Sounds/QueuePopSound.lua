@@ -12,9 +12,8 @@ local F = S:NewFeature{
     key  = "queuePopSound",
     name = "Queue Pop Sound",
     desc = "Plays a sound the moment a dungeon/raid, battleground, or arena queue pops.",
+    sound = { kind = "file", value = 567458, name = "Queue Pop" }, -- same file BetterBlizzQueue used
 }
-
-local QUEUE_POP_SOUND = 567458 -- same file BetterBlizzQueue used
 
 function F:OnEnable()
     -- Dungeon / Raid (LFG proposal)
@@ -23,9 +22,9 @@ function F:OnEnable()
     ev:SetScript("OnEvent", function()
         local proposalExists, _, _, _, _, _, _, hasResponded = GetLFGProposal()
         if not proposalExists or hasResponded then return end
-        S.PlayFile(QUEUE_POP_SOUND)
+        F:PlaySound()
     end)
 
     -- Battleground / Arena
-    self:Hook("PVPReadyDialog_Display", function() S.PlayFile(QUEUE_POP_SOUND) end)
+    self:Hook("PVPReadyDialog_Display", function() F:PlaySound() end)
 end

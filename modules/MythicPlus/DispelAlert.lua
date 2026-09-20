@@ -71,9 +71,9 @@ local F = MP:NewFeature{
     name = "Dispellable Debuff Alert",
     desc = "Plays a sound when a party member gets a debuff your spec can dispel. Dungeons only.",
     info = "Plays a sound whenever a party member gets a debuff your spec can dispel (single-target dispels only). Mythic Keystone dungeons only.",
+    sound = { kind = "file", value = ns.Media("DispelAlert", "DispelAlert.ogg"), name = "Dispellable Debuff Alert", filesOnly = true },
 }
 
-local DISPEL_ALERT_SOUND_FILE = ns.Media("DispelAlert", "AfflictionAlert.ogg")
 
 -- Debug mode: /cxdispel debug  (toggles verbose chat prints)
 --             /cxdispel status (prints current gating state)
@@ -103,8 +103,8 @@ local function AnnounceDispellableDebuff(unit, withSound)
         return
     end
 
-    local willPlay, handle = PlaySoundFile(DISPEL_ALERT_SOUND_FILE, "Master")
-    Debug("PlaySoundFile ->", willPlay, handle, "path:", DISPEL_ALERT_SOUND_FILE)
+    local willPlay, handle = F:PlaySound()
+    Debug("PlaySound ->", willPlay, handle, "value:", tostring(F:GetSound().value))
 end
 
 -- ---------------------------------------------------------------------------
@@ -282,7 +282,7 @@ local function BuildDesiredAuraSoundRegistrations()
                     desired[key] = {
                         unitToken      = unit,
                         spellID        = spellID,
-                        soundFileName  = DISPEL_ALERT_SOUND_FILE,
+                        soundFileName  = F:GetSound().value,
                         outputChannel  = "Master",
                     }
                 end
@@ -513,6 +513,16 @@ function F:OnEnable()
     ev:RegisterEvent("PLAYER_REGEN_ENABLED")
 
     RecomputeDispelTypes()
+end
+
+-- The engine keeps playing the file it was registered with, so a new choice
+-- means dropping the old registrations and registering again.
+function F:OnSoundChanged()
+    if not F:IsOn() or not HAS_AURA_SOUND_API or AuraSoundRegistrationBlocked() then return end
+    for key, handle in pairs(auraSoundHandles) do
+        if pcall(C_UnitAuras.RemoveAuraSound, handle) then auraSoundHandles[key] = nil end
+    end
+    ScheduleAuraSoundRefresh(0)
 end
 
 function F:OnDisable()

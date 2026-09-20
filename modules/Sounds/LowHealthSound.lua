@@ -9,10 +9,11 @@ local F = S:NewFeature{
     key  = "lowHealthAlert",
     name = "Low Health Sound Alert",
     desc = "Plays a custom sound when your health is low.",
+    sound = { kind = "file", value = ns.Media("LowHealthSound", "LowHealthSound.ogg"), name = "Low Health" },
 }
 
 function F:OnEnable()
     self:HookScript(LowHealthFrame, "OnShow", function()
-        S.PlayFile(ns.Media("LowHealthSound", "lowhp.ogg"))
+        F:PlaySound()
     end)
 end

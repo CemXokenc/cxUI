@@ -20,9 +20,12 @@ local SIZE_DESC       = 10 + FONT_BOOST   -- option description
 local SIZE_BTN_NAME   = 21                -- home page module button: name (two columns, 30 * 0.7)
 local SIZE_BTN_DESC   = 14                -- home page module button: description (20 * 0.7)
 
+-- cxUI palette: blue, yellow, white, red (+ class colours). Blizzard's own gold
+-- and grey are mapped onto these (see Palettize).
 local BLUE   = { 0, 0.44, 0.87 }          -- |cff0070dd
 local YELLOW = { 1, 1, 0 }                -- |cffffff00
-local GRAY   = { 0.72, 0.72, 0.72 }
+local WHITE  = { 1, 1, 1 }
+local RED    = { 1, 0, 0 }                -- |cffff0000
 
 local SIDEBAR_WIDTH  = 175
 local BTN_PAD_TOP    = 5     -- inner padding of a home button (top / bottom)
@@ -31,6 +34,9 @@ local TITLE_MARGIN   = 20    -- space between the title and the content below it
 local BTN_COLUMNS    = 2
 local BTN_GAP        = 6     -- space between home buttons
 local SUB_INDENT     = 16    -- sidebar submenu indent
+local CHECK_MARGIN   = 3     -- space between a checkbox and its label
+local CHECK_SIZE     = 26
+local TEXT_INDENT    = CHECK_SIZE + CHECK_MARGIN -- where labels / descriptions start
 local ROW_GAP        = 12
 local PAGE_PAD       = 8
 
@@ -74,6 +80,17 @@ local function StyleFlat(btn)
     end)
 end
 
+local function NewFlatButton(parent, label, width, height, color)
+    local btn = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    btn:SetSize(width, height)
+    StyleFlat(btn)
+    btn.text = NewText(btn, SIZE_DESC, color or WHITE)
+    btn.text:SetPoint("CENTER")
+    btn.text:SetJustifyH("CENTER")
+    btn.text:SetText(label)
+    return btn
+end
+
 -- Reload UI: same row as the title, right side
 local reloadButton = CreateFrame("Button", nil, panel, "BackdropTemplate")
 reloadButton:SetSize(110, 26)
@@ -97,8 +114,20 @@ end
 local homeArea = NewArea()
 local moduleArea = NewArea()
 
-local function NewScroll(parent, name)
+local function NewScroll(parent, name, hideBar)
     local scroll = CreateFrame("ScrollFrame", name, parent, "UIPanelScrollFrameTemplate")
+    if hideBar then
+        -- invisible and unclickable; alpha (not Hide) because the template re-shows the bar itself
+        local bar = scroll.ScrollBar
+        if type(bar) ~= "table" then bar = _G[name .. "ScrollBar"] end
+        if type(bar) == "table" then
+            bar:SetAlpha(0)
+            bar:EnableMouse(false)
+            for _, b in ipairs({ bar.ScrollUpButton, bar.ScrollDownButton }) do
+                if type(b) == "table" and b.EnableMouse then b:EnableMouse(false) end
+            end
+        end
+    end
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(1, 1)
     scroll:SetScrollChild(content)
@@ -120,16 +149,175 @@ local currentGroup = {}   -- [moduleID] = selected submenu id
 local homeBuilt = false
 local ShowPage
 
+
+-- Sound picker ---------------------------------------------------------------------------------
+local ROW_H = 28
+local picker                       -- built on first use
+local pickerFeature, pickerList, pickerFiltered = nil, {}, {}
+
+local function SoundLabel(spec)
+    return (spec and spec.name) or "?"
+end
+
+local function PickerRefresh()
+    if not picker or not picker:IsShown() then return end
+    local scroll, content = picker.scroll, picker.content
+    local offset = math.floor((scroll:GetVerticalScroll() or 0) / ROW_H)
+    local current = pickerFeature and pickerFeature:GetSound()
+    content:SetHeight(math.max(#pickerFiltered * ROW_H, 1))
+    for i, row in ipairs(picker.rows) do
+        local entry = pickerFiltered[offset + i]
+        if entry then
+            row.entry = entry
+            row.label:SetText(entry.name .. (entry.source and ("  |cffffff00[" .. entry.source .. "]|r") or ""))
+            row.selected:SetShown(ns.Sounds.Same(entry, current))
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(offset + i - 1) * ROW_H)
+            row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(offset + i - 1) * ROW_H)
+            row:Show()
+        else
+            row:Hide()
+        end
+    end
+end
+
+local function PickerFilter()
+    local query = (picker.search:GetText() or ""):lower()
+    wipe(pickerFiltered)
+    -- entry 1 is always "Default" so the shipped sound can be restored
+    for _, entry in ipairs(pickerList) do
+        if query == "" or entry.default or entry.name:lower():find(query, 1, true) or (entry.source or ""):lower():find(query, 1, true) then
+            pickerFiltered[#pickerFiltered + 1] = entry
+        end
+    end
+    picker.count:SetText(#pickerFiltered - 1 .. " sounds")
+    picker.scroll:SetVerticalScroll(0)
+    PickerRefresh()
+end
+
+local function BuildPicker()
+    picker = CreateFrame("Frame", "CXUI_SoundPicker", UIParent, "BackdropTemplate")
+    picker:SetSize(460, 520)
+    picker:SetPoint("CENTER")
+    picker:SetFrameStrata("FULLSCREEN_DIALOG")
+    picker:SetToplevel(true)
+    picker:EnableMouse(true)
+    picker:SetMovable(true)
+    picker:RegisterForDrag("LeftButton")
+    picker:SetScript("OnDragStart", picker.StartMoving)
+    picker:SetScript("OnDragStop", picker.StopMovingOrSizing)
+    picker:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+    picker:SetBackdropColor(0.05, 0.05, 0.07, 0.98)
+    picker:SetBackdropBorderColor(0, 0.44, 0.87, 1)
+    picker:Hide()
+    tinsert(UISpecialFrames, "CXUI_SoundPicker") -- ESC closes it
+
+    picker.title = NewText(picker, SIZE_TITLE, BLUE)
+    picker.title:SetPoint("TOPLEFT", 14, -12)
+
+    local close = NewFlatButton(picker, "Close", 70, 26, YELLOW)
+    close:SetPoint("TOPRIGHT", -12, -10)
+    close:SetScript("OnClick", function() picker:Hide() end)
+
+    picker.subtitle = NewText(picker, SIZE_DESC, WHITE)
+    picker.subtitle:SetPoint("TOPLEFT", picker.title, "BOTTOMLEFT", 0, -4)
+
+    local searchLabel = NewText(picker, SIZE_DESC, YELLOW)
+    searchLabel:SetPoint("TOPLEFT", picker.subtitle, "BOTTOMLEFT", 0, -12)
+    searchLabel:SetText("Search:")
+
+    picker.search = CreateFrame("EditBox", "CXUI_SoundPickerSearch", picker, "InputBoxTemplate")
+    picker.search:SetSize(240, 22)
+    picker.search:SetPoint("LEFT", searchLabel, "RIGHT", 12, 0)
+    picker.search:SetAutoFocus(false)
+    picker.search:SetFont(FONT, SIZE_DESC, "")
+    picker.search:SetScript("OnTextChanged", PickerFilter)
+    picker.search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+    picker.count = NewText(picker, SIZE_DESC, WHITE)
+    picker.count:SetPoint("LEFT", picker.search, "RIGHT", 12, 0)
+
+    picker.scroll, picker.content = NewScroll(picker, "CXUI_SoundPickerScroll")
+    picker.scroll:SetPoint("TOPLEFT", searchLabel, "BOTTOMLEFT", 0, -12)
+    picker.scroll:SetPoint("BOTTOMRIGHT", picker, "BOTTOMRIGHT", -32, 12)
+    picker.content:SetWidth(400)
+    picker.scroll:HookScript("OnVerticalScroll", PickerRefresh)
+    picker.scroll:SetScript("OnSizeChanged", function(self, w)
+        picker.content:SetWidth(w or 400)
+    end)
+
+    -- Only as many rows as fit on screen; they are re-filled while scrolling.
+    picker.rows = {}
+    for i = 1, math.ceil(520 / ROW_H) + 1 do
+        local row = CreateFrame("Frame", nil, picker.content)
+        row:SetHeight(ROW_H)
+        row.selected = row:CreateTexture(nil, "BACKGROUND")
+        row.selected:SetAllPoints()
+        row.selected:SetColorTexture(0, 0.44, 0.87, 0.25)
+        row.play = NewFlatButton(row, "Play", 46, 22, BLUE)
+        row.play:SetPoint("LEFT", 4, 0)
+        row.play:SetScript("OnClick", function()
+            if type(row.entry) ~= "table" then return end
+            ns.Sounds.Play(row.entry.default and pickerFeature.sound or row.entry)
+        end)
+        row.set = NewFlatButton(row, "Set", 46, 22, YELLOW)
+        row.set:SetPoint("RIGHT", -4, 0)
+        row.set:SetScript("OnClick", function()
+            if type(row.entry) ~= "table" then return end
+            ns.Sounds.SetChoice(pickerFeature, (not row.entry.default) and row.entry or nil)
+            PickerRefresh()
+        end)
+        row.label = NewText(row, SIZE_DESC, WHITE)
+        row.label:SetPoint("LEFT", row.play, "RIGHT", 8, 0)
+        row.label:SetPoint("RIGHT", row.set, "LEFT", -8, 0)
+        row.label:SetWordWrap(false)
+        row.label:SetJustifyV("MIDDLE")
+        picker.rows[i] = row
+    end
+end
+
+local function OpenSoundPicker(feature)
+    if not picker then BuildPicker() end
+    pickerFeature = feature
+    picker.title:SetText("Choose sound")
+    picker.subtitle:SetText(feature.name)
+
+    pickerList = { { name = "Default (" .. SoundLabel(feature.sound) .. ")", default = true } }
+    for _, entry in ipairs(ns.Sounds.GetList(feature.sound and feature.sound.filesOnly)) do
+        pickerList[#pickerList + 1] = entry
+    end
+    picker.search:SetText("")
+    picker:Show()
+    picker:Raise()
+    PickerFilter()
+end
+
+panel:HookScript("OnHide", function() if picker then picker:Hide() end end)
+
 -- Checkbox widgets -----------------------------------------------------------------
+-- Blizzard gold -> our yellow, Blizzard grey/white -> our white
+local function Palettize(fs)
+    local r, g, b = fs:GetTextColor()
+    if type(r) ~= "number" then return end
+    if r > 0.9 and g > 0.6 and g < 0.95 and b < 0.3 then
+        fs:SetTextColor(YELLOW[1], YELLOW[2], YELLOW[3])
+    else
+        fs:SetTextColor(WHITE[1], WHITE[2], WHITE[3])
+    end
+end
+
 local function NewCheck(parent, name, reload, tooltipTitle, tooltipText)
     local check = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
     SetFont(check.Text, SIZE_NAME)
+    Palettize(check.Text)
+    check.Text:ClearAllPoints()
+    check.Text:SetPoint("LEFT", check, "RIGHT", CHECK_MARGIN, 0)
     check.Text:SetText(name .. (reload and " |cffff0000(Requires Reload)*|r" or ""))
     if tooltipText then
         check:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(tooltipTitle, 1, 1, 1)
-            GameTooltip:AddLine(tooltipText, nil, nil, nil, true)
+            GameTooltip:SetText(tooltipTitle, WHITE[1], WHITE[2], WHITE[3])
+            GameTooltip:AddLine(tooltipText, YELLOW[1], YELLOW[2], YELLOW[3], true)
             GameTooltip:Show()
         end)
         check:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -148,15 +336,40 @@ local function BuildFeatureRow(content, feature)
     end)
     checkboxes[#checkboxes + 1] = { frame = check, key = feature.key }
 
-    local desc = NewText(row, SIZE_DESC, GRAY)
-    desc:SetPoint("TOPLEFT", check, "BOTTOMLEFT", 30, 2)
+    -- Features with a configurable sound: Play + Change at the right end of the name line
+    local reserve = 0
+    if feature.sound then
+        local change = NewFlatButton(row, "Change", 66, 22, YELLOW)
+        change:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -2)
+        local play = NewFlatButton(row, "Play", 46, 22, BLUE)
+        play:SetPoint("RIGHT", change, "LEFT", -6, 0)
+        -- above the checkbox, whose click area spans the whole row
+        change:SetFrameLevel(check:GetFrameLevel() + 5)
+        play:SetFrameLevel(check:GetFrameLevel() + 5)
+        play:SetScript("OnClick", function() feature:PlaySound() end)
+        change:SetScript("OnClick", function() OpenSoundPicker(feature) end)
+        local function tip(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Current sound", WHITE[1], WHITE[2], WHITE[3])
+            GameTooltip:AddLine(SoundLabel(feature:GetSound()), YELLOW[1], YELLOW[2], YELLOW[3], true)
+            GameTooltip:Show()
+        end
+        for _, b in ipairs({ play, change }) do
+            b:HookScript("OnEnter", tip)
+            b:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        end
+        reserve = 66 + 6 + 46 + 8
+    end
+
+    local desc = NewText(row, SIZE_DESC, WHITE)
+    desc:SetPoint("TOPLEFT", check, "BOTTOMLEFT", TEXT_INDENT, 2)
     desc:SetText(feature.desc)
 
     return { frame = row, layout = function(width)
-        desc:SetWidth(width - 34)
+        desc:SetWidth(width - TEXT_INDENT - 4)
         local height = 24 + desc:GetStringHeight()
         row:SetSize(width, height)
-        check:SetHitRectInsets(0, -(width - 30), 0, -(desc:GetStringHeight() + 2)) -- whole row is clickable
+        check:SetHitRectInsets(0, -(width - TEXT_INDENT - reserve), 0, -(desc:GetStringHeight() + 2)) -- whole row is clickable, minus the buttons
         return height
     end }
 end
@@ -172,7 +385,7 @@ local function BuildChoiceRow(content, choice)
     for _, opt in ipairs(choice.choices) do
         local o = {}
         o.check = NewCheck(group, opt.name, false, opt.name, opt.desc)
-        o.desc = NewText(group, SIZE_DESC, GRAY)
+        o.desc = NewText(group, SIZE_DESC, WHITE)
         o.desc:SetText(opt.desc)
         o.value = opt.value
         o.check:SetScript("OnClick", function(self)
@@ -193,9 +406,9 @@ local function BuildChoiceRow(content, choice)
             o.check:ClearAllPoints()
             o.check:SetPoint("TOPLEFT", group, "TOPLEFT", 12, -y)
             o.desc:ClearAllPoints()
-            o.desc:SetPoint("TOPLEFT", o.check, "BOTTOMLEFT", 30, 2)
-            o.desc:SetWidth(width - 46)
-            o.check:SetHitRectInsets(0, -(width - 42), 0, -(o.desc:GetStringHeight() + 2))
+            o.desc:SetPoint("TOPLEFT", o.check, "BOTTOMLEFT", TEXT_INDENT, 2)
+            o.desc:SetWidth(width - TEXT_INDENT - 16)
+            o.check:SetHitRectInsets(0, -(width - TEXT_INDENT - 12), 0, -(o.desc:GetStringHeight() + 2))
             y = y + 24 + o.desc:GetStringHeight() + 8
         end
         group:SetSize(width, y)
@@ -218,9 +431,9 @@ end
 
 -- Module page ------------------------------------------------------------------------
 local function BuildPage(mod, group)
-    local scroll, content = NewScroll(moduleArea, "CXUI_Page_" .. mod.id .. (group and ("_" .. group.id) or ""))
+    local scroll, content = NewScroll(moduleArea, "CXUI_Page_" .. mod.id .. (group and ("_" .. group.id) or ""), true)
     scroll:SetPoint("TOPLEFT", moduleArea, "TOPLEFT", SIDEBAR_WIDTH + 10, 0)
-    scroll:SetPoint("BOTTOMRIGHT", moduleArea, "BOTTOMRIGHT", -22, 0)
+    scroll:SetPoint("BOTTOMRIGHT", moduleArea, "BOTTOMRIGHT", 0, 0)
     scroll:Hide()
 
     local items = {}
@@ -305,7 +518,7 @@ local function BuildSidebar()
         return btn
     end
 
-    AddButton("home", "< Home", 0, nil, function() ShowPage("home") end)
+    AddButton("home", "<- Home", 0, nil, function() ShowPage("home") end)
     y = y + 8
     for _, mod in ipairs(ns.modules) do
         AddButton(mod.id, mod.name, 0, nil, function() ShowPage(mod.id) end)
@@ -318,9 +531,9 @@ local function BuildSidebar()
 end
 
 -- Home page --------------------------------------------------------------------------------
-local homeScroll, homeContent = NewScroll(homeArea, "CXUI_HomeScroll")
+local homeScroll, homeContent = NewScroll(homeArea, "CXUI_HomeScroll", true)
 homeScroll:SetPoint("TOPLEFT", homeArea, "TOPLEFT", 0, 0)
-homeScroll:SetPoint("BOTTOMRIGHT", homeArea, "BOTTOMRIGHT", -22, 0)
+homeScroll:SetPoint("BOTTOMRIGHT", homeArea, "BOTTOMRIGHT", 0, 0)
 
 local homeButtons = {}
 

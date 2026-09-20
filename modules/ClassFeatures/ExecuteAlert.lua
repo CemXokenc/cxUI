@@ -26,6 +26,7 @@ local F = CF:NewFeature{
     desc  = "Sound + on-screen 'EXECUTE!' when your target enters execute range.",
     info = "Plays 'Execute' and flashes 'EXECUTE!' on screen the moment Execute becomes usable on your target (target entered execute range). Ignores Sudden Death procs so it only fires for a real health-threshold entry. Warrior only.",
     class = "WARRIOR",
+    sound = { kind = "file", value = ns.Media("ExecuteAlert", "ExecuteAlert.ogg"), name = "Execute Alert" },
 }
 
 -- Only one of these will ever be known on a given character.
@@ -86,7 +87,7 @@ local function FireExecuteAlert()
     local now = GetTime()
     if now - lastSoundTime >= EXECUTE_SOUND_COOLDOWN then
         lastSoundTime = now
-        PlaySoundFile(ns.Media("ExecuteAlert", "execute.mp3"), "Master")
+        F:PlaySound()
     end
     FlashExecuteText()
 end

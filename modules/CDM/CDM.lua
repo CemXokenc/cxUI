@@ -607,7 +607,7 @@ CDM:NewChoice{
     end,
 }
 
-CDM:NewNote("|cffff2020* If you are using MiniCC, set its glow-type option (Misc tab) to anything other than proc glow.|r", 101)
+CDM:NewNote("|cffff0000* If you are using MiniCC, set its glow-type option (Misc tab) to anything other than proc glow.|r", 101)
 
 -- ---------------------------------------------------------------------------
 -- /cdmglow  (subcommands are added by CDM.lua and CDMGlow.lua)

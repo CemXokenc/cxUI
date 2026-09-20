@@ -23,6 +23,17 @@
   `[x] Name` and a short description under it. Hover an option for a longer explanation when it has one.
 * Options marked **(Requires Reload)\*** only take full effect after `/reload`. Everything else applies immediately.
 
+### Choosing sounds
+
+Features that play a single sound (Ready Check, Group Invite, Queue Pop, Low Health, External Cooldown, Dispellable Debuff,
+Execute Alert) have **Play** and **Change** buttons on the name line. *Play* previews the current sound; *Change* opens a list
+of every available sound with a search box. Each row has **Play** and **Set**; the first row restores the shipped default.
+The list contains cxUI's own sounds, everything registered in SharedMedia (if installed) and Blizzard's built-in sound kits
+(Dispellable Debuff Alert only accepts files, so kits are not offered there). Choices are stored in `CXUI_DB.soundChoices`.
+
+To make a feature's sound selectable, give it a default: `M:NewFeature{ ..., sound = { kind = "file", value = ns.Media("Folder", "Feature.ogg"), name = "..." } }`
+and call `F:PlaySound()` where the sound should play.
+
 The window is generated from the module registry — adding a module or feature never requires touching `options.lua`.
 
 ---
@@ -35,12 +46,12 @@ cxUI/
 ├── core.lua                 # SavedVariables defaults + startup
 ├── options.lua              # settings window (built from the registry)
 ├── libs/
-├── media/                   # one sub-folder per feature that owns files
+├── media/                   # one sub-folder per feature that owns files, files named after the feature (.ogg)
 │   ├── CDMGlow/             #   pixel-glow textures
-│   ├── DispelAlert/
-│   ├── ExecuteAlert/
-│   ├── ExternalAlert/
-│   └── LowHealthSound/
+│   ├── DispelAlert/DispelAlert.ogg
+│   ├── ExecuteAlert/ExecuteAlert.ogg
+│   ├── ExternalAlert/ExternalAlert.ogg
+│   └── LowHealthSound/LowHealthSound.ogg
 └── modules/
     ├── Modules.lua          # module registry + feature lifecycle (shared by all modules)
     ├── <Module>/

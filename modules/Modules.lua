@@ -66,13 +66,15 @@ function Module:AddEntry(entry, order)
 end
 
 -- Registers a feature (a checkbox in the module's options page).
--- info: key, name, desc, [info], [default=true], [reload], [class], [group]
+-- info: key, name, desc, [info], [default=true], [reload], [class], [group],
+--       [sound = {kind="file"|"kit", value=..., name=..., filesOnly=bool}]  (a configurable sound)
 function Module:NewFeature(info)
     assert(info.key and info.name, "cxUI: feature needs key and name")
     local f = setmetatable({
         kind = "feature", key = info.key, name = info.name, desc = info.desc or "",
         info = info.info, default = (info.default ~= false), reload = info.reload and true or false,
         class = info.class, group = info.group or info.class, active = false,
+        sound = info.sound, -- default sound spec; the player's own choice lives in CXUI_DB.soundChoices
         _frames = {}, _timers = setmetatable({}, { __mode = "k" }), _hooked = {},
     }, Feature)
     self:AddEntry(f, info.order)
@@ -171,6 +173,17 @@ function Feature:HookScript(frame, script, fn)
     return true
 end
 
+-- The sound this feature plays: the player's choice, or the shipped default.
+function Feature:GetSound()
+    local choices = CXUI_DB and CXUI_DB.soundChoices
+    return (choices and choices[self.key]) or self.sound
+end
+
+-- Plays the feature's sound through the Master channel. Returns PlaySound(File)'s results.
+function Feature:PlaySound()
+    return ns.Sounds.Play(self:GetSound())
+end
+
 -- Hides everything that could keep running: timers, events, OnUpdate.
 function Feature:Silence()
     for t in pairs(self._timers) do t:Cancel() end
@@ -228,4 +241,76 @@ function ns:SetChoice(key, value)
             if not ok then report("choice " .. key, err) end
         end
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- Sounds: playback + the list of sounds a player can pick from
+-- spec = { kind = "file" (path or FileDataID) | "kit" (SoundKit ID), value = ..., name = ... }
+-- ---------------------------------------------------------------------------
+ns.Sounds = {}
+
+function ns.Sounds.Play(spec)
+    if not spec or spec.value == nil then return end
+    if spec.kind == "kit" then
+        return PlaySound(spec.value, "Master")
+    end
+    return PlaySoundFile(spec.value, "Master")
+end
+
+function ns.Sounds.Same(a, b)
+    return a and b and a.kind == b.kind and a.value == b.value
+end
+
+-- Saves the player's choice for a feature (nil = back to the shipped default).
+function ns.Sounds.SetChoice(feature, spec)
+    CXUI_DB.soundChoices = CXUI_DB.soundChoices or {}
+    if spec then
+        CXUI_DB.soundChoices[feature.key] = { kind = spec.kind, value = spec.value, name = spec.name }
+    else
+        CXUI_DB.soundChoices[feature.key] = nil
+    end
+    if feature.OnSoundChanged then
+        local ok, err = pcall(feature.OnSoundChanged, feature)
+        if not ok then report("OnSoundChanged [" .. feature.key .. "]", err) end
+    end
+end
+
+-- Every selectable sound, in display order: cxUI's own, SharedMedia, Blizzard.
+-- Rebuilt on demand (other addons may register sounds late).
+-- Entries: { name, source, kind, value }
+function ns.Sounds.GetList(filesOnly)
+    local list = {}
+
+    -- 1. sounds shipped in media/ (each feature's default file)
+    local mediaPrefix = ("Interface\\AddOns\\" .. ns.addonName .. "\\media\\"):lower()
+    for _, f in ipairs(ns.featureList) do
+        local d = f.sound
+        if d and d.kind == "file" and type(d.value) == "string" and d.value:lower():find(mediaPrefix, 1, true) then
+            list[#list + 1] = { name = f.name, source = "cxUI", kind = "file", value = d.value }
+        end
+    end
+    table.sort(list, function(a, b) return a.name < b.name end)
+
+    -- 2. LibSharedMedia sounds (whatever the installed addons registered)
+    local LSM = _G.LibStub and _G.LibStub("LibSharedMedia-3.0", true)
+    if LSM then
+        local sm = {}
+        for name, path in pairs(LSM:HashTable("sound")) do
+            if name ~= "None" then sm[#sm + 1] = { name = name, source = "SharedMedia", kind = "file", value = path } end
+        end
+        table.sort(sm, function(a, b) return a.name:lower() < b.name:lower() end)
+        for _, e in ipairs(sm) do list[#list + 1] = e end
+    end
+
+    -- 3. Blizzard sound kits (SOUNDKIT). Not usable where only files are allowed.
+    if not filesOnly and _G.SOUNDKIT then
+        local kits = {}
+        for name, id in pairs(_G.SOUNDKIT) do
+            if type(id) == "number" then kits[#kits + 1] = { name = name, source = "Blizzard", kind = "kit", value = id } end
+        end
+        table.sort(kits, function(a, b) return a.name < b.name end)
+        for _, e in ipairs(kits) do list[#list + 1] = e end
+    end
+
+    return list
 end
