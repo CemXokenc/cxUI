@@ -46,6 +46,7 @@ function ns:NewModule(id, info)
     local mod = setmetatable({
         id = id, name = info.name or id, desc = info.desc or "",
         order = info.order or 100, seq = nextSeq(), entries = {},
+        groups = info.groups, -- optional submenus: { {id=, name=}, ... }; features join one via group/class
     }, Module)
     ns.modules[#ns.modules + 1] = mod
     ns.moduleByID[id] = mod
@@ -65,13 +66,13 @@ function Module:AddEntry(entry, order)
 end
 
 -- Registers a feature (a checkbox in the module's options page).
--- info: key, name, desc, [info], [default=true], [reload], [class]
+-- info: key, name, desc, [info], [default=true], [reload], [class], [group]
 function Module:NewFeature(info)
     assert(info.key and info.name, "cxUI: feature needs key and name")
     local f = setmetatable({
         kind = "feature", key = info.key, name = info.name, desc = info.desc or "",
         info = info.info, default = (info.default ~= false), reload = info.reload and true or false,
-        class = info.class, active = false,
+        class = info.class, group = info.group or info.class, active = false,
         _frames = {}, _timers = setmetatable({}, { __mode = "k" }), _hooked = {},
     }, Feature)
     self:AddEntry(f, info.order)
@@ -94,9 +95,12 @@ function Module:NewNote(text, order)
     return self:AddEntry({ kind = "note", text = text }, order)
 end
 
-function Module:GetEntries()
+-- group (optional): only entries belonging to that submenu
+function Module:GetEntries(group)
     local list = {}
-    for i, e in ipairs(self.entries) do list[i] = e end
+    for _, e in ipairs(self.entries) do
+        if not group or e.group == group then list[#list + 1] = e end
+    end
     table.sort(list, function(a, b)
         if a.order ~= b.order then return a.order < b.order end
         return a.seq < b.seq

@@ -3,7 +3,6 @@ local addonName, ns = ...
 -- ===========================================================================
 -- MODULE: CLASS FEATURES
 -- Shared file. One file per feature lives next to this one:
---   EnemyCounter, NoMovement                       (all classes)
 --   FesteringGlow, PutrefyCross, ReaperCross,
 --   FrostBarSwap                                   (Death Knight)
 --   FlurryCross                                    (Mage)
@@ -18,10 +17,18 @@ local addonName, ns = ...
 --   * /cxaoe debug command (features add their own status line)
 -- ===========================================================================
 
+-- Each class is a submenu in the settings window (a feature joins the submenu
+-- of its `class`).
 local CF = ns:NewModule("ClassFeatures", {
     name  = "Class Features",
     desc  = "Class-specific overlays and alerts",
     order = 3,
+    groups = {
+        { id = "DEATHKNIGHT", name = "Death Knight" },
+        { id = "MAGE",        name = "Mage" },
+        { id = "WARLOCK",     name = "Warlock" },
+        { id = "WARRIOR",     name = "Warrior" },
+    },
 })
 
 local CDM = ns:GetModule("CDM")

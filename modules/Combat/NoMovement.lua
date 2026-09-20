@@ -1,14 +1,14 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- CLASS FEATURES: NO MOVEMENT (all classes)
+-- COMBAT: NO MOVEMENT (all classes)
 -- Shows "No <SPELL> (X.X)" while the class movement ability is on cooldown,
 -- and "FREE MOVEMENT" during Time Spiral.
 -- ===========================================================================
 
-local CF = ns:GetModule("ClassFeatures")
+local M = ns:GetModule("Combat")
 
-local F = CF:NewFeature{
+local F = M:NewFeature{
     key  = "noMovement",
     name = "No Movement",
     desc = "Shows movement ability cooldown when unavailable. Works for all classes.",

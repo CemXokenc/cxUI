@@ -2,14 +2,14 @@ local addonName, ns = ...
 
 -- ===========================================================================
 -- MODULE: COMBAT
--- In-combat helpers: absorb display, input safety and death / resurrection
--- conveniences. One file per feature:
---   AbsorbDisplay, BlockRightClick, BlockSpaceCast,
+-- In-combat helpers: absorb display, enemy counter, movement alert, input
+-- safety and death / resurrection conveniences. One file per feature:
+--   AbsorbDisplay, EnemyCounter, NoMovement, BlockRightClick, BlockSpaceCast,
 --   AutoAcceptResurrection, AutoReleasePvP
 -- ===========================================================================
 
 ns:NewModule("Combat", {
     name  = "Combat",
-    desc  = "Absorb display, input safety, resurrection helpers",
+    desc  = "Absorb, enemy counter, movement alert, input safety, resurrection",
     order = 4,
 })

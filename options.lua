@@ -17,17 +17,20 @@ local FONT            = STANDARD_TEXT_FONT
 local SIZE_TITLE      = 16 + FONT_BOOST   -- GameFontNormalLarge + 4
 local SIZE_NAME       = 12 + FONT_BOOST   -- option / sidebar label
 local SIZE_DESC       = 10 + FONT_BOOST   -- option description
-local SIZE_BTN_NAME   = 30                -- home page module button: name
-local SIZE_BTN_DESC   = 20                -- home page module button: description
+local SIZE_BTN_NAME   = 21                -- home page module button: name (two columns, 30 * 0.7)
+local SIZE_BTN_DESC   = 14                -- home page module button: description (20 * 0.7)
 
 local BLUE   = { 0, 0.44, 0.87 }          -- |cff0070dd
 local YELLOW = { 1, 1, 0 }                -- |cffffff00
 local GRAY   = { 0.72, 0.72, 0.72 }
 
 local SIDEBAR_WIDTH  = 175
-local BTN_PADDING    = 15
-local BTN_WIDTH_FRAC = 0.70
-local BTN_GAP        = 12
+local BTN_PAD_TOP    = 5     -- inner padding of a home button (top / bottom)
+local BTN_PAD_LEFT   = 10    -- inner padding of a home button (left / right)
+local TITLE_MARGIN   = 20    -- space between the title and the content below it
+local BTN_COLUMNS    = 2
+local BTN_GAP        = 6     -- space between home buttons
+local SUB_INDENT     = 16    -- sidebar submenu indent
 local ROW_GAP        = 12
 local PAGE_PAD       = 8
 
@@ -52,25 +55,41 @@ local title = NewText(panel, SIZE_TITLE, nil)
 title:SetPoint("TOPLEFT", 16, -16)
 title:SetText("|cff0070ddCem Xokenc |cffffff00UI|r")
 
-local reloadButton = CreateFrame("Button", nil, panel, "BackdropTemplate, UIPanelButtonTemplate")
-reloadButton:SetSize(140, 30)
-reloadButton:SetPoint("BOTTOMLEFT", 16, 16)
-reloadButton:SetText("Reload UI")
-SetFont(reloadButton:GetFontString(), SIZE_NAME)
-reloadButton:SetBackdrop({
-    bgFile   = "Interface\\Buttons\\WHITE8X8",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 },
-})
-reloadButton:SetBackdropColor(0.5, 0.1, 0.1, 1)
+-- Flat dark rectangle with a blue border on hover (module buttons, Reload UI)
+local function StyleFlat(btn)
+    btn:SetBackdrop({
+        bgFile   = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+    })
+    btn:SetBackdropColor(0.07, 0.07, 0.09, 0.9)
+    btn:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    btn:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(0, 0.44, 0.87, 1)
+        self:SetBackdropColor(0.1, 0.12, 0.18, 0.95)
+    end)
+    btn:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        self:SetBackdropColor(0.07, 0.07, 0.09, 0.9)
+    end)
+end
+
+-- Reload UI: same row as the title, right side
+local reloadButton = CreateFrame("Button", nil, panel, "BackdropTemplate")
+reloadButton:SetSize(110, 26)
+reloadButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -16, -13)
+StyleFlat(reloadButton)
+reloadButton.text = NewText(reloadButton, SIZE_NAME, YELLOW)
+reloadButton.text:SetPoint("CENTER")
+reloadButton.text:SetJustifyH("CENTER")
+reloadButton.text:SetText("Reload UI")
 reloadButton:SetScript("OnClick", ReloadUI)
 
--- Area between the title and the reload button
+-- Area below the title row
 local function NewArea()
     local area = CreateFrame("Frame", nil, panel)
-    area:SetPoint("TOPLEFT", panel, "TOPLEFT", 5, -45)
-    area:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -5, 55)
+    area:SetPoint("TOPLEFT", title, "BOTTOMLEFT", -11, -TITLE_MARGIN)
+    area:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -5, 10)
     area:Hide()
     return area
 end
@@ -93,10 +112,11 @@ local function ScrollWidth(scroll)
 end
 
 -- State ------------------------------------------------------------------------
-local pages = {}          -- [moduleID] = page
-local sidebarButtons = {} -- [moduleID or "home"] = button
+local pages = {}          -- [pageKey] = page   (pageKey = moduleID or moduleID..":"..groupID)
+local sidebarButtons = {} -- [pageKey or "home"] = button
 local checkboxes = {}     -- every checkbox, for state refresh
 local currentID = "home"
+local currentGroup = {}   -- [moduleID] = selected submenu id
 local homeBuilt = false
 local ShowPage
 
@@ -197,8 +217,8 @@ local function BuildNote(content, text)
 end
 
 -- Module page ------------------------------------------------------------------------
-local function BuildPage(mod)
-    local scroll, content = NewScroll(moduleArea, "CXUI_Page_" .. mod.id)
+local function BuildPage(mod, group)
+    local scroll, content = NewScroll(moduleArea, "CXUI_Page_" .. mod.id .. (group and ("_" .. group.id) or ""))
     scroll:SetPoint("TOPLEFT", moduleArea, "TOPLEFT", SIDEBAR_WIDTH + 10, 0)
     scroll:SetPoint("BOTTOMRIGHT", moduleArea, "BOTTOMRIGHT", -22, 0)
     scroll:Hide()
@@ -209,7 +229,7 @@ local function BuildPage(mod)
     local header = CreateFrame("Frame", nil, content)
     local hTitle = NewText(header, SIZE_TITLE, BLUE)
     hTitle:SetPoint("TOPLEFT", 0, 0)
-    hTitle:SetText(mod.name)
+    hTitle:SetText(group and (mod.name .. " \226\128\148 " .. group.name) or mod.name)
     local hDesc = NewText(header, SIZE_DESC, YELLOW)
     hDesc:SetPoint("TOPLEFT", hTitle, "BOTTOMLEFT", 0, -4)
     hDesc:SetText(mod.desc)
@@ -226,7 +246,7 @@ local function BuildPage(mod)
         return h
     end }
 
-    for _, entry in ipairs(mod:GetEntries()) do
+    for _, entry in ipairs(mod:GetEntries(group and group.id)) do
         if entry.kind == "feature" then
             items[#items + 1] = BuildFeatureRow(content, entry)
         elseif entry.kind == "choice" then
@@ -252,14 +272,26 @@ local function BuildPage(mod)
 end
 
 -- Sidebar ----------------------------------------------------------------------------------
+local function PlayerClass() return select(2, UnitClass("player")) end
+
+local function DefaultGroup(mod)
+    local mine = PlayerClass()
+    for _, g in ipairs(mod.groups) do
+        if g.id == mine then return g.id end
+    end
+    return mod.groups[1].id
+end
+
 local function BuildSidebar()
-    local function AddButton(id, label, y, onClick)
+    local y = 0
+    local function AddButton(key, label, indent, color, onClick)
         local btn = CreateFrame("Button", nil, moduleArea)
-        btn:SetSize(SIDEBAR_WIDTH, 30)
-        btn:SetPoint("TOPLEFT", moduleArea, "TOPLEFT", 0, -y)
+        btn:SetSize(SIDEBAR_WIDTH - indent, 28)
+        btn:SetPoint("TOPLEFT", moduleArea, "TOPLEFT", indent, -y)
         btn.text = NewText(btn, SIZE_NAME, nil)
         btn.text:SetPoint("LEFT", 10, 0)
         btn.text:SetText(label)
+        btn.color = color
         btn.selected = btn:CreateTexture(nil, "BACKGROUND")
         btn.selected:SetAllPoints()
         btn.selected:SetColorTexture(0, 0.44, 0.87, 0.25)
@@ -268,15 +300,20 @@ local function BuildSidebar()
         hl:SetAllPoints()
         hl:SetColorTexture(1, 1, 1, 0.08)
         btn:SetScript("OnClick", onClick)
-        sidebarButtons[id] = btn
+        sidebarButtons[key] = btn
+        y = y + 30
         return btn
     end
 
-    AddButton("home", "< Home", 0, function() ShowPage("home") end)
-    local y = 38
+    AddButton("home", "< Home", 0, nil, function() ShowPage("home") end)
+    y = y + 8
     for _, mod in ipairs(ns.modules) do
-        AddButton(mod.id, mod.name, y, function() ShowPage(mod.id) end)
-        y = y + 32
+        AddButton(mod.id, mod.name, 0, nil, function() ShowPage(mod.id) end)
+        for _, g in ipairs(mod.groups or {}) do
+            local c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[g.id]
+            AddButton(mod.id .. ":" .. g.id, g.name, SUB_INDENT, c and { c.r, c.g, c.b } or nil,
+                function() ShowPage(mod.id, g.id) end)
+        end
     end
 end
 
@@ -290,24 +327,16 @@ local homeButtons = {}
 local function BuildHome()
     for _, mod in ipairs(ns.modules) do
         local btn = CreateFrame("Button", nil, homeContent, "BackdropTemplate")
-        btn:SetBackdrop({
-            bgFile   = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            edgeSize = 1,
-        })
-        btn:SetBackdropColor(0.07, 0.07, 0.09, 0.9)
-        btn:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        StyleFlat(btn)
 
         btn.name = NewText(btn, SIZE_BTN_NAME, BLUE)
-        btn.name:SetPoint("TOPLEFT", BTN_PADDING, -BTN_PADDING)
+        btn.name:SetPoint("TOPLEFT", BTN_PAD_LEFT, -BTN_PAD_TOP)
         btn.name:SetText(mod.name)
 
         btn.desc = NewText(btn, SIZE_BTN_DESC, YELLOW)
-        btn.desc:SetPoint("TOPLEFT", btn.name, "BOTTOMLEFT", 0, -6)
+        btn.desc:SetPoint("TOPLEFT", btn.name, "BOTTOMLEFT", 0, -3)
         btn.desc:SetText(mod.desc)
 
-        btn:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(0, 0.44, 0.87, 1); self:SetBackdropColor(0.1, 0.12, 0.18, 0.95) end)
-        btn:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1); self:SetBackdropColor(0.07, 0.07, 0.09, 0.9) end)
         btn:SetScript("OnClick", function() ShowPage(mod.id) end)
         homeButtons[#homeButtons + 1] = btn
     end
@@ -315,17 +344,28 @@ end
 
 local function LayoutHome()
     local width = ScrollWidth(homeScroll)
-    local btnWidth = math.floor(width * BTN_WIDTH_FRAC)
-    local x = math.floor((width - btnWidth) / 2)
-    local y = BTN_GAP
-    for _, btn in ipairs(homeButtons) do
-        btn.desc:SetWidth(btnWidth - BTN_PADDING * 2)
-        btn.name:SetWidth(btnWidth - BTN_PADDING * 2)
-        local height = BTN_PADDING + btn.name:GetStringHeight() + 6 + btn.desc:GetStringHeight() + BTN_PADDING
-        btn:SetSize(btnWidth, height)
-        btn:ClearAllPoints()
-        btn:SetPoint("TOPLEFT", homeContent, "TOPLEFT", x, -y)
-        y = y + height + BTN_GAP
+    local btnWidth = math.floor((width - BTN_GAP * (BTN_COLUMNS - 1)) / BTN_COLUMNS)
+    local y = 0
+    for first = 1, #homeButtons, BTN_COLUMNS do
+        -- every button in a row gets the height of the tallest one
+        local rowHeight = 0
+        for i = first, math.min(first + BTN_COLUMNS - 1, #homeButtons) do
+            local btn = homeButtons[i]
+            btn.name:SetWidth(btnWidth - BTN_PAD_LEFT * 2)
+            btn.desc:SetWidth(btnWidth - BTN_PAD_LEFT * 2)
+            -- whole pixels only: a fractional height puts later rows on half pixels
+            -- and the 1px top border of those buttons disappears
+            local h = math.ceil(BTN_PAD_TOP + btn.name:GetStringHeight() + 3 + btn.desc:GetStringHeight() + BTN_PAD_TOP)
+            if h > rowHeight then rowHeight = h end
+        end
+        for i = first, math.min(first + BTN_COLUMNS - 1, #homeButtons) do
+            local btn = homeButtons[i]
+            local column = i - first
+            btn:SetSize(btnWidth, rowHeight)
+            btn:ClearAllPoints()
+            btn:SetPoint("TOPLEFT", homeContent, "TOPLEFT", column * (btnWidth + BTN_GAP), -y)
+        end
+        y = y + rowHeight + BTN_GAP
     end
     homeContent:SetSize(width, y)
 end
@@ -343,7 +383,7 @@ local function RefreshCheckboxes()
     end
 end
 
-function ShowPage(id)
+function ShowPage(id, groupID)
     if not homeBuilt then
         homeBuilt = true
         BuildHome()
@@ -360,24 +400,40 @@ function ShowPage(id)
         return
     end
 
+    local mod = ns.moduleByID[id]
+    local group
+    if mod.groups then
+        currentGroup[id] = groupID or currentGroup[id] or DefaultGroup(mod)
+        for _, g in ipairs(mod.groups) do
+            if g.id == currentGroup[id] then group = g end
+        end
+    end
+    local key = id .. (group and (":" .. group.id) or "")
+
     homeArea:Hide()
     moduleArea:Show()
-    for bid, btn in pairs(sidebarButtons) do
-        local selected = (bid == id)
-        btn.selected:SetShown(selected)
-        if selected then btn.text:SetTextColor(BLUE[1], BLUE[2], BLUE[3]) else btn.text:SetTextColor(1, 1, 1) end
+    for bkey, btn in pairs(sidebarButtons) do
+        btn.selected:SetShown(bkey == key)
+        local c = btn.color
+        if type(c) == "table" then
+            -- submenu item: only the background marks the selection, the class colour stays
+            btn.text:SetTextColor(c[1], c[2], c[3])
+        elseif bkey == key or bkey == id then
+            btn.text:SetTextColor(BLUE[1], BLUE[2], BLUE[3])
+        else
+            btn.text:SetTextColor(1, 1, 1)
+        end
     end
 
-    local mod = ns.moduleByID[id]
-    if not pages[id] then pages[id] = BuildPage(mod) end
-    pages[id].scroll:Show()
-    pages[id].layout()
-    pages[id].scroll:SetVerticalScroll(0)
+    if not pages[key] then pages[key] = BuildPage(mod, group) end
+    pages[key].scroll:Show()
+    pages[key].layout()
+    pages[key].scroll:SetVerticalScroll(0)
     RefreshCheckboxes()
 end
 
 panel:HookScript("OnShow", function()
-    ShowPage(currentID)
+    ShowPage(currentID, currentGroup[currentID])
 end)
 
 -- The Settings window doesn't always give a fresh hidden->shown transition, so

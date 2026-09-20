@@ -1,14 +1,14 @@
 local addonName, ns = ...
 
 -- ===========================================================================
--- CLASS FEATURES: ENEMY COUNTER (all classes)
+-- COMBAT: ENEMY COUNTER (all classes)
 -- Shows the number of nearby enemies fighting you while in combat.
 -- Edit the constants to adjust position and appearance.
 -- ===========================================================================
 
-local CF = ns:GetModule("ClassFeatures")
+local M = ns:GetModule("Combat")
 
-local F = CF:NewFeature{
+local F = M:NewFeature{
     key  = "cdmEnemyCounter",
     name = "Enemy Counter",
     desc = "Shows nearby enemy count in the center of the screen. Works for all classes.",

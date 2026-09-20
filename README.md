@@ -119,29 +119,29 @@ Shared file: `CDM.lua`
 
 ### 3. Class Features — `modules/ClassFeatures/`
 
-Class-specific overlays and alerts.  
+Class-specific overlays and alerts. Each class is its own submenu in the settings window.  
 Shared file: `ClassFeatures.lua`
 
 | File | Option | What it does | Reload |
 |---|---|---|---|
 | `BurningRushReminder.lua` | Burning Rush Reminder — Warlock | Pulsing on-screen alert while Burning Rush is active. | — |
-| `EnemyCounter.lua` | Enemy Counter | Shows nearby enemy count in the center of the screen. Works for all classes. | — |
 | `ExecuteAlert.lua` | Execute Alert — Warrior | Sound + on-screen 'EXECUTE!' when your target enters execute range. | — |
 | `FesteringGlow.lua` | Festering Strike Glow — Unholy DK | White glow on Festering Strike when the buff has <5s left. | — |
 | `FlurryCross.lua` | Flurry Cross — Frost Mage | Red x on Flurry CDM after Flurry is cast, until Ice Lance or 6s pass. | — |
 | `FrostBarSwap.lua` | Swap ST/AOE — Frost DK | Swaps Obliterate/Frostscythe icons on the CDM when the action bar page changes. | — |
-| `NoMovement.lua` | No Movement | Shows movement ability cooldown when unavailable. Works for all classes. | — |
 | `PutrefyCross.lua` | Putrefy Cross — Unholy DK | Red x on Putrefy CDM when Dark Transformation has <9s CD. | — |
 | `ReaperCross.lua` | Reaper Cross — Unholy DK | Red x on Reaper CDM for 6s right after Dark Transformation is cast. | — |
 
 ### 4. Combat — `modules/Combat/`
 
-Absorb display, input safety, resurrection helpers.  
+Absorb, enemy counter, movement alert, input safety, resurrection.  
 Shared file: `Combat.lua`
 
 | File | Option | What it does | Reload |
 |---|---|---|---|
 | `AbsorbDisplay.lua` | Enable Absorb Display | Shows total shield amount in screen center. | — |
+| `EnemyCounter.lua` | Enemy Counter | Shows nearby enemy count in the center of the screen. Works for all classes. | — |
+| `NoMovement.lua` | No Movement | Shows movement ability cooldown when unavailable. Works for all classes. | — |
 | `AutoAcceptResurrection.lua` | Auto-Accept Resurrection | Automatically accepts resurrection requests, but not while the resurrecting unit is in combat. | — |
 | `AutoReleasePvP.lua` | Auto-Release in PvP | Automatically releases your spirit in battlegrounds and supported world PvP zones, unless you can self-resurrect. | — |
 | `BlockRightClick.lua` | Block Right-Click in Combat | Prevents accidental right-click targeting in dungeons and raids. | — |
