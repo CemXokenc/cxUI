@@ -135,6 +135,7 @@ Shared file: `ClassFeatures.lua`
 
 | File | Option | What it does | Reload |
 |---|---|---|---|
+| `BlightfallSwap.lua` | Blightfall Swap — Unholy DK | Swaps the Dark Transformation CDM icon to Blightfall + glow for 5s, starting 13s after Dark Transformation is cast. | — |
 | `BurningRushReminder.lua` | Burning Rush Reminder — Warlock | Pulsing on-screen alert while Burning Rush is active. | — |
 | `ExecuteAlert.lua` | Execute Alert — Warrior | Sound + on-screen 'EXECUTE!' when your target enters execute range. | — |
 | `FesteringGlow.lua` | Festering Strike Glow — Unholy DK | White glow on Festering Strike when the buff has <5s left. | — |

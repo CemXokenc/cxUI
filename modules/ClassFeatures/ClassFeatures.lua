@@ -4,7 +4,7 @@ local addonName, ns = ...
 -- MODULE: CLASS FEATURES
 -- Shared file. One file per feature lives next to this one:
 --   FesteringGlow, PutrefyCross, ReaperCross,
---   FrostBarSwap                                   (Death Knight)
+--   FrostBarSwap, BlightfallSwap                    (Death Knight)
 --   FlurryCross                                    (Mage)
 --   BurningRushReminder                            (Warlock)
 --   ExecuteAlert                                   (Warrior)

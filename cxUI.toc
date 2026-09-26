@@ -27,6 +27,7 @@ modules\ClassFeatures\FesteringGlow.lua
 modules\ClassFeatures\PutrefyCross.lua
 modules\ClassFeatures\ReaperCross.lua
 modules\ClassFeatures\FrostBarSwap.lua
+modules\ClassFeatures\BlightfallSwap.lua
 modules\ClassFeatures\FlurryCross.lua
 modules\ClassFeatures\BurningRushReminder.lua
 modules\ClassFeatures\ExecuteAlert.lua
