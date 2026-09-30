@@ -9,7 +9,7 @@ local F = S:NewFeature{
     key  = "lowHealthAlert",
     name = "Low Health Sound Alert",
     desc = "Plays a custom sound when your health is low.",
-    sound = { kind = "file", value = ns.Media("LowHealthSound", "LowHealthSound.ogg"), name = "Low Health" },
+    sound = { kind = "file", value = ns.Media("LowHealthSound", "LowHealthSound.ogg"), name = "Low Health", premium = true },
 }
 
 function F:OnEnable()

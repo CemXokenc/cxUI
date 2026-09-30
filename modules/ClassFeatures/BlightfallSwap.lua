@@ -4,7 +4,8 @@ local addonName, ns = ...
 -- CLASS FEATURES: BLIGHTFALL SWAP (Unholy Death Knight)
 -- SWAP_DELAY seconds after Dark Transformation is cast, the Dark
 -- Transformation CDM icon switches to the Blightfall icon and gets a
--- standard-color proc glow, both for SWAP_DURATION seconds, then reverts.
+-- standard-color proc glow. Both stay up until Blightfall is actually cast
+-- (or combat ends / spec changes), there is no timeout-based revert.
 -- ===========================================================================
 
 local CF = ns:GetModule("ClassFeatures")
@@ -12,20 +13,19 @@ local CF = ns:GetModule("ClassFeatures")
 local F = CF:NewFeature{
     key   = "cdmBlightfallSwap",
     name  = "Blightfall Swap — Unholy DK",
-    desc  = "Swaps the Dark Transformation CDM icon to Blightfall + glow for 5s, starting 13s after Dark Transformation is cast.",
+    desc  = "Swaps the Dark Transformation CDM icon to Blightfall + glow, starting 13s after Dark Transformation is cast, until you cast Blightfall.",
     class = "DEATHKNIGHT",
 }
 
 local SPELL_DARK_TRANSFORMATION = 1233448
-local SPELL_BLIGHTFALL          = 1271967
-local SWAP_DELAY, SWAP_DURATION = 13, 5
+local SPELL_BLIGHTFALL          = 1271967 -- the ability itself; casting it consumes the proc
+local SWAP_DELAY                = 13
 
 local dtFrames       = {}
 local overlays        = {}
 local settingTexture  = {}
 local swapActive      = false
 local delayTimer      = nil
-local durationTimer   = nil
 
 local function SwapWanted()
     return F:IsOn() and swapActive
@@ -73,23 +73,15 @@ end
 
 local function Stop()
     swapActive = false
-    if delayTimer    then delayTimer:Cancel();    delayTimer    = nil end
-    if durationTimer then durationTimer:Cancel(); durationTimer = nil end
+    if delayTimer then delayTimer:Cancel(); delayTimer = nil end
     StopGlowAll()
     UpdateIcons()
 end
 
 local function Show()
-    if durationTimer then durationTimer:Cancel(); durationTimer = nil end
     swapActive = true
     UpdateIcons()
     StartGlowAll()
-    durationTimer = F:NewTimer(SWAP_DURATION, function()
-        durationTimer = nil
-        swapActive = false
-        StopGlowAll()
-        UpdateIcons()
-    end)
 end
 
 local function OnDarkTransformation()
@@ -147,7 +139,11 @@ function F:OnEnable()
     ev:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     ev:SetScript("OnEvent", function(_, event, _, _, spellID)
         if event == "UNIT_SPELLCAST_SUCCEEDED" then
-            if spellID == SPELL_DARK_TRANSFORMATION then OnDarkTransformation() end
+            if spellID == SPELL_DARK_TRANSFORMATION then
+                OnDarkTransformation()
+            elseif spellID == SPELL_BLIGHTFALL then
+                Stop() -- proc consumed: revert right away
+            end
         else
             Stop() -- combat ended / spec changed
         end
@@ -157,7 +153,7 @@ end
 
 function F:OnDisable()
     CF.RemoveRescan("blightfallswap")
-    delayTimer, durationTimer = nil, nil -- cancelled by F:Silence()
+    delayTimer = nil -- cancelled by F:Silence()
     swapActive = false
     UpdateIcons() -- IsOn() is false now, so this restores the Dark Transformation icon
     for _, ov in pairs(overlays) do CF.StopGlow(ov) end

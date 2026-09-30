@@ -154,6 +154,16 @@ local ShowPage
 local ROW_H = 28
 local picker                       -- built on first use
 local pickerFeature, pickerList, pickerFiltered = nil, {}, {}
+local premiumWin, premiumFeature       -- Premium window (built on first use) and the feature it edits
+local OpenPremiumWindow                -- defined below, next to the checkbox widgets it reuses
+
+-- The picker's Premium button: only for features flagged `sound.premium`, and only while /cx premium is on.
+local function UpdatePremiumButton()
+    if not picker then return end
+    local show = pickerFeature and pickerFeature.sound and pickerFeature.sound.premium and ns.Sounds.IsPremium()
+    picker.premium:SetShown(show and true or false)
+    if not show and premiumWin then premiumWin:Hide() end
+end
 
 local function SoundLabel(spec)
     return (spec and spec.name) or "?"
@@ -219,6 +229,14 @@ local function BuildPicker()
     close:SetPoint("TOPRIGHT", -12, -10)
     close:SetScript("OnClick", function() picker:Hide() end)
 
+    picker.premium = NewFlatButton(picker, "Premium", 84, 26, BLUE)
+    picker.premium:SetPoint("RIGHT", close, "LEFT", -6, 0)
+    picker.premium:SetScript("OnClick", function()
+        if pickerFeature then OpenPremiumWindow(pickerFeature) end
+    end)
+    picker.premium:Hide()
+    picker:SetScript("OnHide", function() if premiumWin then premiumWin:Hide() end end)
+
     picker.subtitle = NewText(picker, SIZE_DESC, WHITE)
     picker.subtitle:SetPoint("TOPLEFT", picker.title, "BOTTOMLEFT", 0, -4)
 
@@ -279,6 +297,8 @@ end
 local function OpenSoundPicker(feature)
     if not picker then BuildPicker() end
     pickerFeature = feature
+    if premiumWin then premiumWin:Hide() end
+    UpdatePremiumButton()
     picker.title:SetText("Choose sound")
     picker.subtitle:SetText(feature.name)
 
@@ -324,6 +344,111 @@ local function NewCheck(parent, name, reload, tooltipTitle, tooltipText)
     end
     return check
 end
+
+-- Premium window -------------------------------------------------------------------
+-- Opened from the sound picker's Premium button: one checkbox per file registered in
+-- modules/PremiumSounds.lua. Ticks are stored per feature (CXUI_DB.premiumPicks) and
+-- take effect immediately; the feature's own sound is always part of its pool.
+local function NewPremiumRow(i)
+    local content = premiumWin.content
+    local row = CreateFrame("Frame", nil, content)
+    row:SetHeight(ROW_H)
+    row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(i - 1) * ROW_H)
+    row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(i - 1) * ROW_H)
+
+    row.play = NewFlatButton(row, "Play", 46, 22, BLUE)
+    row.play:SetPoint("LEFT", 4, 0)
+    row.play:SetScript("OnClick", function()
+        if row.file then ns.Sounds.Play(ns.Sounds.PremiumSpec(row.file)) end
+    end)
+
+    row.check = NewCheck(row, "", false)
+    row.check:SetPoint("LEFT", row.play, "RIGHT", 8, 0)
+    row.check.Text:SetWidth(240)
+    row.check.Text:SetWordWrap(false)
+    row.check:SetScript("OnClick", function(self)
+        if row.file and premiumFeature then
+            ns.Sounds.SetPicked(premiumFeature, row.file, self:GetChecked() and true or false)
+        end
+    end)
+
+    premiumWin.rows[i] = row
+    return row
+end
+
+local function BuildPremiumWindow()
+    local win = CreateFrame("Frame", "CXUI_PremiumPicker", UIParent, "BackdropTemplate")
+    win:SetSize(420, 380)
+    win:SetPoint("TOPLEFT", picker, "TOPRIGHT", 6, 0) -- rides along with the picker
+    win:SetFrameStrata("FULLSCREEN_DIALOG")
+    win:SetToplevel(true)
+    win:SetClampedToScreen(true)
+    win:EnableMouse(true)
+    win:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+    win:SetBackdropColor(0.05, 0.05, 0.07, 0.98)
+    win:SetBackdropBorderColor(0, 0.44, 0.87, 1)
+    win:Hide()
+    tinsert(UISpecialFrames, "CXUI_PremiumPicker") -- ESC closes it
+
+    local title = NewText(win, SIZE_TITLE, BLUE)
+    title:SetPoint("TOPLEFT", 14, -12)
+    title:SetText("Random sounds")
+
+    local close = NewFlatButton(win, "Close", 70, 26, YELLOW)
+    close:SetPoint("TOPRIGHT", -12, -10)
+    close:SetScript("OnClick", function() win:Hide() end)
+
+    win.subtitle = NewText(win, SIZE_DESC, WHITE)
+    win.subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+
+    local hint = NewText(win, SIZE_DESC, YELLOW)
+    hint:SetPoint("TOPLEFT", win.subtitle, "BOTTOMLEFT", 0, -8)
+    hint:SetWidth(390)
+    hint:SetWordWrap(true)
+    hint:SetText("Ticked sounds join the random pool together with the sound chosen for this feature.")
+
+    win.scroll, win.content = NewScroll(win, "CXUI_PremiumPickerScroll")
+    win.scroll:SetPoint("TOPLEFT", hint, "BOTTOMLEFT", 0, -12)
+    win.scroll:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -32, 12)
+    win.content:SetWidth(340)
+    win.scroll:SetScript("OnSizeChanged", function(_, w) win.content:SetWidth(w or 340) end)
+
+    win.empty = NewText(win, SIZE_DESC, WHITE)
+    win.empty:SetPoint("TOP", win.scroll, "TOP", 0, -20)
+    win.empty:SetWidth(340)
+    win.empty:SetJustifyH("CENTER")
+    win.empty:SetText("No Premium sounds registered.\nAdd file names to modules/PremiumSounds.lua")
+    win.empty:Hide()
+
+    win.rows = {}
+    premiumWin = win
+end
+
+OpenPremiumWindow = function(feature)
+    if not premiumWin then BuildPremiumWindow() end
+    premiumFeature = feature
+    premiumWin.subtitle:SetText(feature.name)
+
+    local files = ns.Sounds.GetPremiumFiles()
+    for i, file in ipairs(files) do
+        local row = premiumWin.rows[i] or NewPremiumRow(i)
+        row.file = file
+        row.check.Text:SetText(ns.Sounds.PremiumName(file))
+        row.check:SetChecked(ns.Sounds.IsPicked(feature, file))
+        row:Show()
+    end
+    for i = #files + 1, #premiumWin.rows do
+        premiumWin.rows[i].file = nil
+        premiumWin.rows[i]:Hide()
+    end
+    premiumWin.content:SetHeight(math.max(#files * ROW_H, 1))
+    premiumWin.empty:SetShown(#files == 0)
+    premiumWin:Show()
+    premiumWin:Raise()
+end
+
+-- /cx premium toggled: show/hide the picker's Premium button (and close the window when it goes off)
+ns.Sounds.onPremiumChanged = UpdatePremiumButton
 
 -- Every widget below returns { frame = Frame, layout = function(width) -> height }
 

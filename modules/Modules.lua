@@ -67,7 +67,8 @@ end
 
 -- Registers a feature (a checkbox in the module's options page).
 -- info: key, name, desc, [info], [default=true], [reload], [class], [group],
---       [sound = {kind="file"|"kit", value=..., name=..., filesOnly=bool}]  (a configurable sound)
+--       [sound = {kind="file"|"kit", value=..., name=..., filesOnly=bool, premium=bool}]  (a configurable sound;
+--        premium = true adds the "Premium" random-pool button to its sound picker, see the Premium section below)
 function Module:NewFeature(info)
     assert(info.key and info.name, "cxUI: feature needs key and name")
     local f = setmetatable({
@@ -179,9 +180,39 @@ function Feature:GetSound()
     return (choices and choices[self.key]) or self.sound
 end
 
+-- Every sound this feature may play right now. Normally just GetSound(). With Premium on and
+-- `sound.premium` set, the sounds ticked for this feature in the Premium window join it.
+function Feature:GetPool()
+    local pool = { self:GetSound() }
+    if not (self.sound and self.sound.premium and ns.Sounds.IsPremium()) then return pool end
+    for _, file in ipairs(ns.Sounds.GetPremiumFiles()) do
+        if ns.Sounds.IsPicked(self, file) then pool[#pool + 1] = ns.Sounds.PremiumSpec(file) end
+    end
+    return pool
+end
+
 -- Plays the feature's sound through the Master channel. Returns PlaySound(File)'s results.
+-- With a pool of several sounds one is picked at random: never the same one twice in a row,
+-- and a file that fails to play (missing) is skipped in favour of another.
 function Feature:PlaySound()
-    return ns.Sounds.Play(self:GetSound())
+    local pool = self:GetPool()
+    if #pool == 1 then return ns.Sounds.Play(pool[1]) end
+
+    local candidates = {}
+    for _, spec in ipairs(pool) do
+        if not ns.Sounds.Same(spec, self._lastSound) then candidates[#candidates + 1] = spec end
+    end
+    if #candidates == 0 then candidates = pool end
+
+    while #candidates > 0 do
+        local spec = table.remove(candidates, math.random(#candidates))
+        local willPlay, handle = ns.Sounds.Play(spec)
+        if willPlay ~= false then
+            self._lastSound = spec
+            return willPlay, handle
+        end
+    end
+    return false
 end
 
 -- Hides everything that could keep running: timers, events, OnUpdate.
@@ -313,4 +344,90 @@ function ns.Sounds.GetList(filesOnly)
     end
 
     return list
+end
+
+-- ---------------------------------------------------------------------------
+-- Premium: per-feature random sound pools
+-- /cx premium switches it on/off (CXUI_DB.premium). The sounds it can add live in
+-- media/Premium/ and are registered by hand in modules/PremiumSounds.lua. Which of them
+-- each feature uses is ticked in that feature's Premium window (sound picker) and stored
+-- in CXUI_DB.premiumPicks[featureKey][fileName]. Turning Premium off keeps the ticks.
+-- ---------------------------------------------------------------------------
+local premiumSpecs = {} -- [fileName] = spec (cached)
+
+function ns.Sounds.IsPremium()
+    return CXUI_DB ~= nil and CXUI_DB.premium == true
+end
+
+function ns.Sounds.SetPremium(on)
+    CXUI_DB.premium = on and true or false
+    if ns.Sounds.onPremiumChanged then -- the options window hooks in here
+        local ok, err = pcall(ns.Sounds.onPremiumChanged)
+        if not ok then report("onPremiumChanged", err) end
+    end
+end
+
+-- The registered file names (modules/PremiumSounds.lua), in order, without duplicates.
+function ns.Sounds.GetPremiumFiles()
+    local list, seen = {}, {}
+    for _, file in ipairs(ns.Sounds.PremiumFiles or {}) do
+        if type(file) == "string" and file ~= "" and not seen[file] then
+            seen[file] = true
+            list[#list + 1] = file
+        end
+    end
+    return list
+end
+
+-- "Roar.ogg" -> "Roar"
+function ns.Sounds.PremiumName(file)
+    return (file:gsub("%.[oO][gG][gG]$", ""))
+end
+
+function ns.Sounds.PremiumSpec(file)
+    local spec = premiumSpecs[file]
+    if not spec then
+        spec = { kind = "file", value = ns.Media("Premium", file), name = ns.Sounds.PremiumName(file) }
+        premiumSpecs[file] = spec
+    end
+    return spec
+end
+
+function ns.Sounds.IsPicked(feature, file)
+    local all = CXUI_DB and CXUI_DB.premiumPicks
+    local picks = all and all[feature.key]
+    return picks ~= nil and picks[file] == true
+end
+
+function ns.Sounds.SetPicked(feature, file, on)
+    CXUI_DB.premiumPicks = CXUI_DB.premiumPicks or {}
+    local picks = CXUI_DB.premiumPicks[feature.key]
+    if not picks then
+        picks = {}
+        CXUI_DB.premiumPicks[feature.key] = picks
+    end
+    picks[file] = on and true or nil
+end
+
+SLASH_CXUI1 = "/cx"
+SlashCmdList["CXUI"] = function(msg)
+    local cmd = (msg or ""):match("^%s*(%S*)"):lower()
+    if cmd ~= "premium" then
+        ns.Print("Usage: /cx premium  (toggles the random Premium sounds)")
+        return
+    end
+
+    local on = not ns.Sounds.IsPremium()
+    ns.Sounds.SetPremium(on)
+    if not on then
+        ns.Print("Premium |cffff0000OFF|r")
+        return
+    end
+
+    local files = ns.Sounds.GetPremiumFiles()
+    ns.Print(("Premium |cff00ff00ON|r - registered files: %d"):format(#files))
+    for _, file in ipairs(files) do
+        print("   |cffffff00" .. ns.Sounds.PremiumName(file) .. "|r  (" .. file .. ")")
+    end
+    if #files == 0 then print("   none - add file names to modules/PremiumSounds.lua") end
 end

@@ -34,6 +34,25 @@ The list contains cxUI's own sounds, everything registered in SharedMedia (if in
 To make a feature's sound selectable, give it a default: `M:NewFeature{ ..., sound = { kind = "file", value = ns.Media("Folder", "Feature.ogg"), name = "..." } }`
 and call `F:PlaySound()` where the sound should play.
 
+### Premium (random sounds)
+
+Execute Alert and Low Health Sound can play a **random** sound instead of always the same one.
+It is a hidden switch: `/cx premium` toggles it (the chat says `ON` and lists the registered files, or `OFF`).
+
+* While it is **on**, the sound picker of those two features gets a **Premium** button (left of *Close*).
+  It opens a small window with one checkbox per registered Premium file (each with a **Play** button).
+  The files are the same for both features, but the ticks are stored **per feature**.
+* The feature's pool is *the sound it currently has* (your choice, or the shipped default) **plus** the ticked files.
+  Each play picks one at random, never the same one twice in a row; a file that fails to play is skipped.
+  With nothing ticked the pool is just that one sound, so nothing changes.
+* Turning Premium **off** only stops the randomness. The ticks stay in `CXUI_DB.premiumPicks` and come back
+  when it is turned on again.
+* The main sound list is unchanged: Premium files are only offered in the Premium window.
+
+To add a Premium sound: drop the `.ogg` into `media/Premium/` and add its file name as one more line in
+`modules/PremiumSounds.lua` (WoW cannot list a folder, so files are registered by hand).
+To let another feature use it, add `premium = true` to that feature's `sound` table.
+
 The window is generated from the module registry — adding a module or feature never requires touching `options.lua`.
 
 ---
@@ -51,9 +70,11 @@ cxUI/
 │   ├── DispelAlert/DispelAlert.ogg
 │   ├── ExecuteAlert/ExecuteAlert.ogg
 │   ├── ExternalAlert/ExternalAlert.ogg
-│   └── LowHealthSound/LowHealthSound.ogg
+│   ├── LowHealthSound/LowHealthSound.ogg
+│   └── Premium/             #   extra sounds for the Premium random pools (registered in PremiumSounds.lua)
 └── modules/
     ├── Modules.lua          # module registry + feature lifecycle (shared by all modules)
+    ├── PremiumSounds.lua    # hand-edited list of the files in media/Premium/
     ├── <Module>/
     │   ├── <Module>.lua     # registers the module + helpers shared by its features
     │   └── <Feature>.lua    # exactly one file per feature
@@ -135,9 +156,9 @@ Shared file: `ClassFeatures.lua`
 
 | File | Option | What it does | Reload |
 |---|---|---|---|
-| `BlightfallSwap.lua` | Blightfall Swap — Unholy DK | Swaps the Dark Transformation CDM icon to Blightfall + glow for 5s, starting 13s after Dark Transformation is cast. | — |
+| `BlightfallSwap.lua` | Blightfall Swap — Unholy DK | Swaps the Dark Transformation CDM icon to Blightfall + glow, starting 13s after Dark Transformation is cast, until you cast Blightfall. | — |
 | `BurningRushReminder.lua` | Burning Rush Reminder — Warlock | Pulsing on-screen alert while Burning Rush is active. | — |
-| `ExecuteAlert.lua` | Execute Alert — Warrior | Sound + on-screen 'EXECUTE!' when your target enters execute range. | — |
+| `ExecuteAlert.lua` | Execute Alert — Warrior | Sound + on-screen 'EXECUTE!' when your target enters execute range. Supports Premium random sounds. | — |
 | `FesteringGlow.lua` | Festering Strike Glow — Unholy DK | White glow on Festering Strike when the buff has <5s left. | — |
 | `FlurryCross.lua` | Flurry Cross — Frost Mage | Red x on Flurry CDM after Flurry is cast, until Ice Lance or 6s pass. | — |
 | `FrostBarSwap.lua` | Swap ST/AOE — Frost DK | Swaps Obliterate/Frostscythe icons on the CDM when the action bar page changes. | — |
@@ -181,7 +202,7 @@ Shared file: `Sounds.lua`
 | File | Option | What it does | Reload |
 |---|---|---|---|
 | `GroupInviteSound.lua` | Group Invite Sound | Plays a sound through Master when a group invite arrives. | — |
-| `LowHealthSound.lua` | Low Health Sound Alert | Plays a custom sound when your health is low. | — |
+| `LowHealthSound.lua` | Low Health Sound Alert | Plays a custom sound when your health is low. Supports Premium random sounds. | — |
 | `PullTimerSound.lua` | Pull Timer Countdown Sound | Plays audio for the preparation countdown (10, 5, 4, 3, 2, 1). | — |
 | `QueuePopSound.lua` | Queue Pop Sound | Plays a sound the moment a dungeon/raid, battleground, or arena queue pops. | — |
 | `ReadyCheckSound.lua` | Ready Check Alert | Plays ready check sound through Master channel. Audible when alt-tabbed. | — |
@@ -233,6 +254,7 @@ Shared file: `MythicPlus.lua`
 /cxexternal debug | scan | status          External cooldown alert
 /cxdispel debug | status                   Dispellable debuff alert
 /cxautoconfirm debug | status              Auto confirm
+/cx premium                                Toggle the Premium random sounds (Execute Alert, Low Health)
 ```
 
 ## Customising
@@ -240,6 +262,7 @@ Shared file: `MythicPlus.lua`
 * **CDM proc glow spells** — edit `PROC_CONFIG` in `modules/CDM/CDMGlow.lua`.
 * **ESC teleport list** — edit `DUNGEONS` in `modules/MythicPlus/ESCTeleports.lua` each season.
 * **Dispel spell-ID list** — `SPELLS_BY_TYPE` in `modules/MythicPlus/DispelAlert.lua`.
+* **Premium sounds** — put the `.ogg` in `media/Premium/` and add its file name to `modules/PremiumSounds.lua`.
 
 ---
 

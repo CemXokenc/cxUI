@@ -10,6 +10,9 @@
 core.lua
 modules\Modules.lua
 
+# Premium random-sound registry (needs ns.Sounds from Modules.lua)
+modules\PremiumSounds.lua
+
 # Module: Transparency
 modules\Transparency\Transparency.lua
 modules\Transparency\ActionBars.lua
