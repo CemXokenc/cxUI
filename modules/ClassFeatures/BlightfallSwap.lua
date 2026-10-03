@@ -19,7 +19,8 @@ local F = CF:NewFeature{
 
 local SPELL_DARK_TRANSFORMATION = 1233448
 local SPELL_BLIGHTFALL          = 1271967 -- the ability itself; casting it consumes the proc
-local SWAP_DELAY                = 13
+local SWAP_DELAY                = 12
+local SWAP_DURATION 			= 5
 
 local dtFrames       = {}
 local overlays        = {}
@@ -73,15 +74,24 @@ end
 
 local function Stop()
     swapActive = false
-    if delayTimer then delayTimer:Cancel(); delayTimer = nil end
+
+    if delayTimer then
+        delayTimer:Cancel()
+        delayTimer = nil
+    end
+
     StopGlowAll()
-    UpdateIcons()
 end
 
 local function Show()
     swapActive = true
     UpdateIcons()
     StartGlowAll()
+
+    delayTimer = F:NewTimer(SWAP_DURATION, function()
+        delayTimer = nil
+        Stop()
+    end)
 end
 
 local function OnDarkTransformation()

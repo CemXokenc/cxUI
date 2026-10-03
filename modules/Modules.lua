@@ -192,24 +192,30 @@ function Feature:GetPool()
 end
 
 -- Plays the feature's sound through the Master channel. Returns PlaySound(File)'s results.
--- With a pool of several sounds one is picked at random: never the same one twice in a row,
--- and a file that fails to play (missing) is skipped in favour of another.
+-- With a pool of several sounds one is picked at random, preferring one that is not the sound
+-- played last time. A sound that fails to play (missing file) is skipped in favour of another;
+-- the previous sound is only tried again once every other sound has failed.
 function Feature:PlaySound()
     local pool = self:GetPool()
     if #pool == 1 then return ns.Sounds.Play(pool[1]) end
 
-    local candidates = {}
+    local fresh, previous = {}, {}
     for _, spec in ipairs(pool) do
-        if not ns.Sounds.Same(spec, self._lastSound) then candidates[#candidates + 1] = spec end
+        if ns.Sounds.Same(spec, self._lastSound) then
+            previous[#previous + 1] = spec
+        else
+            fresh[#fresh + 1] = spec
+        end
     end
-    if #candidates == 0 then candidates = pool end
 
-    while #candidates > 0 do
-        local spec = table.remove(candidates, math.random(#candidates))
-        local willPlay, handle = ns.Sounds.Play(spec)
-        if willPlay ~= false then
-            self._lastSound = spec
-            return willPlay, handle
+    for _, group in ipairs({ fresh, previous }) do
+        while #group > 0 do
+            local spec = table.remove(group, math.random(#group))
+            local willPlay, handle = ns.Sounds.Play(spec)
+            if willPlay ~= false then
+                self._lastSound = spec
+                return willPlay, handle
+            end
         end
     end
     return false
