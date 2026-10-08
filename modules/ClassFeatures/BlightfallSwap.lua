@@ -5,7 +5,8 @@ local addonName, ns = ...
 -- SWAP_DELAY seconds after Dark Transformation is cast, the Dark
 -- Transformation CDM icon switches to the Blightfall icon and gets a
 -- standard-color proc glow. Both stay up until Blightfall is actually cast
--- (or combat ends / spec changes), there is no timeout-based revert.
+-- (or SWAP_DURATION expires / combat ends / spec or talents change).
+-- Requires the Blightfall talent (TALENT_BLIGHTFALL) to be learned.
 -- ===========================================================================
 
 local CF = ns:GetModule("ClassFeatures")
@@ -13,23 +14,28 @@ local CF = ns:GetModule("ClassFeatures")
 local F = CF:NewFeature{
     key   = "cdmBlightfallSwap",
     name  = "Blightfall Swap — Unholy DK",
-    desc  = "Swaps the Dark Transformation CDM icon to Blightfall + glow, starting 13s after Dark Transformation is cast, until you cast Blightfall.",
+    desc  = "Swaps the Dark Transformation CDM icon to Blightfall + glow, starting 12s after Dark Transformation is cast, until you cast Blightfall.",
     class = "DEATHKNIGHT",
 }
 
 local SPELL_DARK_TRANSFORMATION = 1233448
 local SPELL_BLIGHTFALL          = 1271967 -- the ability itself; casting it consumes the proc
+local TALENT_BLIGHTFALL         = 1271974 -- talent required for the swap
 local SWAP_DELAY                = 12
-local SWAP_DURATION 			= 5
+local SWAP_DURATION             = 3
 
 local dtFrames       = {}
-local overlays        = {}
-local settingTexture  = {}
-local swapActive      = false
-local delayTimer      = nil
+local overlays       = {}
+local settingTexture = {}
+local swapActive     = false
+local delayTimer     = nil
+
+local function HasTalent()
+    return IsPlayerSpell(TALENT_BLIGHTFALL)
+end
 
 local function SwapWanted()
-    return F:IsOn() and swapActive
+    return F:IsOn() and swapActive and HasTalent()
 end
 
 -- Forces the Blightfall texture back onto the icon whenever CDM (or anything
@@ -81,9 +87,16 @@ local function Stop()
     end
 
     StopGlowAll()
+    UpdateIcons() -- restore the Dark Transformation icon
 end
 
 local function Show()
+    -- Safety net: the talent could have been removed during the delay.
+    if not HasTalent() then
+        Stop()
+        return
+    end
+
     swapActive = true
     UpdateIcons()
     StartGlowAll()
@@ -96,6 +109,8 @@ end
 
 local function OnDarkTransformation()
     Stop()
+    if not HasTalent() then return end
+
     delayTimer = F:NewTimer(SWAP_DELAY, function()
         delayTimer = nil
         Show()
@@ -129,8 +144,9 @@ local function Rescan()
     end)
 
     UpdateIcons()
-    if wasActive then
+    if wasActive and HasTalent() then
         swapActive = true
+        UpdateIcons()
         StartGlowAll()
     end
 end
@@ -139,7 +155,8 @@ CF.RegisterStatus(function()
     if not F:IsOn() then return nil end
     local n = 0
     for _ in pairs(overlays) do n = n + 1 end
-    return ("blightfallswap=%s  frames=%d"):format(tostring(swapActive), n)
+    return ("blightfallswap=%s  talent=%s  frames=%d"):format(
+        tostring(swapActive), tostring(HasTalent() and true or false), n)
 end)
 
 function F:OnEnable()
@@ -147,6 +164,7 @@ function F:OnEnable()
     ev:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
     ev:RegisterEvent("PLAYER_REGEN_ENABLED")
     ev:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    ev:RegisterEvent("TRAIT_CONFIG_UPDATED")
     ev:SetScript("OnEvent", function(_, event, _, _, spellID)
         if event == "UNIT_SPELLCAST_SUCCEEDED" then
             if spellID == SPELL_DARK_TRANSFORMATION then
@@ -154,6 +172,8 @@ function F:OnEnable()
             elseif spellID == SPELL_BLIGHTFALL then
                 Stop() -- proc consumed: revert right away
             end
+        elseif event == "TRAIT_CONFIG_UPDATED" then
+            if not HasTalent() then Stop() end -- talent removed mid-window
         else
             Stop() -- combat ended / spec changed
         end
