@@ -25,7 +25,7 @@
 
 ### Choosing sounds
 
-Features that play a single sound (Ready Check, Group Invite, Queue Pop, Low Health, External Cooldown, Dispellable Debuff,
+Features that play a single sound (Ready Check, Group Invite, Queue Pop, Low Health, Potion Reminder, External Cooldown, Dispellable Debuff,
 Execute Alert) have **Play** and **Change** buttons on the name line. *Play* previews the current sound; *Change* opens a list
 of every available sound with a search box. Each row has **Play** and **Set**; the first row restores the shipped default.
 The list contains cxUI's own sounds, everything registered in SharedMedia (if installed) and Blizzard's built-in sound kits
@@ -203,6 +203,7 @@ Shared file: `Sounds.lua`
 |---|---|---|---|
 | `GroupInviteSound.lua` | Group Invite Sound | Plays a sound through Master when a group invite arrives. | — |
 | `LowHealthSound.lua` | Low Health Sound Alert | Plays a custom sound when your health is low. Supports Premium random sounds. | — |
+| `PotionReminder.lua` | Potion Reminder | Plays a sound and flashes 'POTION READY' when your potion is ready again. Raids and active M+ keys only; silent for 5 s after a resurrection, encounter end or key start. | — |
 | `PullTimerSound.lua` | Pull Timer Countdown Sound | Plays audio for the preparation countdown (10, 5, 4, 3, 2, 1). | — |
 | `QueuePopSound.lua` | Queue Pop Sound | Plays a sound the moment a dungeon/raid, battleground, or arena queue pops. | — |
 | `ReadyCheckSound.lua` | Ready Check Alert | Plays ready check sound through Master channel. Audible when alt-tabbed. | — |
@@ -254,6 +255,7 @@ Shared file: `MythicPlus.lua`
 /cxexternal debug | scan | status          External cooldown alert
 /cxdispel debug | status                   Dispellable debuff alert
 /cxautoconfirm debug | status              Auto confirm
+/cxpotion [item <id|link|auto> | test | debug]  Potion reminder status / pin item
 /cx premium                                Toggle the Premium random sounds (Execute Alert, Low Health)
 ```
 

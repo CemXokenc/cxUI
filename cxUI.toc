@@ -61,6 +61,7 @@ modules\Sounds\GroupInviteSound.lua
 modules\Sounds\PullTimerSound.lua
 modules\Sounds\QueuePopSound.lua
 modules\Sounds\LowHealthSound.lua
+modules\Sounds\PotionReminder.lua
 
 # Module: Group Finder
 modules\GroupFinder\GroupFinder.lua
