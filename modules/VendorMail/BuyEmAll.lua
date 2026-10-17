@@ -193,8 +193,8 @@ end
 
 function BEA:GetFreeBagSpace(itemID)
     local canFit = 0
-    local itemType = GetItemFamily(itemID)
-    local stackSize = select(8, GetItemInfo(itemID))
+    local itemType = (C_Item and C_Item.GetItemFamily or GetItemFamily)(itemID) or 0
+    local stackSize = select(8, (C_Item and C_Item.GetItemInfo or GetItemInfo)(itemID)) or 1
 
     for currentBag = 0, 4 do
         local freeSpace, bagType = C_Container.GetContainerNumFreeSlots(currentBag)
@@ -345,7 +345,8 @@ function BEA:AltCurrencyHandling(itemIndex, clickFrame)
             if strmatch(altCurrLink, "currency") then
                 self.AltCurrAfford[i] = floor(C_CurrencyInfo.GetCurrencyInfoFromLink(altCurrLink).quantity / self.AltCurrPrice[i]) * self.preset
             else
-                self.AltCurrAfford[i] = floor((GetItemCount(tonumber(strmatch(altCurrLink, "item:(%d+):")), true)) / self.AltCurrPrice[i]) * self.preset
+                local getItemCount = C_Item and C_Item.GetItemCount or GetItemCount
+				self.AltCurrAfford[i] = floor((getItemCount(tonumber(strmatch(altCurrLink, "item:(%d+):")), true)) / self.AltCurrPrice[i]) * self.preset
             end
         end
         self.afford = self.AltCurrAfford[1]
