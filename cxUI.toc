@@ -66,6 +66,7 @@ modules\Sounds\PotionReminder.lua
 # Module: Group Finder
 modules\GroupFinder\GroupFinder.lua
 modules\GroupFinder\DungeonFilter.lua
+modules\GroupFinder\ApplicantSort.lua
 modules\GroupFinder\MoveResetButton.lua
 
 # Module: Vendor & Mail
