@@ -23,8 +23,9 @@ local function Debug(...)
 end
 
 local WHITELIST = {
-    CONFIRM_PURCHASE_TOKEN_ITEM    = true,
-    CONFIRM_MAIL_ITEM_UNREFUNDABLE = true,
+    CONFIRM_PURCHASE_TOKEN_ITEM          = true,
+    CONFIRM_MAIL_ITEM_UNREFUNDABLE       = true,
+    CONFIRM_PURCHASE_NONREFUNDABLE_ITEM  = true,
 }
 
 local function TryAutoConfirm(which)
