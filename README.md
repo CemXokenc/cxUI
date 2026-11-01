@@ -190,7 +190,7 @@ Shared file: `Interface.lua`
 | `HideDurabilityMount.lua` | Hide Durability & Mount Seats | Hides the durability figure and the seat indicator shown on mounts that can carry passengers. | — |
 | `HideExtraActionDecor.lua` | Hide Extra Action Button Decor | Removes the decorative ring texture from ExtraActionButton1 and ZoneAbilityFrame. | — |
 | `HideHelpTips.lua` | Hide Talent Alerts | Hides annoying talent-related notifications. | — |
-| `MacroOverride.lua` | Mega Macro Override | Redirects the default 'Macros' menu button to Mega Macro. | — |
+| `MacroOverride.lua` | Macro Window Override | Opens the cxUI macro window (module 10) instead of Blizzard's when you press the 'Macros' menu button. Only active while Macro Manager is managing macros. | — |
 | `NoAutoClose.lua` | No Auto Close | Opening a panel (map, bags, character...) no longer closes other open panels. ESC still closes them properly. | yes |
 | `TransmogOutfits.lua` | Transmog Outfits (Account-Wide) | Adds a 'TransmogOutfits' button to the Wardrobe that saves outfits shared by every character. | yes |
 
@@ -243,6 +243,22 @@ Shared file: `MythicPlus.lua`
 | `ESCTeleports.lua` | ESC Menu Dungeon Teleports | Adds clickable dungeon-teleport buttons for the current M+ season next to the Game Menu (ESC). | — |
 | `ExternalAlert.lua` | External Cooldown Alert | Plays a sound whenever an external defensive (Pain Suppression, Guardian Spirit, etc.) is cast on you. | — |
 
+### 10. Macros — `modules/Macros/`
+
+Replacement for the Mega Macro idea: macros are stored in `CXUI_MacroDB` (own SavedVariable), split into **General / Class / Spec / Character** (+ an **Archive** that is never bound), and the ones belonging to the character you are playing are copied into the game's native macro slots. Each native slot is tagged `#NNN` on its first line (same ids as Mega Macro: 1–60 general, 61–90 class, 91–120 spec, 121–150 character), so a slot keeps its place on your action bars while its content changes with your spec. Class / spec keys are `classFile` / `specID`, not localised names.
+
+The window (`/cxm`) has scope tabs, a class icon strip (Class / Spec tabs), a spec strip (Spec tab) and a character list (Character tab), so every stored macro can be browsed and edited; only the current character's active ones are written to the native slots. Copy / Cut / Paste moves macros between any scope, class or spec. The editor colours macro syntax and the icon picker searches spell names (indexed in the background the first time it is opened), spell IDs and file IDs. Macros are limited to 250 characters (255 minus the tag). Everything that touches native macros is queued during combat.
+
+Shared files: `Macros.lua` (module + constants), `Store.lua` (database), `Slots.lua` (native slot engine), `Highlight.lua`, `Icons.lua`, `UI.lua`, `IconPicker.lua`, `Import.lua`, `Window.lua`.
+
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `MacroManager.lua` | Macro Manager | Writes the macros of your character / class / spec into the native macro slots and swaps them when you change spec. Needs Mega Macro disabled. | — |
+
+Migrating from Mega Macro: enable it for one session, run `/cxm import` (on each character), then disable Mega Macro and `/reload`. Native macros that have no tag can be taken over with `/cxm adopt`.
+
+---
+
 ---
 
 ## Commands
@@ -257,6 +273,7 @@ Shared file: `MythicPlus.lua`
 /cxautoconfirm debug | status              Auto confirm
 /cxpotion [item <id|link|auto> | test | debug]  Potion reminder status / pin item
 /cx premium                                Toggle the Premium random sounds (Execute Alert, Low Health)
+/cxm [import | adopt | sync | release]     Macro window / copy Mega Macro data / take over native macros / rewrite slots / strip tags
 ```
 
 ## Customising

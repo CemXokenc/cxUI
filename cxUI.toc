@@ -1,9 +1,9 @@
-## Interface: 120000, 120001, 120005, 120007, 120100
+## Interface: 120000, 120001, 120005, 120007, 120100, 120105
 ## Title: |cff0070ddcx|cffffff00UI|r
 ## Notes: Minimalist UI suite
 ## Version: 2.0.1
 ## Author: cemxokenc
-## SavedVariables: CXUI_DB
+## SavedVariables: CXUI_DB, CXUI_MacroDB
 ## IconTexture: Interface\AddOns\cxUI\media\Addon\icon.tga
 
 # Core: DB + startup, then the module registry / feature lifecycle
@@ -76,6 +76,18 @@ modules\VendorMail\BuyEmAll.lua
 modules\VendorMail\AutoConfirm.lua
 modules\VendorMail\RememberRecipient.lua
 modules\VendorMail\FavoriteContacts.lua
+
+# Module: Macros
+modules\Macros\Macros.lua
+modules\Macros\Store.lua
+modules\Macros\Slots.lua
+modules\Macros\Highlight.lua
+modules\Macros\Icons.lua
+modules\Macros\UI.lua
+modules\Macros\IconPicker.lua
+modules\Macros\Import.lua
+modules\Macros\Window.lua
+modules\Macros\MacroManager.lua
 
 # Module: Mythic+
 modules\MythicPlus\MythicPlus.lua
