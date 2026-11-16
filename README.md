@@ -257,6 +257,45 @@ Shared files: `Macros.lua` (module + constants), `Store.lua` (database), `Slots.
 
 Migrating from Mega Macro: enable it for one session, run `/cxm import` (on each character), then disable Mega Macro and `/reload`. Native macros that have no tag can be taken over with `/cxm adopt`.
 
+### 11. EllesmereUI Skins — `modules/EllesmereSkins/`
+
+Gives other addons the EllesmereUI look through EllesmereUI's official skinning API (`EllesmereUI.RegisterSkin`, documented in `SKINNING_API.md` in the EllesmereUI folder) and fixes bugs that stop those addons from working. Needs EllesmereUI and EllesmereUI Blizzard Skin+; without them every option here does nothing. Skins can't be removed live, so every option needs a reload.
+
+A skin checkbox registers the skin for its addon **and** applies the fixes that addon needs. The master **Fix addon issues** applies every fix whether or not the addon has a skin ticked. All fixes are idempotent and step aside when not needed.
+
+Remove the old skin packs (EUIAddonSkins, EllesmereUI_AddonSkins, EllesmereSkin_WIM, Rematch_EllesmereUI_Skin): EllesmereUI keeps the *first* skin registered under a name, so they would win over this module.
+
+Shared files: `EllesmereSkins.lua` (module + helpers in `ns.ESkin`), `Compat.lua` (the named fixes).
+
+| File | Option | What it does | Reload |
+|---|---|---|---|
+| `FixAddonIssues.lua` | Fix addon issues | Restores `MouseIsOver` and `GetItemInfoInstant` (removed in 12.1: Rematch, CollectionLog, M33kAuras options, BtWQuests) and rescues Rematch's window from NPC names hidden inside instances. | yes |
+| `Skins/ArenaAnalytics.lua` | ArenaAnalytics | Stock widgets in the history window; the import dialog as a house window. | yes |
+| `Skins/Auctionator.lua` | Auctionator | Auction House tabs, dialogs, lists, option widgets. | yes |
+| `Skins/BetterWardrobe.lua` | BetterWardrobe | Stock widgets in its collection list and popups (not the Blizzard journal itself). | yes |
+| `Skins/BtWQuests.lua` | BtWQuests | Quest Journal window border and plate, expansion cards and View All / Load AddOn buttons. | yes |
+| `Skins/BugSack.lua` | BugSack | Sack window, tabs, options. | yes |
+| `Skins/CollectionLog.lua` | Collection Log | Stock widgets only (buttons, checkboxes, edit boxes, dropdowns, scroll bars); also applies the `GetItemInfoInstant` fix. | yes |
+| `Skins/CooldownManagerProfiles.lua` | CooldownManagerProfiles | Stock widgets in the profile manager. | yes |
+| `Skins/HomeBound.lua` | HomeBound | Main window, popups, tooltips and previews, plus the stock widgets inside. (Its settings window is a page of the Blizzard AddOns tab and is not touched.) | yes |
+| `Skins/PetTracker.lua` | PetTracker | The "Pets" header and progress bar in the objective tracker (header styled by EllesmereUI's tracker skin). | yes |
+| `Skins/RareScanner.lua` | RareScanner | The found-something popup and the explorer window. | yes |
+| `Skins/RCLootCouncil.lua` | RCLootCouncil | Buttons only: every button made by `RCLootCouncil:CreateButton`. | yes |
+| `Skins/Rematch.lua` | Rematch | The full window skin from Rematch_EllesmereUI_Skin (vendored), plus the `MouseIsOver` and hidden-NPC-name fixes, and hides PetTracker's Rivals tab (it collides with Rematch's journal). Needs `Rematch` loaded before cxUI (OptionalDeps). | yes |
+| `Skins/SimpleAddonManager.lua` | SimpleAddonManager | Window, search, buttons, addon and category lists. | yes |
+| `Skins/Simulationcraft.lua` | SimulationCraft | Export window. | yes |
+| `Skins/TargetedSpells.lua` | TargetedSpells | The Designer window and its stock widgets. | yes |
+| `Skins/TomTom.lua` | TomTom | The waypoint paste window. | yes |
+| `Skins/WIM.lua` | WIM | WIM's "EllesmereUI" skin from EllesmereSkin_WIM (vendored; pick it in WIM as before, /wim -> Skin), and the History Viewer: the skins get a `history_viewer` section (WIM 3.19 draws the viewer from it) and the window is skinned through EllesmereUI when it opens. | yes |
+
+Vendored code (`Vendor/`): the WIM and Rematch skins are the files of the EllesmereSkin_WIM and Rematch_EllesmereUI_Skin addons, kept as their authors wrote them and wrapped in a function so they can run after WIM / Rematch have loaded. Rematch_EllesmereUI_Skin is GPL-3.0 (its `LICENSE` file travels with the project it came from); EllesmereSkin_WIM ships no license file. Keep that in mind before sharing this module.
+
+**Scope: separate windows only.** Nothing on the pages of the Blizzard options window (Game Menu > Options > AddOns) is skinned, whatever addon it belongs to: partial skinning there (some widgets flat, Blizzard's own buttons and sliders stock) looks worse than none. What is skinned is every addon's own windows, popups and panels, and, where an addon shares widgets between its own window and its options page (Auctionator), only the instances in its own window.
+
+Diagnostics: `/esk mouse` prints what the frame under the mouse is (its type, which stock-template parts it has, its normal texture) and what this module would do with it Widgets that are not skinned are almost always not stock ones (custom art, sliders, Ace checkboxes); `/esk mouse` says which.
+
+Adding an addon: create `Skins/<Addon>.lua` with `Sk.NewSkin{ addon = "<FolderName>", fixes = { "<FixId>" }, apply = function(S) ... end }` (`Sk = ns.ESkin`), add it to `cxUI.toc`, and add a row above. A new fix is `Sk.DefineFix(id, text, fn)` in `Compat.lua`.
+
 ---
 
 ---
