@@ -419,28 +419,70 @@ end
 -- ---------------------------------------------------------------------------
 -- Building the frame
 -- ---------------------------------------------------------------------------
+
+-- Plain mode (/cxm plain): the EditBox shows its own text, no colouring and no custom caret.
+-- A fallback that always behaves like any normal edit box.
+function W.ApplyBodyMode()
+    if not bodyEdit then return end
+    local plain = M.DB().ui.plain == true
+    bodyHL:SetShown(not plain)          -- bodyHL is the overlay frame
+    if plain then bodyCaret:Hide() end
+end
+
+function W.TogglePlain()
+    local ui = M.DB().ui
+    ui.plain = not ui.plain
+    W.ApplyBodyMode()
+    return ui.plain
+end
+
 local function BuildBody(parent)
     local box = UI.Box(parent)
     box:SetSize(EDITOR_W, BODY_H)
 
-    local scroll = CreateFrame("ScrollFrame", nil, box)
-    scroll:SetPoint("TOPLEFT", 6, -6)
-    scroll:SetPoint("BOTTOMRIGHT", -6, 6)
-    scroll:EnableMouseWheel(true)
-
+    -- Blizzard's own multi-line input (scroll frame + edit box with the stock cursor / click /
+    -- scrolling handlers). A hand-made scroll child kept Up/Down and click-to-place from working.
     local viewH = BODY_H - 12
-    local eb = CreateFrame("EditBox", nil, scroll)
+    local scroll, eb, native
+    local okT = pcall(function() scroll = CreateFrame("ScrollFrame", nil, box, "InputScrollFrameTemplate") end)
+    native = okT and scroll and scroll.EditBox ~= nil
+    if native then
+        eb = scroll.EditBox
+        scroll:SetSize(EDITOR_W - 12, viewH)
+        scroll:SetPoint("TOPLEFT", 6, -6)
+        if scroll.CharCount then scroll.CharCount:Hide() end
+        if scroll.EditBox.Instructions then scroll.EditBox.Instructions:Hide() end
+        if scroll.ScrollBar then scroll.ScrollBar:SetAlpha(0) end   -- the mouse wheel still scrolls
+        eb:SetWidth(EDITOR_W - 12 - 4)
+    else
+        if scroll then scroll:Hide() end
+        scroll = CreateFrame("ScrollFrame", nil, box)
+        scroll:SetPoint("TOPLEFT", 6, -6)
+        scroll:SetPoint("BOTTOMRIGHT", -6, 6)
+        scroll:EnableMouseWheel(true)
+        eb = CreateFrame("EditBox", nil, scroll)
+        eb:SetSize(EDITOR_W - 12, viewH)
+        scroll:SetScrollChild(eb)
+    end
     eb:SetMultiLine(true)
     eb:SetAutoFocus(false)
     eb:SetFont(UI.FONT, 13, "")
-    eb:SetTextColor(1, 1, 1, 0)          -- the real text is invisible; the coloured copy below is drawn instead
+    -- The real text stays fully opaque, so the client lays it out and handles the caret, Up/Down and
+    -- clicks exactly like in any edit box. The coloured copy is drawn by `ov`, a click-through child
+    -- frame (it draws above the EditBox's own text) with an opaque background that covers the real text.
+    eb:SetTextColor(1, 1, 1, 1)
     eb:SetTextInsets(0, 0, 0, 0)
     eb:SetSpacing(2)
     eb:SetMaxLetters(M.BODY_MAX)
-    eb:SetSize(EDITOR_W - 12, viewH)
-    scroll:SetScrollChild(eb)
 
-    local hl = eb:CreateFontString(nil, "ARTWORK")
+    local ov = CreateFrame("Frame", nil, eb)       -- no EnableMouse: clicks go through to the EditBox
+    ov:SetAllPoints(eb)
+    ov:SetFrameLevel(eb:GetFrameLevel() + 1)
+    local cover = ov:CreateTexture(nil, "BACKGROUND")
+    cover:SetAllPoints()
+    cover:SetColorTexture(0.08, 0.08, 0.11, 1)     -- same colour as the box behind it (UI.Box default)
+
+    local hl = ov:CreateFontString(nil, "ARTWORK")
     hl:SetFont(UI.FONT, 13, "")
     hl:SetSpacing(2)
     hl:SetJustifyH("LEFT")
@@ -448,15 +490,16 @@ local function BuildBody(parent)
     hl:SetPoint("TOPLEFT")
     hl:SetPoint("TOPRIGHT")
 
-    -- own caret: does not depend on how the client colours its native one
-    local caret = eb:CreateTexture(nil, "OVERLAY")
+    -- own caret (drawn over the cover, since the native one is hidden under it)
+    local caret = ov:CreateTexture(nil, "OVERLAY")
     caret:SetColorTexture(1, 1, 1, 0.9)
     caret:SetSize(1, 14)
     caret:Hide()
     local blink, focused = 0, false
+    local function Plain() return M.DB().ui.plain == true end
 
-    local hint = UI.Text(box, 13, { 0.4, 0.4, 0.46 })
-    hint:SetPoint("TOPLEFT", 6, -6)
+    local hint = UI.Text(ov, 13, { 0.4, 0.4, 0.46 })
+    hint:SetPoint("TOPLEFT", ov, "TOPLEFT", 0, 0)
     hint:SetText("#showtooltip\n/cast [@mouseover,help,nodead] Spell; Other Spell")
 
     local count = UI.Text(parent, UI.SIZE_SMALL, UI.GRAY)
@@ -464,47 +507,52 @@ local function BuildBody(parent)
     local function Update(self, userInput)
         local text = self:GetText()
         hl:SetText(M.Highlight(text))
-        eb:SetHeight(math.max(viewH, hl:GetStringHeight() + 6))
+        if not native then eb:SetHeight(math.max(viewH, hl:GetStringHeight() + 6)) end
         local len = strlenutf8 and strlenutf8(text) or #text
         count:SetText(("%d/%d"):format(len, M.BODY_MAX))
         count:SetTextColor(len >= M.BODY_MAX and 1 or 0.6, len >= M.BODY_MAX and 0 or 0.6, len >= M.BODY_MAX and 0 or 0.66)
         hint:SetShown(text == "" and not focused)
         if userInput then MarkDirty() end
     end
-    eb:SetScript("OnTextChanged", Update)
-    eb:SetScript("OnEscapePressed", eb.ClearFocus)
-    eb:SetScript("OnCursorChanged", function(_, x, y, _, h)
+    -- HookScript, not SetScript: keep the stock handlers (they scroll to the caret)
+    eb:HookScript("OnTextChanged", Update)
+    eb:HookScript("OnEscapePressed", eb.ClearFocus)
+    eb:HookScript("OnCursorChanged", function(_, x, y, _, h)
         caret:ClearAllPoints()
         caret:SetPoint("TOPLEFT", eb, "TOPLEFT", x, y)
         caret:SetHeight(h > 0 and h or 14)
         blink = 0
-        -- keep the caret inside the visible part
+        if native then return end
+        -- keep the caret inside the visible part (own scroll child only)
         local top, bottom = -y, -y + h
         local cur = scroll:GetVerticalScroll()
         if top < cur then scroll:SetVerticalScroll(top)
         elseif bottom > cur + viewH then scroll:SetVerticalScroll(bottom - viewH) end
     end)
-    eb:SetScript("OnEditFocusGained", function()
-        focused = true; caret:Show(); hint:Hide()
+    eb:HookScript("OnEditFocusGained", function()
+        focused = true; caret:SetShown(not Plain()); hint:Hide()
         box:SetBackdropBorderColor(UI.BLUE[1], UI.BLUE[2], UI.BLUE[3], 1)
     end)
-    eb:SetScript("OnEditFocusLost", function()
+    eb:HookScript("OnEditFocusLost", function()
         focused = false; caret:Hide()
         hint:SetShown(eb:GetText() == "")
         box:SetBackdropBorderColor(0.25, 0.25, 0.30, 1)
     end)
-    eb:SetScript("OnUpdate", function(_, elapsed)
+    eb:HookScript("OnUpdate", function(_, elapsed)
         if not focused then return end
         blink = blink + elapsed
         caret:SetAlpha((blink % 1) < 0.55 and 1 or 0)
     end)
-    scroll:SetScript("OnMouseDown", function() eb:SetFocus() end)
-    scroll:SetScript("OnMouseWheel", function(self, delta)
-        local maxScroll = math.max(0, eb:GetHeight() - viewH)
-        self:SetVerticalScroll(math.min(maxScroll, math.max(0, self:GetVerticalScroll() - delta * 26)))
-    end)
+    scroll:HookScript("OnMouseDown", function() eb:SetFocus() end)
+    if not native then
+        scroll:SetScript("OnMouseWheel", function(self, delta)
+            local maxScroll = math.max(0, eb:GetHeight() - viewH)
+            self:SetVerticalScroll(math.min(maxScroll, math.max(0, self:GetVerticalScroll() - delta * 26)))
+        end)
+    end
 
-    bodyEdit, bodyHL, bodyCaret, bodyHint, counter = eb, hl, caret, hint, count
+    bodyEdit, bodyHL, bodyCaret, bodyHint, counter = eb, ov, caret, hint, count
+    W.ApplyBodyMode()
     return box
 end
 

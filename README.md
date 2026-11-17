@@ -64,7 +64,6 @@ cxUI/
 ├── cxUI.toc
 ├── core.lua                 # SavedVariables defaults + startup
 ├── options.lua              # settings window (built from the registry)
-├── libs/
 ├── media/                   # one sub-folder per feature that owns files, files named after the feature (.ogg)
 │   ├── CDMGlow/             #   pixel-glow textures
 │   ├── DispelAlert/DispelAlert.ogg
@@ -215,8 +214,11 @@ Shared file: `GroupFinder.lua`
 
 | File | Option | What it does | Reload |
 |---|---|---|---|
+| `ApplicantSort.lua` | Sort Applicants by M+ Rating | Sorts the pending applicants to your Mythic+ listing by: highest key timed on the listed dungeon, then overall M+ rating, then item level (a group application is ranked by its leader). Raid / non-dungeon listings keep Blizzard's order. | — |
 | `DungeonFilter.lua` | Dungeon Finder: Advanced Filters | Adds party-fit, Bloodlust/Battle Res and same-spec filters to the Dungeon Finder search list. | yes |
 | `MoveResetButton.lua` | Move 'Reset Filter' Button | Shifts the Dungeon Browser's 'Reset Filter' button to the left side to avoid overlap. | — |
+
+**Applicant sort and EllesmereUI Group Finder.** The sort reorders Blizzard's applicant list. EllesmereUI's Group Finder (9.x) draws its own list ordered by `displayOrderID`, so while that list is shown the sort has no visible effect (it works with Ellesmere's Group Finder off). cxUI exposes `CXUI_SortApplicantList(list)` for addons that want to use it; EllesmereUI does not call it. `/cxsort debug` prints what was sorted.
 
 ### 8. Vendor & Mail — `modules/VendorMail/`
 
@@ -245,17 +247,63 @@ Shared file: `MythicPlus.lua`
 
 ### 10. Macros — `modules/Macros/`
 
-Replacement for the Mega Macro idea: macros are stored in `CXUI_MacroDB` (own SavedVariable), split into **General / Class / Spec / Character** (+ an **Archive** that is never bound), and the ones belonging to the character you are playing are copied into the game's native macro slots. Each native slot is tagged `#NNN` on its first line (same ids as Mega Macro: 1–60 general, 61–90 class, 91–120 spec, 121–150 character), so a slot keeps its place on your action bars while its content changes with your spec. Class / spec keys are `classFile` / `specID`, not localised names.
+A replacement for Mega Macro. The macros live in cxUI's own SavedVariable (`CXUI_MacroDB`), grouped by *scope*; the ones that belong to the character you are playing are copied into the game's native macro slots. Open the window with `/cxm` (or `/m`).
 
-The window (`/cxm`) has scope tabs, a class icon strip (Class / Spec tabs), a spec strip (Spec tab) and a character list (Character tab), so every stored macro can be browsed and edited; only the current character's active ones are written to the native slots. Copy / Cut / Paste moves macros between any scope, class or spec. The editor colours macro syntax and the icon picker searches spell names (indexed in the background the first time it is opened), spell IDs and file IDs. Macros are limited to 250 characters (255 minus the tag). Everything that touches native macros is queued during combat.
+**How it works.** Every macro has an id, and each id owns at most one native macro slot, recognised by a `#NNN` tag on its first line. A slot is never deleted when its macro goes away (it is blanked), so a button on your action bar keeps pointing at the same slot while the *content* changes with your spec. Ids are the same as Mega Macro's, so existing tags keep working.
 
-Shared files: `Macros.lua` (module + constants), `Store.lua` (database), `Slots.lua` (native slot engine), `Highlight.lua`, `Icons.lua`, `UI.lua`, `IconPicker.lua`, `Import.lua`, `Window.lua`.
+| Scope | Slots | Ids | Written to native slots when |
+|---|---|---|---|
+| General | 60 | 1–60 | always (account-wide space) |
+| Class | 30 | 61–90 | you play that class |
+| Spec | 30 | 91–120 | you play that spec |
+| Character | 30 | 121–150 | you are that character (per-character space) |
+| Archive | 60 | — | never: storage only |
+
+Class / spec keys are `classFile` / `specID` (not localised names) and characters are stored by GUID, so changing the client language loses nothing.
+
+**The window**
+
+* Scope tabs along the top; the *Class* and *Spec* tabs add a class icon strip, the *Spec* tab a spec strip, the *Character* tab a list of your characters. Your own class / spec / character is marked. Everything can be browsed and edited, but only what belongs to the character you are playing is also written to the native slots (the header says `active` / `not active (editing only)` / `storage only`).
+* Slot grid on the left (8 columns). Click a slot to edit it; drag an *active* slot onto an action bar. Hover shows the macro text.
+* Editor on the right: icon (click to open the icon picker), name (up to 32 characters; the native slot gets the first 18), macro text with a live character counter. Macros are limited to **250 characters** (255 minus the `#NNN` tag).
+* **Save** / **Revert** / **Delete** (asks "Sure?" first) / **Copy** / **Cut** / **Paste**. Copy / Cut / Paste move macros between any scope, class or spec. Unsaved edits are saved automatically when you switch slot or tab, or close the window.
+* Syntax colouring for `#showtooltip`, commands, `[conditions]`, `@units`, spells, chat and Lua lines. It is purely visual: the real (almost transparent) edit box sits on top of a coloured copy, and the window draws its own caret. If the editor ever misbehaves (caret, click-to-place, arrow keys), `/cxm plain` switches to a normal uncoloured edit box.
+* Icon picker: searches spell names (indexed in the background the first time it is opened), spell IDs and file IDs. "Automatic" keeps the `?` icon so `#showtooltip` shows the real one.
+* Footer buttons appear only when useful: **Import Mega Macro** (when Mega Macro's data is present) and **Adopt N native** (when there are native macros without a tag).
+* Everything that touches native macros is blocked in combat, so it is queued and replayed when combat ends (the status line says so).
+
+**Files** (load order matters, see `cxUI.toc`)
+
+| File | Purpose |
+|---|---|
+| `Macros.lua` | module registration + constants (scopes, limits, ids) |
+| `Store.lua` | `CXUI_MacroDB` access, class / spec / character helpers |
+| `Slots.lua` | native slot engine: scan, create, edit, sync, release; combat queue |
+| `Highlight.lua` | macro syntax colouring |
+| `Icons.lua` | icon lists + spell-name index for the icon search |
+| `UI.lua` | small flat widgets in the cxUI look (button, box, edit box, slider) |
+| `IconPicker.lua` | icon picker window |
+| `Import.lua` | Mega Macro import + adopting untagged native macros |
+| `Window.lua` | the macro window (scope tabs, strips, grid, editor) |
+| `MacroManager.lua` | the feature: events (login, spec change, leaving combat) + slash commands |
 
 | File | Option | What it does | Reload |
 |---|---|---|---|
-| `MacroManager.lua` | Macro Manager | Writes the macros of your character / class / spec into the native macro slots and swaps them when you change spec. Needs Mega Macro disabled. | — |
+| `MacroManager.lua` | Macro Manager | Writes the macros of your character / class / spec into the native macro slots and swaps them when you change spec. Needs Mega Macro disabled. With it off you can still browse and edit, but nothing is written to the game's slots. | — |
+| `Interface/MacroOverride.lua` | Macro Window Override | Opens this window instead of Blizzard's when you press the *Macros* button of the game menu. Only while Macro Manager is managing macros. | — |
 
-Migrating from Mega Macro: enable it for one session, run `/cxm import` (on each character), then disable Mega Macro and `/reload`. Native macros that have no tag can be taken over with `/cxm adopt`.
+**Commands**
+
+```
+/cxm  (or /m)     open / close the window
+/cxm import       copy Mega Macro's data into cxUI (Mega Macro must be enabled for this session)
+/cxm adopt        take over native macros that have no #NNN tag (they go to General / Character)
+/cxm sync         rewrite the native slots from the database
+/cxm release      strip the cxUI tags from the native macros (turn Macro Manager off before reloading)
+/cxm plain        toggle the plain-text editor (no colouring, normal caret)
+```
+
+**Migrating from Mega Macro:** enable it for one session, run `/cxm import` on each character (nothing in Mega Macro is changed, identical macros are skipped, macros that had no `#show...` get `#showtooltip` as Mega Macro did), then disable Mega Macro and `/reload`. cxUI stays idle while Mega Macro is loaded; the red banner in the window says so.
 
 ### 11. EllesmereUI Skins — `modules/EllesmereSkins/`
 
@@ -312,7 +360,9 @@ Adding an addon: create `Skins/<Addon>.lua` with `Sk.NewSkin{ addon = "<FolderNa
 /cxautoconfirm debug | status              Auto confirm
 /cxpotion [item <id|link|auto> | test | debug]  Potion reminder status / pin item
 /cx premium                                Toggle the Premium random sounds (Execute Alert, Low Health)
-/cxm [import | adopt | sync | release]     Macro window / copy Mega Macro data / take over native macros / rewrite slots / strip tags
+/cxm [import | adopt | sync | release | plain]  Macro window / copy Mega Macro data / take over native macros / rewrite slots / strip tags / plain-text editor
+/cxsort [debug]                            Applicant sort status / debug output
+/esk mouse                                What is under the mouse and how EllesmereUI Skins treats it
 ```
 
 ## Customising

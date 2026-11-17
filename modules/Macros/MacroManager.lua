@@ -77,6 +77,9 @@ SlashCmdList["CXUIMACROS"] = function(msg)
         M.ImportMegaMacro()
     elseif cmd == "adopt" then
         M.AdoptNative()
+    elseif cmd == "plain" then
+        local plain = M.Window.TogglePlain()
+        ns.Print("Macro editor: " .. (plain and "plain text (no colouring)" or "coloured") .. ".")
     elseif cmd == "sync" then
         if M.IsManaging() then M.Slots.Sync(true); ns.Print("Macros synced.")
         else ns.Print(M.ManagingReason()) end
@@ -86,6 +89,6 @@ SlashCmdList["CXUIMACROS"] = function(msg)
                    or "Not in combat, please.")
     else
         ns.Print("/cxm  open the window  |  import  copy Mega Macro data  |  adopt  take over native macros  |  " ..
-            "sync  rewrite slots  |  release  strip cxUI tags")
+            "sync  rewrite slots  |  release  strip cxUI tags  |  plain  toggle the plain-text editor")
     end
 end

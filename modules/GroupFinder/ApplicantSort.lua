@@ -12,6 +12,7 @@ local addonName, ns = ...
 -- Only pending applications ("applied") are reordered, among themselves; invited /
 -- declined / etc. rows keep the slot Blizzard gave them.
 -- Off = Blizzard's own order (hooks stay installed but return immediately).
+-- EllesmereUI's Group Finder replaces Blizzard's list with its own: see ns.SortApplicantList below.
 -- ===========================================================================
 
 local GF = ns:GetModule("GroupFinder")
@@ -132,6 +133,19 @@ local function SortApplicants(applicants)
     end
     return changed
 end
+
+-- ---------------------------------------------------------------------------
+-- Public entry point for addons that draw their OWN applicant list instead of
+-- Blizzard's (EllesmereUI Group Finder does: it reads the applicants from C_LFGList and
+-- orders them by displayOrderID, so reordering Blizzard's viewer.applicants has no effect
+-- on what you see). Such an addon calls this with its list of applicant IDs; the list is
+-- reordered in place. Returns true if it changed. Does nothing while the option is off.
+-- ---------------------------------------------------------------------------
+function ns.SortApplicantList(list)
+    if not F:IsOn() then return false end
+    return SortApplicants(list)
+end
+_G.CXUI_SortApplicantList = ns.SortApplicantList
 
 -- ---------------------------------------------------------------------------
 -- Hooking
